@@ -1,0 +1,123 @@
+* {
+	box-sizing: border-box;
+}
+
+:root {
+	--text-base: hsl(0 0% 8%);
+	--text-secondary: hsl(0 0% 20%);
+	--text-highlight: hsl(330 60% 33%);
+	--text-link: hsl(210, 85%, 40%);
+	--bg-base: hsl(0 0% 98%);
+	color: var(--text-base);
+	background-color: var(--bg-base);
+}
+
+body {
+	margin: 0;
+	padding: 1.5rem;
+	line-height: 1.5;
+	font-family: system-ui, sans-serif;
+}
+
+/*
+tweaking font sizes to fractional sizes may defeat font hinting,
+which could look bad on low resolution screens
+*/
+@media (min-resolution: 1.5x) {
+	body,
+	code {
+		font-size-adjust: ex-height 0.525;
+	}
+	.files {
+		font-size: 0.96875rem;
+	}
+}
+
+@media (min-width: 40em) {
+	body {
+		padding: 3rem 3.5rem;
+	}
+}
+
+h1 {
+	margin-block: 0 1.5rem;
+	font-size: 1.125rem;
+	font-weight: 500;
+	line-height: 1.2;
+}
+
+p {
+	margin-block: 0;
+	padding-block: 0.5rem;
+	color: var(--text-secondary);
+}
+
+code {
+	font-family: ui-monospace, monospace;
+	font-size: 100%;
+	color: var(--text-highlight);
+}
+
+.files {
+	margin-block: 1rem;
+	margin-inline: -0.75rem;
+	padding-inline: 0;
+	list-style: none;
+	font-variant-numeric: tabular-nums;
+}
+
+@media (min-width: 40em) {
+	.files {
+		max-width: max(30rem, var(--max-col-count, 4) * 21rem);
+		column-width: 20rem;
+		column-gap: 1rem;
+	}
+}
+
+.files li {
+	max-width: 30rem;
+	break-inside: avoid;
+}
+
+.files a {
+	--icon-opacity: 0.8;
+	display: flex;
+	gap: 0.75rem;
+	align-items: center;
+	min-height: 2.5rem;
+	border-radius: 4px;
+	padding: 0.25rem 0.75rem;
+	line-height: 1.25;
+	color: var(--text-base);
+}
+
+.files a:not(:hover) {
+	text-decoration: none;
+}
+
+.files a:hover {
+	--icon-opacity: 1;
+	color: var(--text-link);
+}
+
+.files a:focus-visible {
+	--icon-opacity: 1;
+	color: var(--text-link);
+	outline: solid 2px currentColor;
+	outline-offset: -2px;
+}
+
+.files .parent a {
+	letter-spacing: 0.15ch;
+}
+
+.files svg {
+	flex: none;
+	fill: currentColor;
+	opacity: var(--icon-opacity);
+}
+
+.files span > span {
+	margin-inline-start: 0.2ch;
+	opacity: 0.75;
+}

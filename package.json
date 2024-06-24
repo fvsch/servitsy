@@ -1,0 +1,35 @@
+{
+	"name": "servitsy",
+	"version": "0.1.0-alpha.1",
+	"type": "module",
+	"main": "./lib/index.js",
+	"exports": {
+		".": {
+			"import": "./lib/index.js"
+		}
+	},
+	"bin": {
+		"servitsy": "./bin/servitsy.js"
+	},
+	"files": [
+		"./bin",
+		"./lib",
+		"./README.md"
+	],
+	"scripts": {
+		"format": "prettier --write '**/*.js' '**/*config*.json'",
+		"test": "node --test",
+		"types:build": "tsc -p jsconfig.build.json",
+		"types:check": "tsc -p jsconfig.json"
+	},
+	"devDependencies": {
+		"@types/node": "^20.14.15",
+		"prettier": "^3.3.3",
+		"typescript": "~5.5.4"
+	},
+	"prettier": {
+		"printWidth": 100,
+		"singleQuote": true,
+		"useTabs": true
+	}
+}

@@ -1,0 +1,12 @@
+{
+	"include": ["./bin", "./lib"],
+	"compilerOptions": {
+		"module": "NodeNext",
+		"target": "ES2022",
+		"lib": ["ES2022"],
+		"types": ["node"],
+		"strict": true,
+		"allowJs": true,
+		"checkJs": true
+	}
+}
