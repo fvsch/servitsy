@@ -7,10 +7,10 @@ import { DIR_FILE_DEFAULT, EXTENSIONS_DEFAULT, FILE_EXCLUDE_DEFAULT } from '../l
 import { FileResolver, PathMatcher } from '../lib/resolver.js';
 
 /**
-@typedef {import('../lib/resolver.js').FSUtils} FSUtils
-@typedef {import('../lib/resolver.js').ResolveOptions} ResolveOptions
+@typedef {import('../lib/types.js').FSUtils} FSUtils
+@typedef {import('../lib/types.js').ResolveOptions} ResolveOptions
 @typedef {{path: string; kind: 'dir' | 'file', readable: boolean}} VFile
-*/
+**/
 
 function root(localPath = '') {
 	const _root = join(cwd(), 'tmp/test-path');
@@ -19,6 +19,7 @@ function root(localPath = '') {
 
 /** @type {ResolveOptions} */
 const defaultResolveOptions = {
+	root: root(),
 	dirFile: [...DIR_FILE_DEFAULT],
 	dirList: true,
 	ext: [...EXTENSIONS_DEFAULT],
@@ -90,7 +91,13 @@ function getFsUtils(filePaths) {
 @type {(options?: Partial<ResolveOptions>, files?: Record<string, boolean>) => FileResolver}
 */
 function getResolver(options = {}, files = {}) {
-	return new FileResolver(root(), getFsUtils(files ?? {}), options);
+	return new FileResolver(
+		{
+			root: options.root ?? root(''),
+			...options,
+		},
+		getFsUtils(files),
+	);
 }
 
 suite('PathMatcher', () => {
@@ -183,9 +190,8 @@ suite('FileResolver.#root', () => {
 		throws(() => {
 			new FileResolver(
 				// @ts-expect-error
-				undefined,
-				getFsUtils({}),
 				{},
+				getFsUtils({}),
 			);
 		}, /Missing root directory/);
 	});
@@ -225,13 +231,13 @@ suite('FileResolver.locateFile', () => {
 		const resolver = getResolver({ ext: [], dirFile: [] }, locate_files);
 
 		for (const file of Object.keys(locate_files)) {
-			const path = root(file);
-			deepStrictEqual(await resolver.locateFile(path), { kind: 'file', path });
+			const filePath = root(file);
+			deepStrictEqual(await resolver.locateFile(filePath), { kind: 'file', filePath });
 		}
 
 		for (const dir of ['section1', 'section2', 'section2/sub-page']) {
-			const path = root(dir);
-			deepStrictEqual(await resolver.locateFile(path), { kind: 'dir', path });
+			const filePath = root(dir);
+			deepStrictEqual(await resolver.locateFile(filePath), { kind: 'dir', filePath });
 		}
 	});
 
@@ -247,7 +253,7 @@ suite('FileResolver.locateFile', () => {
 		for (const [query, expected] of Object.entries(expectTargetToDir)) {
 			deepStrictEqual(await resolver.locateFile(root(query)), {
 				kind: 'dir',
-				path: root(expected),
+				filePath: root(expected),
 			});
 		}
 
@@ -261,7 +267,7 @@ suite('FileResolver.locateFile', () => {
 		for (const [query, expected] of Object.entries(expectTargetToFile)) {
 			deepStrictEqual(await resolver.locateFile(root(query)), {
 				kind: 'file',
-				path: root(expected),
+				filePath: root(expected),
 			});
 		}
 	});
@@ -273,28 +279,28 @@ suite('FileResolver.locateFile', () => {
 		// finds dirFile
 		deepStrictEqual(await locate(''), {
 			kind: 'file',
-			path: root('index.html'),
+			filePath: root('index.html'),
 		});
 		deepStrictEqual(await locate('section1'), {
 			kind: 'file',
-			path: root('section1/index.html'),
+			filePath: root('section1/index.html'),
 		});
 
 		// does not add .html or find non-dirFile children
 		deepStrictEqual(await locate('page1'), {
 			kind: null,
-			path: root('page1'),
+			filePath: root('page1'),
 		});
 		deepStrictEqual(await locate('section2/sub-page'), {
 			kind: 'dir',
-			path: root('section2/sub-page'),
+			filePath: root('section2/sub-page'),
 		});
 	});
 });
 
 suite('FileResolver.#options', () => {
 	test('options: exclude', () => {
-		const resolver = new FileResolver(root(), getFsUtils({}), { exclude: ['.*', '*.md'] });
+		const resolver = getResolver({ exclude: ['.*', '*.md'] });
 		const allowed = (p = '') => resolver.allowedPath(root(p));
 
 		// should be allowed

@@ -2,7 +2,6 @@ import { deepStrictEqual, match, strictEqual } from 'node:assert';
 import { cwd } from 'node:process';
 import { suite, test } from 'node:test';
 
-import { errorsContext } from '../lib/logger.js';
 import {
 	serverOptions,
 	validateArgPresence,
@@ -15,6 +14,7 @@ import {
 	validatePorts,
 	validateRoot,
 } from '../lib/options.js';
+import { errorsContext } from '../lib/utils.js';
 import { argify } from './args.test.js';
 
 /**

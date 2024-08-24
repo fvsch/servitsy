@@ -1,4 +1,4 @@
-import { strictEqual } from 'node:assert';
+import { match, strictEqual } from 'node:assert';
 import { join } from 'node:path';
 import { cwd } from 'node:process';
 import { suite, test } from 'node:test';
@@ -15,70 +15,127 @@ export function root(strings = '', ...values) {
 
 suite('responseLogLine', () => {
 	/**
-	 * @param {Pick<import('../lib/server.js').ReqResInfo, 'filePath' | 'method' | 'status' | 'urlPath'>} info
+	 * @param {Omit<import('../lib/server.js').ReqResInfo, 'root' | 'startedAt' | 'endedAt'>} info
+	 * @param {string} expected
 	 */
-	const logLine = (info) => requestLogLine({ root: root(''), ...info });
+	const matchLogLine = (info, expected) => {
+		const time = Date.now();
+		const line = requestLogLine({
+			root: root(''),
+			startedAt: time,
+			endedAt: time,
+			...info,
+		});
+		const pattern = /^(?:\d{2}:\d{2}:\d{2} )(.*)$/;
+		match(line, pattern);
+		strictEqual(line.match(pattern)?.[1], expected);
+	};
 
 	test('basic formatting', () => {
-		strictEqual(logLine({ method: 'GET', status: 200, urlPath: '/' }), `[200] GET /`);
-		strictEqual(
-			logLine({ method: 'GET', status: 404, urlPath: '/favicon.ico' }),
-			`[404] GET /favicon.ico`,
+		matchLogLine(
+			{
+				method: 'GET',
+				status: 200,
+				urlPath: '/',
+			},
+			'200 — GET /',
 		);
-		strictEqual(
-			logLine({ method: 'GET', status: 403, urlPath: '/.htaccess' }),
-			`[403] GET /.htaccess`,
+		matchLogLine(
+			{
+				method: 'GET',
+				status: 404,
+				urlPath: '/favicon.ico',
+			},
+			`404 — GET /favicon.ico`,
+		);
+		matchLogLine(
+			{
+				method: 'GET',
+				status: 403,
+				urlPath: '/.htaccess',
+			},
+			`403 — GET /.htaccess`,
 		);
 	});
 
 	test('shows resolved file', () => {
-		strictEqual(
-			logLine({ method: 'GET', status: 200, urlPath: '/', filePath: root`index.html` }),
-			`[200] GET /<index.html>`,
+		matchLogLine(
+			{
+				method: 'GET',
+				status: 200,
+				urlPath: '/',
+				filePath: root`index.html`,
+			},
+			`200 — GET /<index.html>`,
 		);
-		strictEqual(
-			logLine({ method: 'GET', status: 200, urlPath: '/some/page', filePath: root`some/page.htm` }),
-			`[200] GET /some/page<.htm>`,
+		matchLogLine(
+			{
+				method: 'GET',
+				status: 200,
+				urlPath: '/some/page',
+				filePath: root`some/page.htm`,
+			},
+			`200 — GET /some/page<.htm>`,
 		);
-		strictEqual(
-			logLine({
+		matchLogLine(
+			{
 				method: 'POST',
 				status: 201,
 				urlPath: '/api/hello',
 				filePath: root`api/hello.json`,
-			}),
-			`[201] POST /api/hello<.json>`,
+			},
+			`201 — POST /api/hello<.json>`,
 		);
 	});
 
 	test('no resolved file suffix if filePath matches URL', () => {
-		strictEqual(
-			logLine({ method: 'GET', status: 200, urlPath: '/', filePath: root('') }),
-			`[200] GET /`,
+		matchLogLine(
+			{
+				method: 'GET',
+				status: 200,
+				urlPath: '/',
+				filePath: root(''),
+			},
+			`200 — GET /`,
 		);
-		strictEqual(
-			logLine({ method: 'GET', status: 200, urlPath: '/section1', filePath: root`section1` }),
-			`[200] GET /section1`,
+		matchLogLine(
+			{
+				method: 'GET',
+				status: 200,
+				urlPath: '/section1',
+				filePath: root`section1`,
+			},
+			`200 — GET /section1`,
 		);
-		strictEqual(
-			logLine({
+		matchLogLine(
+			{
 				method: 'GET',
 				status: 200,
 				urlPath: '/section-two/',
 				filePath: root`section-two`,
-			}),
-			`[200] GET /section-two/`,
+			},
+			`200 — GET /section-two/`,
 		);
 	});
 
 	test('hides resolved file for error status', () => {
-		strictEqual(
-			logLine({ method: 'GET', status: 403, urlPath: '/.env', filePath: root`.env` }),
-			`[403] GET /.env`,
+		matchLogLine(
+			{
+				method: 'GET',
+				status: 403,
+				urlPath: '/.env',
+				filePath: root`.env`,
+			},
+			`403 — GET /.env`,
 		);
-		strictEqual(
-			logLine({ method: 'GET', status: 404, urlPath: '/robots.txt', filePath: root`robots.txt` }),
-			`[404] GET /robots.txt`,
+		matchLogLine(
+			{
+				method: 'GET',
+				status: 404,
+				urlPath: '/robots.txt',
+				filePath: root`robots.txt`,
+			},
+			`404 — GET /robots.txt`,
 		);
 	});
 });

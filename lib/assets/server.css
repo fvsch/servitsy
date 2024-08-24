@@ -89,6 +89,8 @@ code {
 	padding: 0.25rem 0.75rem;
 	line-height: 1.25;
 	color: var(--text-base);
+	hyphenate-character: "";
+	word-break: break-word;
 }
 
 .files a:not(:hover) {
