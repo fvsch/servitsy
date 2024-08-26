@@ -2,7 +2,7 @@
 
 Local web server for static files, coming in a small package.
 
-- Small: 16 kilobytes gzipped, zero dependencies.
+- Small: 19.5 kilobytes gzipped, zero dependencies.
 - What: for your local testing needs.
 - How: with decent defaults, and no cool features.
 
@@ -37,7 +37,7 @@ There are good established alternatives to this package. Here is a brief and sub
 
 | Package                 | Size on disk† | Dependencies | Highlights                 |
 | ----------------------- | ------------- | ------------ | -------------------------- |
-| servitsy (v0.1.0)       | 90 kB         | 0            | Tiny                       |
+| servitsy (v0.1.0)       | 100 kB        | 0            | Tiny                       |
 | [servor] (v4.0.2)       | 144 kB        | 0            | Tiny, cool features        |
 | [sirv-cli] (v2.0.2)     | 392 kB        | 12           | Small, good options        |
 | [serve] (v14.2.3)       | 7.6 MB        | 89           | Good defaults, easy to use |
@@ -85,7 +85,7 @@ Defaults to `8080+`.
 
 ### `exclude`
 
-Block access to files and folders matched by the provided pattern(s). Patterns may use the wildcard character `*`, but not slashes (`/` or `\`). Use a pattern starting with `!` to negate an exclusion rule.
+Block access to files and folders matched by the provided pattern(s). Patterns may use the wildcard character `*`, but not slashes or colons (`/`, `\` or `:`). Use a pattern starting with `!` to negate an exclusion rule.
 
 Defaults to blocking all dotfiles, except for `.well-known` (see [Well-known URI](https://en.wikipedia.org/wiki/Well-known_URI)):
 
@@ -106,3 +106,27 @@ For example, if a request resolves to a readable file at `<root_dir>/subfolder/d
 - blocked with `--exclude 'sub*'` (fully matches `subfolder`);
 - blocked with `--exclude '*.js*'` (fully matches `data.json`);
 - _allowed_ for `--exclude '.json'` (does _not_ fully match `data.json`).
+
+### `headers`
+
+Add custom HTTP headers to responses, for all files or specific file patterns. Headers can be provided using a `header:value` syntax, or as a JSON string:
+
+```sh
+# header:value syntax
+servitsy --headers 'cache-control: max-age=5' --headers 'server: servitsy'
+
+# JSON syntax
+servitsy --headers '{"cache-control": "max-age=5", "server": "servitsy"}'
+```
+
+To add headers to specific responses, use file matching patterns before the value:
+
+```sh
+# header:value syntax
+servitsy --headers '*.rst content-type: text/x-rst'
+
+# JSON syntax
+servitsy --headers '*.rst {"content-type": "text/x-rst"}'
+```
+
+See the [`exclude` option](#exclude) for more information about file matching patterns.

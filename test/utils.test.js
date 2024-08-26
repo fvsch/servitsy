@@ -1,7 +1,7 @@
 import { deepStrictEqual, strictEqual, throws } from 'node:assert';
 import { suite, test } from 'node:test';
 
-import { clamp, contentType, fwdPath, intRange } from '../lib/utils.js';
+import { clamp, contentType, escapeHtml, fwdPath, intRange } from '../lib/utils.js';
 
 suite('clamp', () => {
 	test('keeps the value when between bounds', () => {
@@ -58,6 +58,29 @@ suite('contentType', () => {
 		strictEqual(contentType('file3.txt', 'ISO-8859-1'), 'text/plain; charset=ISO-8859-1');
 		strictEqual(contentType('lib.so', charset), 'application/octet-stream');
 		strictEqual(contentType('image.png', charset), 'image/png');
+	});
+});
+
+suite('escapeHtml', () => {
+	test('escapes & charachters', () => {
+		const input = `"Ampersand&Sons"`;
+		strictEqual(escapeHtml(input, 'text'), `"Ampersand&amp;Sons"`);
+		strictEqual(escapeHtml(input, 'attr'), `&quot;Ampersand&amp;Sons&quot;`);
+	});
+
+	test('escapes HTML comments', () => {
+		const input = `<!--hmm-->`;
+		strictEqual(escapeHtml(input, 'text'), `&lt;!--hmm--&gt;`);
+		strictEqual(escapeHtml(input, 'attr'), `&lt;!--hmm--&gt;`);
+	});
+
+	test('escapes HTML tags', () => {
+		const input = `<script>alert(document.location = "/admin")`;
+		strictEqual(escapeHtml(input, 'text'), `&lt;script&gt;alert(document.location = "/admin")`);
+		strictEqual(
+			escapeHtml(input, 'attr'),
+			`&lt;script&gt;alert(document.location = &quot;/admin&quot;)`,
+		);
 	});
 });
 

@@ -6,7 +6,7 @@
 	--text-base: hsl(0 0% 8%);
 	--text-secondary: hsl(0 0% 20%);
 	--text-highlight: hsl(330 60% 33%);
-	--text-link: hsl(210, 85%, 40%);
+	--text-link: hsl(210 85% 40%);
 	--bg-base: hsl(0 0% 98%);
 	color: var(--text-base);
 	background-color: var(--bg-base);
@@ -89,8 +89,6 @@ code {
 	padding: 0.25rem 0.75rem;
 	line-height: 1.25;
 	color: var(--text-base);
-	hyphenate-character: "";
-	word-break: break-word;
 }
 
 .files a:not(:hover) {
@@ -109,7 +107,14 @@ code {
 	outline-offset: -2px;
 }
 
-.files .parent a {
+.files a > span {
+	display: block;
+	white-space: pre-wrap;
+	word-break: break-word;
+	hyphenate-character: '';
+}
+
+.files .parent a > span {
 	letter-spacing: 0.15ch;
 }
 
@@ -119,7 +124,7 @@ code {
 	opacity: var(--icon-opacity);
 }
 
-.files span > span {
+.files a span > span {
 	margin-inline-start: 0.2ch;
 	opacity: 0.75;
 }

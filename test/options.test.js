@@ -1,4 +1,5 @@
 import { deepStrictEqual, match, strictEqual } from 'node:assert';
+import { join } from 'node:path';
 import { cwd } from 'node:process';
 import { suite, test } from 'node:test';
 
@@ -10,6 +11,7 @@ import {
 	validateDirList,
 	validateExclude,
 	validateExt,
+	validateHeaders,
 	validateHost,
 	validatePorts,
 	validateRoot,
@@ -18,7 +20,12 @@ import { errorsContext } from '../lib/utils.js';
 import { argify } from './args.test.js';
 
 /**
-@type {(mode: 'arg' | 'option') => import('../lib/options.js').ValidationContext}
+@typedef {import('../lib/types.js').HttpHeaderRule} HttpHeaderRule
+@typedef {import('../lib/options.js').ValidationContext} ValidationContext
+**/
+
+/**
+@type {(mode: 'arg' | 'option') => ValidationContext}
 */
 function validationContext(mode) {
 	return { mode, ...errorsContext() };
@@ -92,6 +99,137 @@ suite('validateCors', () => {
 			{ warn: "invalid --cors value: 'NO'" },
 			{ warn: "invalid --cors value: 'access-control-allow-origin:*'" },
 		]);
+	});
+});
+
+suite('validateHeaders', () => {
+	/** @type {(context: ValidationContext) => (input: string, expected: HttpHeaderRule) => void} */
+	const getCheckHeaders = (context) => {
+		return (input = '', expected) => {
+			const result = validateHeaders([input], context).at(0);
+			deepStrictEqual(result, expected);
+		};
+	};
+
+	test('no header rules for empty inputs', () => {
+		const context = validationContext('arg');
+		const headers1 = validateHeaders([], context);
+		const headers2 = validateHeaders(
+			// @ts-expect-error
+			[undefined, null, '', '\t\t\n\t\n', {}, []],
+			context,
+		);
+		deepStrictEqual(headers1, []);
+		deepStrictEqual(headers2, []);
+		deepStrictEqual(context.errors, []);
+	});
+
+	test('parses key:value strings', () => {
+		const context = validationContext('arg');
+		const checkHeaders = getCheckHeaders(context);
+
+		checkHeaders('x-header1:value', {
+			headers: { 'x-header1': 'value' },
+		});
+
+		checkHeaders('  X-Header2:   value  ', {
+			headers: { 'X-Header2': 'value' },
+		});
+
+		checkHeaders('* x-header3: value', {
+			headers: { 'x-header3': 'value' },
+		});
+
+		checkHeaders('a b ,  c\t \td: value', {
+			include: ['a b', 'c'],
+			headers: { d: 'value' },
+		});
+
+		checkHeaders('* HEADER_0001: {{value}}', {
+			headers: { HEADER_0001: '{{value}}' },
+		});
+
+		checkHeaders('*.rst, *.rtxt Content-Type: text/x-rst; charset=ISO-8859-1', {
+			include: ['*.rst', '*.rtxt'],
+			headers: { 'Content-Type': 'text/x-rst; charset=ISO-8859-1' },
+		});
+
+		deepStrictEqual(context.errors, []);
+	});
+
+	test('parses json values', () => {
+		const context = validationContext('arg');
+		const checkHeaders = getCheckHeaders(context);
+
+		checkHeaders('{"x-header1": "value", "x-header2": true}', {
+			headers: { 'x-header1': 'value', 'x-header2': 'true' },
+		});
+
+		checkHeaders('{   "x-header3":    "  json syntax keeps whitespace  " }', {
+			headers: { 'x-header3': '  json syntax keeps whitespace  ' },
+		});
+
+		checkHeaders('.*,!.well-known {"HEADER_0001": "{{\\\\///|||}}"}', {
+			include: ['.*', '!.well-known'],
+			headers: { HEADER_0001: '{{\\///|||}}' },
+		});
+
+		checkHeaders('*.html, *.htm, *.shtml {"Content-Type": "text/html;charset=ISO-8859-1"}', {
+			include: ['*.html', '*.htm', '*.shtml'],
+			headers: { 'Content-Type': 'text/html;charset=ISO-8859-1' },
+		});
+
+		deepStrictEqual(context.errors, []);
+	});
+
+	test('rejects invalid header names', () => {
+		const context = validationContext('arg');
+
+		const rules = validateHeaders(
+			[
+				': value',
+				'a b  c\tinval!d=chars: value',
+				'{"çççç": "value"}',
+				'{"  ": "value"}',
+				'{"space-after ": "value"}',
+			],
+			context,
+		);
+
+		deepStrictEqual(rules, []);
+		deepStrictEqual(context.errors, [
+			{ warn: `invalid --headers value: ': value'` },
+			{
+				error: `invalid --headers value: {"headers":{"inval!d=chars":"value"},"include":["a b  c"]}`,
+			},
+			{ error: `invalid --headers value: {"headers":{"çççç":"value"}}` },
+			{ error: `invalid --headers value: {"headers":{"  ":"value"}}` },
+			{ error: `invalid --headers value: {"headers":{"space-after ":"value"}}` },
+		]);
+	});
+
+	test('rejects invalid headers rules', () => {
+		const context = validationContext('option');
+		const inputs = [
+			'x-custom: not valid',
+			{ is: { not: 'valid' } },
+			{ headers: {} },
+			{ headers: { 'x-h1': 1 } },
+			{ headers: { 'x-h2': true } },
+			{ include: true, headers: {} },
+		];
+		const rules = validateHeaders(
+			// @ts-expect-error
+			inputs,
+			context,
+		);
+		deepStrictEqual(rules, []);
+		deepStrictEqual(
+			context.errors,
+			inputs.map((value) => ({
+				error: `invalid headers value: ${JSON.stringify(value)}`,
+			})),
+		);
 	});
 });
 
@@ -186,5 +324,13 @@ suite('validatePorts', () => {
 		const excessiveCount = validatePorts('8000+', argContext({ initial: 5000, count: 1000 }));
 		strictEqual(excessiveCount.length, 100);
 		strictEqual(excessiveCount.at(-1), 8099);
+	});
+});
+
+suite('validateRoot', () => {
+	test('resolves from cwd', () => {
+		const context = validationContext('arg');
+		strictEqual(validateRoot('.', context), cwd());
+		strictEqual(validateRoot('lib', context), join(cwd(), 'lib'));
 	});
 });
