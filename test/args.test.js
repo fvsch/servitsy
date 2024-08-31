@@ -2,17 +2,7 @@ import { deepStrictEqual, strictEqual } from 'node:assert';
 import { suite, test } from 'node:test';
 
 import { CLIArgs } from '../lib/args.js';
-
-/**
- * @type {(s: string | TemplateStringsArray, ...v: string[]) => CLIArgs}
- */
-export function argify(strings = '', ...values) {
-	return new CLIArgs(
-		String.raw({ raw: strings }, ...values)
-			.trim()
-			.split(/\s+/g),
-	);
-}
+import { argify } from './shared.js';
 
 suite('CLIArgs', () => {
 	test('returns empty values', () => {

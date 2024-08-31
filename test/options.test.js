@@ -17,7 +17,7 @@ import {
 	validateRoot,
 } from '../lib/options.js';
 import { errorsContext } from '../lib/utils.js';
-import { argify } from './args.test.js';
+import { argify } from './shared.js';
 
 /**
 @typedef {import('../lib/types.js').HttpHeaderRule} HttpHeaderRule

@@ -1,5 +1,5 @@
 {
-	"include": ["./*.test.js"],
+	"include": ["./*.js"],
 	"compilerOptions": {
 		"module": "NodeNext",
 		"target": "ES2022",

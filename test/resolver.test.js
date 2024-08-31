@@ -1,104 +1,8 @@
 import { deepStrictEqual, strictEqual, throws } from 'node:assert';
-import { join, resolve } from 'node:path';
-import { cwd } from 'node:process';
 import { suite, test } from 'node:test';
 
-import { DIR_FILE_DEFAULT, EXTENSIONS_DEFAULT, FILE_EXCLUDE_DEFAULT } from '../lib/constants.js';
 import { FileResolver, PathMatcher } from '../lib/resolver.js';
-
-/**
-@typedef {import('../lib/types.js').FSUtils} FSUtils
-@typedef {import('../lib/types.js').ResolveOptions} ResolveOptions
-@typedef {{path: string; kind: 'dir' | 'file', readable: boolean}} VFile
-**/
-
-function root(localPath = '') {
-	const _root = join(cwd(), 'tmp/test-path');
-	return resolve(_root, localPath);
-}
-
-/** @type {ResolveOptions} */
-const defaultResolveOptions = {
-	root: root(),
-	dirFile: [...DIR_FILE_DEFAULT],
-	dirList: true,
-	ext: [...EXTENSIONS_DEFAULT],
-	exclude: [...FILE_EXCLUDE_DEFAULT],
-};
-
-/**
-@type {(filePaths: Record<string, boolean>) => FSUtils}
-*/
-function getFsUtils(filePaths) {
-	/** @type {Map<string, VFile>} */
-	const vfs = new Map();
-
-	// add root dir
-	vfs.set(root(''), { path: root(''), kind: 'dir', readable: true });
-
-	// add dirs and files
-	for (const [key, readable] of Object.entries(filePaths)) {
-		const filePath = key.replace(/^\//, '').replace(/\/$/, '');
-
-		/** @type {string[]} */
-		const paths = [];
-		for (const segment of filePath.split('/')) {
-			const prev = paths.at(-1);
-			paths.push(prev ? `${prev}/${segment}` : segment);
-		}
-
-		for (const path of paths) {
-			const isDir = filePath.startsWith(`${path}/`);
-			const fullPath = root(path);
-			if (vfs.has(fullPath)) continue;
-			vfs.set(fullPath, {
-				path: fullPath,
-				kind: isDir ? 'dir' : 'file',
-				readable: isDir ? true : readable,
-			});
-		}
-	}
-
-	return {
-		async index(dirPath) {
-			if (!vfs.has(dirPath) || vfs.get(dirPath)?.kind !== 'dir') return [];
-			const prefix = `${dirPath}/`;
-			const entries = [];
-			for (const entry of vfs.values()) {
-				if (!entry.path.startsWith(prefix)) continue;
-				const relative = entry.path.slice(prefix.length);
-				if (!relative.includes('/')) {
-					entries.push({ filePath: entry.path, kind: entry.kind });
-				}
-			}
-			return entries;
-		},
-		async info(filePath) {
-			const kind = await this.kind(filePath);
-			const readable = await this.readable(filePath);
-			return { filePath, kind, readable };
-		},
-		async kind(filePath) {
-			return vfs.get(filePath)?.kind ?? null;
-		},
-		async readable(filePath) {
-			return vfs.get(filePath)?.readable ?? false;
-		},
-	};
-}
-
-/**
-@type {(options?: Partial<ResolveOptions>, files?: Record<string, boolean>) => FileResolver}
-*/
-function getResolver(options = {}, files = {}) {
-	return new FileResolver(
-		{
-			root: options.root ?? root(''),
-			...options,
-		},
-		getFsUtils(files),
-	);
-}
+import { defaultResolveOptions, getFsUtils, getResolver, testPath as root } from './shared.js';
 
 suite('PathMatcher', () => {
 	test('does not match strings when no patterns are provided', () => {
@@ -197,21 +101,22 @@ suite('FileResolver.#root', () => {
 	});
 
 	test('withinRoot', () => {
-		const resolver = getResolver();
-		const withinRoot = (p = '') => resolver.withinRoot(root(p));
+		const resolver = getResolver({ root: root() });
+		const check = (p = '') => resolver.withinRoot(p);
 
-		strictEqual(withinRoot('index.html'), true);
-		strictEqual(withinRoot('some/dir'), true);
-		strictEqual(withinRoot('../../.zshrc'), false);
-		strictEqual(withinRoot('/etc/hosts'), false);
+		strictEqual(check(root`index.html`), true);
+		strictEqual(check(root`some/dir`), true);
+
+		strictEqual(check(root`../../.zshrc`), false);
+		strictEqual(check('/etc/hosts'), false);
 	});
 });
 
 suite('FileResolver.urlToTargetPath', () => {
 	test('urlToTargetPath', () => {
 		const resolver = getResolver();
-		strictEqual(resolver.urlToTargetPath('/test'), root('test'));
-		strictEqual(resolver.urlToTargetPath('../test'), root('test'));
+		strictEqual(resolver.urlToTargetPath('/test'), root`test`);
+		strictEqual(resolver.urlToTargetPath('../test'), root`test`);
 
 		// FIXME: broken
 		// strictEqual(resolver.urlToTargetPath('//test'), root('test'));
@@ -279,21 +184,21 @@ suite('FileResolver.locateFile', () => {
 		// finds dirFile
 		deepStrictEqual(await locate(''), {
 			kind: 'file',
-			filePath: root('index.html'),
+			filePath: root`index.html`,
 		});
 		deepStrictEqual(await locate('section1'), {
 			kind: 'file',
-			filePath: root('section1/index.html'),
+			filePath: root`section1/index.html`,
 		});
 
 		// does not add .html or find non-dirFile children
 		deepStrictEqual(await locate('page1'), {
 			kind: null,
-			filePath: root('page1'),
+			filePath: root`page1`,
 		});
 		deepStrictEqual(await locate('section2/sub-page'), {
 			kind: 'dir',
-			filePath: root('section2/sub-page'),
+			filePath: root`section2/sub-page`,
 		});
 	});
 });
@@ -379,7 +284,7 @@ suite('FileResolver.find', () => {
 		for (const urlPath of ['/section', '/section/']) {
 			deepStrictEqual(await resolver.find(urlPath), {
 				urlPath,
-				filePath: root('section'),
+				filePath: root`section`,
 				kind: 'dir',
 				status: 200,
 			});
@@ -424,13 +329,13 @@ suite('FileResolver.find', () => {
 		strictEqual(await find('/.doesnt-exist'), '404 null');
 
 		// existing dotfiles are excluded by default pattern
-		strictEqual(await find('/.env'), '404 ' + root('.env'));
-		strictEqual(await find('/.htpasswd'), '404 ' + root('.htpasswd'));
-		strictEqual(await find('/section/.gitignore'), '404 ' + root('section/.gitignore'));
+		strictEqual(await find('/.env'), '404 ' + root`.env`);
+		strictEqual(await find('/.htpasswd'), '404 ' + root`.htpasswd`);
+		strictEqual(await find('/section/.gitignore'), '404 ' + root`section/.gitignore`);
 
 		// Except the .well-known folder, allowed by default
-		strictEqual(await find('/.well-known'), '200 ' + root('.well-known'));
-		strictEqual(await find('/.well-known/security.txt'), '200 ' + root('.well-known/security.txt'));
+		strictEqual(await find('/.well-known'), '200 ' + root`.well-known`);
+		strictEqual(await find('/.well-known/security.txt'), '200 ' + root`.well-known/security.txt`);
 	});
 
 	test('default options resolve index.html', async () => {
@@ -439,14 +344,14 @@ suite('FileResolver.find', () => {
 		deepStrictEqual(await resolver.find('/'), {
 			urlPath: '/',
 			status: 200,
-			filePath: root('index.html'),
+			filePath: root`index.html`,
 			kind: 'file',
 		});
 		for (const urlPath of ['/section', '/section/']) {
 			deepStrictEqual(await resolver.find(urlPath), {
 				urlPath,
 				status: 200,
-				filePath: root('section/index.html'),
+				filePath: root`section/index.html`,
 				kind: 'file',
 			});
 		}
@@ -458,7 +363,7 @@ suite('FileResolver.find', () => {
 		// adds .html
 		for (const fileLike of ['index', 'page1', 'section/index']) {
 			const urlPath = `/${fileLike}`;
-			const filePath = root(`${fileLike}.html`);
+			const filePath = root`${fileLike}.html`;
 			deepStrictEqual(await resolver.find(urlPath), {
 				urlPath,
 				status: 200,
@@ -496,24 +401,24 @@ suite('FileResolver.index', () => {
 	test('does not index directories when options.dirList is false', async () => {
 		const resolver = getResolver({ ...defaultResolveOptions, dirList: false }, index_files);
 		deepStrictEqual(await resolver.index(root()), []);
-		deepStrictEqual(await resolver.index(root('section')), []);
-		deepStrictEqual(await resolver.index(root('doesnt-exist')), []);
+		deepStrictEqual(await resolver.index(root`section`), []);
+		deepStrictEqual(await resolver.index(root`doesnt-exist`), []);
 	});
 
 	test('indexes directories when options.dirList is true', async () => {
 		const resolver = getResolver({ ...defaultResolveOptions }, index_files);
 		deepStrictEqual(await resolver.index(root()), [
-			{ filePath: root('.well-known'), kind: 'dir' },
-			{ filePath: root('about-us.html'), kind: 'file' },
-			{ filePath: root('index.html'), kind: 'file' },
-			{ filePath: root('products.html'), kind: 'file' },
-			{ filePath: root('section'), kind: 'dir' },
+			{ filePath: root`.well-known`, kind: 'dir' },
+			{ filePath: root`about-us.html`, kind: 'file' },
+			{ filePath: root`index.html`, kind: 'file' },
+			{ filePath: root`products.html`, kind: 'file' },
+			{ filePath: root`section`, kind: 'dir' },
 		]);
 
-		deepStrictEqual(await resolver.index(root('section')), [
-			{ filePath: root('section/forbidden.json'), kind: 'file' },
-			{ filePath: root('section/index.html'), kind: 'file' },
-			{ filePath: root('section/page.md'), kind: 'file' },
+		deepStrictEqual(await resolver.index(root`section`), [
+			{ filePath: root`section/forbidden.json`, kind: 'file' },
+			{ filePath: root`section/index.html`, kind: 'file' },
+			{ filePath: root`section/page.md`, kind: 'file' },
 		]);
 	});
 });
