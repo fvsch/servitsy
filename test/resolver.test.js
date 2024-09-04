@@ -279,7 +279,7 @@ suite('FileResolver.find', () => {
 	});
 
 	test('find folder with exact path', async () => {
-		const resolver = getResolver({}, find_files);
+		const resolver = getResolver({ dirList: true }, find_files);
 
 		for (const urlPath of ['/section', '/section/']) {
 			deepStrictEqual(await resolver.find(urlPath), {

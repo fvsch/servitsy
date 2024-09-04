@@ -1,7 +1,7 @@
 import { deepStrictEqual, strictEqual, throws } from 'node:assert';
 import { suite, test } from 'node:test';
 
-import { clamp, contentType, escapeHtml, fwdPath, intRange } from '../lib/utils.js';
+import { clamp, contentType, escapeHtml, fwdPath, isPrivateIPv4, intRange } from '../lib/utils.js';
 
 suite('clamp', () => {
 	test('keeps the value when between bounds', () => {
@@ -111,6 +111,34 @@ suite('fwdPath', () => {
 		strictEqual(fwdPath('./hello/'), './hello');
 		strictEqual(fwdPath('ok/'), 'ok');
 		strictEqual(fwdPath('/'), '/');
+	});
+});
+
+suite('isPrivateIPv4', () => {
+	test('rejects invalid addresses', () => {
+		strictEqual(isPrivateIPv4(''), false);
+		strictEqual(isPrivateIPv4('192.168'), false);
+		strictEqual(isPrivateIPv4('192.168.0.1000'), false);
+	});
+
+	test('rejects addresses out of private ranges', () => {
+		strictEqual(isPrivateIPv4('0.0.0.0'), false);
+		strictEqual(isPrivateIPv4('11.11.11.11'), false);
+		strictEqual(isPrivateIPv4('172.32.1.1'), false);
+		strictEqual(isPrivateIPv4('255.255.255.255'), false);
+	});
+
+	test('accepts addresses in private ranges', () => {
+		strictEqual(isPrivateIPv4('10.0.0.0'), true);
+		strictEqual(isPrivateIPv4('10.10.10.10'), true);
+		strictEqual(isPrivateIPv4('10.255.255.255'), true);
+		strictEqual(isPrivateIPv4('172.16.0.0'), true);
+		strictEqual(isPrivateIPv4('172.24.0.10'), true);
+		strictEqual(isPrivateIPv4('172.31.255.255'), true);
+		strictEqual(isPrivateIPv4('192.168.0.0'), true);
+		strictEqual(isPrivateIPv4('192.168.1.1'), true);
+		strictEqual(isPrivateIPv4('192.168.99.199'), true);
+		strictEqual(isPrivateIPv4('192.168.255.255'), true);
 	});
 });
 
