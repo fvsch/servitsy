@@ -198,13 +198,13 @@ suite('validateHeaders', () => {
 
 		deepStrictEqual(rules, []);
 		deepStrictEqual(context.errors, [
-			{ warn: `invalid --headers value: ': value'` },
+			{ warn: `invalid --header value: ': value'` },
 			{
-				error: `invalid --headers value: {"headers":{"inval!d=chars":"value"},"include":["a b  c"]}`,
+				error: `invalid --header value: {"headers":{"inval!d=chars":"value"},"include":["a b  c"]}`,
 			},
-			{ error: `invalid --headers value: {"headers":{"çççç":"value"}}` },
-			{ error: `invalid --headers value: {"headers":{"  ":"value"}}` },
-			{ error: `invalid --headers value: {"headers":{"space-after ":"value"}}` },
+			{ error: `invalid --header value: {"headers":{"çççç":"value"}}` },
+			{ error: `invalid --header value: {"headers":{"  ":"value"}}` },
+			{ error: `invalid --header value: {"headers":{"space-after ":"value"}}` },
 		]);
 	});
 

@@ -1,6 +1,15 @@
 {
 	"name": "servitsy",
-	"version": "0.1.0-alpha.5",
+	"version": "0.1.0",
+	"homepage": "https://github.com/fvsch/servitsy",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/fvsch/servitsy.git"
+	},
+	"author": {
+		"name": "Florens Verschelde",
+		"url": "https://www.npmjs.com/~fvsch"
+	},
 	"type": "module",
 	"main": "./lib/index.js",
 	"exports": {
@@ -9,7 +18,7 @@
 		}
 	},
 	"bin": {
-		"servitsy": "./bin/servitsy.js"
+		"servitsy": "bin/servitsy.js"
 	},
 	"files": [
 		"./bin",
@@ -22,7 +31,7 @@
 		"typecheck": "tsc -p jsconfig.json"
 	},
 	"devDependencies": {
-		"@types/node": "^20.16.3",
+		"@types/node": "^20.16.5",
 		"prettier": "^3.3.3",
 		"typescript": "~5.5.4"
 	},

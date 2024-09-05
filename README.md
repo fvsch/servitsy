@@ -2,7 +2,7 @@
 
 Local web server for static files, coming in a small package.
 
-- Small: 19.5 kilobytes gzipped, zero dependencies.
+- Small: zero dependencies, 21 kilobytes gzipped.
 - What: for your local testing needs.
 - How: with decent defaults, and no cool features.
 
@@ -37,8 +37,8 @@ There are good established alternatives to this package. Here is a brief and sub
 
 | Package                 | Size on disk† | Dependencies | Highlights                 |
 | ----------------------- | ------------- | ------------ | -------------------------- |
-| servitsy (v0.1.0)       | 100 kB        | 0            | Tiny                       |
-| [servor] (v4.0.2)       | 144 kB        | 0            | Tiny, cool features        |
+| servitsy (v0.1.0)       | 104 kB        | 0            | Tiny                       |
+| [servor] (v4.0.2)       | 144 kB        | 0            | Tiny, some cool features   |
 | [sirv-cli] (v2.0.2)     | 392 kB        | 12           | Small, good options        |
 | [serve] (v14.2.3)       | 7.6 MB        | 89           | Good defaults, easy to use |
 | [http-server] (v14.1.1) | 8.9 MB        | 45           | Good defaults, featureful  |
@@ -55,6 +55,103 @@ If size and dependency count is not a concern and you want something stable and 
 [sirv-cli]: https://www.npmjs.com/package/sirv-cli
 
 ## Options
+
+### `cors`
+
+Adds [Cross-Origin Resource Sharing](https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS) headers to responses. Defaults to `false`.
+
+Currently, setting this option to `true` will add a `Access-Control-Allow-Origin: *` header with every response (except directory listings).
+
+```sh
+# Enable
+servitsy --cors
+servitsy --cors true
+
+# Disable (default)
+servitsy --cors false
+```
+
+### `dirFile`
+
+File names to look up when a request matches a directory. Defaults to `index.html`.
+
+```sh
+servitsy --dir-file 'index.html'
+servitsy --dir-file 'page.html,page.htm'
+```
+
+### `dirList`
+
+Whether to list directory contents when a request matches a directory and no `dirFile` is found. Defaults to `true`.
+
+```sh
+# Enable (default)
+servitsy --dir-list
+servitsy --dir-list true
+
+# Disable
+servitsy --dir-list false
+```
+
+### `exclude`
+
+Block access to files and folders matched by the provided pattern(s). Patterns may use the wildcard character `*`, but not slashes or colons (`/`, `\` or `:`). Use a pattern starting with `!` to negate an exclusion rule.
+
+Defaults to blocking all dotfiles, except for `.well-known` (see [Well-known URI](https://en.wikipedia.org/wiki/Well-known_URI)):
+
+```sh
+servitsy --exclude '.*' --exclude '!.well-known'
+```
+
+Patterns can also be provided as comma-separated values:
+
+```sh
+servitsy --exclude '.*,!.well-known'
+```
+
+Blocked requests will result in a 404 error. A request will be block if any file or folder name in the requested file's path matches an exclusion rule (while not matching a negative exclusion rule).
+
+For example, if a request resolves to a readable file at `<root_dir>/subfolder/data.json`, access will be:
+
+- blocked with `--exclude 'sub*'` (fully matches `subfolder`);
+- blocked with `--exclude '*.js*'` (fully matches `data.json`);
+- _allowed_ for `--exclude '.json'` (does _not_ fully match `data.json`).
+
+### `ext`
+
+File extensions to look for when resolving a request. Defaults to `.html`.
+
+Typically, this allows serving a `page-name.html` file for a request URL path of `/page-name`.
+
+```sh
+servitsy --ext '' # disable
+servitsy --ext '.html' # default
+servitsy --ext '.xhtml' --ext '.html'
+```
+
+### `header`
+
+Add custom HTTP headers to responses, for all files or specific file patterns. Headers can be provided using a `header:value` syntax, or as a JSON string:
+
+```sh
+# header:value syntax
+servitsy --header 'cache-control: max-age=5' --header 'server: servitsy'
+
+# JSON syntax
+servitsy --header '{"cache-control": "max-age=5", "server": "servitsy"}'
+```
+
+To add headers to specific responses, use file matching patterns before the value:
+
+```sh
+# header:value syntax
+servitsy --header '*.rst content-type: text/x-rst'
+
+# JSON syntax
+servitsy --header '*.rst {"content-type": "text/x-rst"}'
+```
+
+See the [`exclude` option](#exclude) for more information about file matching patterns.
 
 ### `host`
 
@@ -82,51 +179,3 @@ servitsy --port 8080-8099
 - `<number>-<number>`: a range of port numbers to try (from first to last).
 
 Defaults to `8080+`.
-
-### `exclude`
-
-Block access to files and folders matched by the provided pattern(s). Patterns may use the wildcard character `*`, but not slashes or colons (`/`, `\` or `:`). Use a pattern starting with `!` to negate an exclusion rule.
-
-Defaults to blocking all dotfiles, except for `.well-known` (see [Well-known URI](https://en.wikipedia.org/wiki/Well-known_URI)):
-
-```sh
-servitsy --exclude '.*' --exclude '!.well-known'
-```
-
-Patterns can also be provided as comma-separated values:
-
-```sh
-servitsy --exclude '.*,!.well-known'
-```
-
-Blocked requests will result in a 404 error. A request will be block if any file or folder name in the requested file's path matches an exclusion rule (while not matching a negative exclusion rule).
-
-For example, if a request resolves to a readable file at `<root_dir>/subfolder/data.json`, access will be:
-
-- blocked with `--exclude 'sub*'` (fully matches `subfolder`);
-- blocked with `--exclude '*.js*'` (fully matches `data.json`);
-- _allowed_ for `--exclude '.json'` (does _not_ fully match `data.json`).
-
-### `headers`
-
-Add custom HTTP headers to responses, for all files or specific file patterns. Headers can be provided using a `header:value` syntax, or as a JSON string:
-
-```sh
-# header:value syntax
-servitsy --headers 'cache-control: max-age=5' --headers 'server: servitsy'
-
-# JSON syntax
-servitsy --headers '{"cache-control": "max-age=5", "server": "servitsy"}'
-```
-
-To add headers to specific responses, use file matching patterns before the value:
-
-```sh
-# header:value syntax
-servitsy --headers '*.rst content-type: text/x-rst'
-
-# JSON syntax
-servitsy --headers '*.rst {"content-type": "text/x-rst"}'
-```
-
-See the [`exclude` option](#exclude) for more information about file matching patterns.
