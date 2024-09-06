@@ -1,7 +1,16 @@
 import { deepStrictEqual, strictEqual, throws } from 'node:assert';
+import { sep } from 'node:path';
 import { suite, test } from 'node:test';
 
-import { clamp, contentType, escapeHtml, fwdPath, isPrivateIPv4, intRange } from '../lib/utils.js';
+import {
+	clamp,
+	contentType,
+	escapeHtml,
+	fwdPath,
+	getDirname,
+	isPrivateIPv4,
+	intRange,
+} from '../lib/utils.js';
 
 suite('clamp', () => {
 	test('keeps the value when between bounds', () => {
@@ -139,6 +148,18 @@ suite('isPrivateIPv4', () => {
 		strictEqual(isPrivateIPv4('192.168.1.1'), true);
 		strictEqual(isPrivateIPv4('192.168.99.199'), true);
 		strictEqual(isPrivateIPv4('192.168.255.255'), true);
+	});
+});
+
+suite('getDirname', () => {
+	test('returns the __dirname for a ESM module', () => {
+		strictEqual(
+			getDirname(import.meta.url)
+				.split(sep)
+				.filter((s) => s.length > 0)
+				.at(-1),
+			'test',
+		);
 	});
 });
 
