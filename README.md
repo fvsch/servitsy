@@ -2,7 +2,7 @@
 
 Local web server for static files, coming in a small package.
 
-- Small: zero dependencies, 21 kilobytes gzipped.
+- Small: zero dependencies, 22 kilobytes gzipped.
 - What: for your local testing needs.
 - How: with decent defaults, and no cool features.
 
