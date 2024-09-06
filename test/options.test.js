@@ -102,6 +102,55 @@ suite('validateCors', () => {
 	});
 });
 
+suite('validateExt', () => {
+	test('returns a default value', () => {
+		const context = validationContext('arg');
+		deepStrictEqual(validateExt(undefined, context), ['.html']);
+		deepStrictEqual(validateExt([], context), ['.html']);
+		deepStrictEqual(context.errors, []);
+	});
+
+	test('empty string is discarded', () => {
+		const context = validationContext('arg');
+		deepStrictEqual(validateExt([''], context), []);
+		deepStrictEqual(validateExt(['', '.foo', ''], context), ['.foo']);
+		deepStrictEqual(context.errors, []);
+	});
+
+	test('accepts extensions with leading dot', () => {
+		const context = validationContext('arg');
+		const values1 = ['.htm', '.XML', '.7z', '.no'];
+		const values2 = ['.de.html', '.htm.br', '.a.b.c.1.2.3.gz'];
+		deepStrictEqual(validateExt(values1, context), values1);
+		deepStrictEqual(validateExt(values2, context), values2);
+		deepStrictEqual(context.errors, []);
+	});
+
+	test('accepts extensions without a leading dot', () => {
+		const context = validationContext('arg');
+		deepStrictEqual(validateExt(['html', 'XML'], context), ['.html', '.XML']);
+		deepStrictEqual(validateExt(['json5', '7z'], context), ['.json5', '.7z']);
+		deepStrictEqual(validateExt(['index.html', 'page.html'], context), [
+			'.index.html',
+			'.page.html',
+		]);
+		deepStrictEqual(context.errors, []);
+	});
+
+	test('rejects invalid strings', () => {
+		const context = validationContext('arg');
+		deepStrictEqual(validateExt(['.'], context), []);
+		deepStrictEqual(validateExt(['~/.ssh/id_rsa'], context), []);
+		deepStrictEqual(validateExt(['.ha!', 'çhe'], context), []);
+		deepStrictEqual(context.errors, [
+			{ warn: "invalid --ext value: '.'" },
+			{ warn: "invalid --ext value: '.~/.ssh/id_rsa'" },
+			{ warn: "invalid --ext value: '.ha!'" },
+			{ warn: "invalid --ext value: '.çhe'" },
+		]);
+	});
+});
+
 suite('validateHeaders', () => {
 	/** @type {(context: ValidationContext) => (input: string, expected: HttpHeaderRule) => void} */
 	const getCheckHeaders = (context) => {
