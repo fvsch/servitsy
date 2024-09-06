@@ -95,15 +95,127 @@ suite('validateCors', () => {
 		validateCors('NO', context);
 		validateCors('access-control-allow-origin:*', context);
 		deepStrictEqual(context.errors, [
-			{ warn: "invalid --cors value: 'yes'" },
-			{ warn: "invalid --cors value: 'NO'" },
-			{ warn: "invalid --cors value: 'access-control-allow-origin:*'" },
+			{ warn: `invalid --cors value: 'yes'` },
+			{ warn: `invalid --cors value: 'NO'` },
+			{ warn: `invalid --cors value: 'access-control-allow-origin:*'` },
 		]);
 	});
 });
 
+suite('validateDirFile', () => {
+	test('returns defaults', () => {
+		const context = validationContext('arg');
+		const defaults = ['index.html'];
+		deepStrictEqual(validateDirFile(undefined, context), defaults);
+		deepStrictEqual(validateDirFile([], context), defaults);
+		deepStrictEqual(context.errors, []);
+	});
+
+	test('resets default with empty values', () => {
+		const context = validationContext('arg');
+		deepStrictEqual(validateDirFile([''], context), []);
+		deepStrictEqual(validateDirFile(['', ''], context), []);
+		deepStrictEqual(context.errors, []);
+	});
+
+	test('splits comma-separated values (arg mode)', () => {
+		const context = validationContext('arg');
+		deepStrictEqual(validateDirFile(['a', 'b,c', 'd,e'], context), ['a', 'b', 'c', 'd', 'e']);
+		deepStrictEqual(validateDirFile(['index.html,index.htm,page.html,page.htm'], context), [
+			'index.html',
+			'index.htm',
+			'page.html',
+			'page.htm',
+		]);
+		deepStrictEqual(context.errors, []);
+	});
+
+	test('rejects invalid patterns', () => {
+		const context = validationContext('arg');
+		deepStrictEqual(validateDirFile(['/index.html', '/sub/page.html', 'C:\\what'], context), []);
+		deepStrictEqual(context.errors, [
+			{ warn: `invalid --dir-file value: '/index.html'` },
+			{ warn: `invalid --dir-file value: '/sub/page.html'` },
+			{ warn: `invalid --dir-file value: 'C:\\what'` },
+		]);
+	});
+});
+
+suite('validateDirList', () => {
+	test('default is true', () => {
+		const context = validationContext('arg');
+		strictEqual(validateDirList(undefined, context), true);
+		strictEqual(validateDirList('', context), true);
+		deepStrictEqual(context.errors, []);
+	});
+
+	test('parses boolean-like arg values', () => {
+		const context = validationContext('arg');
+		strictEqual(validateDirList('', context), true);
+		strictEqual(validateDirList('true', context), true);
+		strictEqual(validateDirList('1', context), true);
+		strictEqual(validateDirList('false', context), false);
+		strictEqual(validateDirList('0', context), false);
+		deepStrictEqual(context.errors, []);
+	});
+
+	test('rejects invalid strings', () => {
+		const context = validationContext('arg');
+		validateDirList('yes', context);
+		validateDirList('NEVERmind', context);
+		deepStrictEqual(context.errors, [
+			{ warn: `invalid --dir-list value: 'yes'` },
+			{ warn: `invalid --dir-list value: 'NEVERmind'` },
+		]);
+	});
+});
+
+suite('validateExclude', () => {
+	test('returns defaults', () => {
+		const context = validationContext('arg');
+		const defaults = ['.*', '!.well-known'];
+		deepStrictEqual(validateExclude(undefined, context), defaults);
+		deepStrictEqual(validateExclude([], context), defaults);
+		deepStrictEqual(context.errors, []);
+	});
+
+	test('resets default with empty values', () => {
+		const context = validationContext('arg');
+		deepStrictEqual(validateExclude([''], context), []);
+		deepStrictEqual(validateExclude(['', ''], context), []);
+		deepStrictEqual(context.errors, []);
+	});
+
+	test('accepts valid values', () => {
+		const context = validationContext('arg');
+		const values1 = ['f00', 'B 4 R', '__test__', 'L’Épopée post-médiévale'];
+		const values2 = ['*', '.*', '**', '*.*', '*.html'];
+		const values3 = ['!*', '!!', '!!!!', '!?*!?'];
+		deepStrictEqual(validateExclude(values1, context), values1);
+		deepStrictEqual(validateExclude(values2, context), values2);
+		deepStrictEqual(validateExclude(values3, context), values3);
+		deepStrictEqual(context.errors, []);
+	});
+
+	test('rejects invalid patterns', () => {
+		const context = validationContext('arg');
+		deepStrictEqual(validateExclude(['\\\\hello', '**/section/*', '*:*'], context), []);
+		deepStrictEqual(context.errors, [
+			{ warn: `ignoring invalid --exclude pattern: '\\\\hello'` },
+			{ warn: `ignoring invalid --exclude pattern: '**/section/*'` },
+			{ warn: `ignoring invalid --exclude pattern: '*:*'` },
+		]);
+	});
+
+	test('splits comma-separated values (arg mode)', () => {
+		const context = validationContext('arg');
+		deepStrictEqual(validateExclude(['*.md, _*, !_meta'], context), ['*.md', '_*', '!_meta']);
+		deepStrictEqual(context.errors, []);
+	});
+});
+
 suite('validateExt', () => {
-	test('returns a default value', () => {
+	test('returns defaults', () => {
 		const context = validationContext('arg');
 		deepStrictEqual(validateExt(undefined, context), ['.html']);
 		deepStrictEqual(validateExt([], context), ['.html']);
@@ -114,6 +226,12 @@ suite('validateExt', () => {
 		const context = validationContext('arg');
 		deepStrictEqual(validateExt([''], context), []);
 		deepStrictEqual(validateExt(['', '.foo', ''], context), ['.foo']);
+		deepStrictEqual(context.errors, []);
+	});
+
+	test('splits comma-separated values (arg mode)', () => {
+		const context = validationContext('arg');
+		deepStrictEqual(validateExt(['.a,.b,.c'], context), ['.a', '.b', '.c']);
 		deepStrictEqual(context.errors, []);
 	});
 
@@ -143,10 +261,10 @@ suite('validateExt', () => {
 		deepStrictEqual(validateExt(['~/.ssh/id_rsa'], context), []);
 		deepStrictEqual(validateExt(['.ha!', 'çhe'], context), []);
 		deepStrictEqual(context.errors, [
-			{ warn: "invalid --ext value: '.'" },
-			{ warn: "invalid --ext value: '.~/.ssh/id_rsa'" },
-			{ warn: "invalid --ext value: '.ha!'" },
-			{ warn: "invalid --ext value: '.çhe'" },
+			{ warn: `invalid --ext value: '.'` },
+			{ warn: `invalid --ext value: '.~/.ssh/id_rsa'` },
+			{ warn: `invalid --ext value: '.ha!'` },
+			{ warn: `invalid --ext value: '.çhe'` },
 		]);
 	});
 });
