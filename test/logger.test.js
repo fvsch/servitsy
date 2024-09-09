@@ -7,7 +7,7 @@ import { testPath } from './shared.js';
 
 suite('responseLogLine', () => {
 	/**
-	 * @param {Omit<import('../lib/server.js').ReqResInfo, 'root' | 'startedAt' | 'endedAt'>} info
+	 * @param {Omit<import('../lib/types.js').ReqResInfo, 'root' | 'startedAt' | 'endedAt' | 'kind'>} info
 	 * @param {string} expected
 	 */
 	const matchLogLine = (info, expected) => {
@@ -16,6 +16,7 @@ suite('responseLogLine', () => {
 			root: testPath(''),
 			startedAt: time,
 			endedAt: time,
+			kind: 'file',
 			...info,
 		});
 		const rawLine = stripStyle(line);
@@ -30,6 +31,7 @@ suite('responseLogLine', () => {
 				method: 'GET',
 				status: 200,
 				urlPath: '/',
+				filePath: testPath``,
 			},
 			'200 — GET /',
 		);
@@ -38,6 +40,7 @@ suite('responseLogLine', () => {
 				method: 'GET',
 				status: 404,
 				urlPath: '/favicon.ico',
+				filePath: null,
 			},
 			`404 — GET /favicon.ico`,
 		);
@@ -46,6 +49,7 @@ suite('responseLogLine', () => {
 				method: 'GET',
 				status: 403,
 				urlPath: '/.htaccess',
+				filePath: testPath`.htaccess`,
 			},
 			`403 — GET /.htaccess`,
 		);

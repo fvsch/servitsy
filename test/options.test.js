@@ -21,6 +21,7 @@ import { argify } from './shared.js';
 
 /**
 @typedef {import('../lib/types.js').HttpHeaderRule} HttpHeaderRule
+@typedef {import('../lib/types.js').PortsConfig} PortsConfig
 @typedef {import('../lib/options.js').ValidationContext} ValidationContext
 **/
 
@@ -33,6 +34,12 @@ function validationContext(mode) {
 
 const hostWildcardPattern = /^(::|0\.0\.0\.0)$/;
 const defaultPorts = [8080, 8081, 8082, 8083, 8084, 8085, 8086, 8087, 8088, 8089];
+/** @type {PortsConfig} */
+const defaultPortsConfig = {
+	initial: 8080,
+	count: 10,
+	countLimit: 100,
+};
 
 suite('serverOptions', () => {
 	test('default options (option mode)', () => {
@@ -410,18 +417,10 @@ suite('validateHost', () => {
 });
 
 suite('validatePorts', () => {
-	/** @type {import('../lib/constants.js').PortsConfig} */
-	const defaultConfig = {
-		initial: defaultPorts[0],
-		count: defaultPorts.length,
-	};
-	const argContext = (config = defaultConfig) => ({
+	/** @param {Partial<PortsConfig>} [config] */
+	const argContext = (config) => ({
 		...validationContext('arg'),
-		config,
-	});
-	const optContext = (config = defaultConfig) => ({
-		...validationContext('option'),
-		config,
+		config: { ...defaultPortsConfig, ...config },
 	});
 
 	const defaultError = (input = '') => ({
@@ -470,7 +469,10 @@ suite('validatePorts', () => {
 		strictEqual(defaultCount.length, 10);
 		strictEqual(`${defaultCount.at(0)}-${defaultCount.at(-1)}`, '3000-3009');
 
-		const customCount = validatePorts('1234+', argContext({ initial: 5000, count: 5 }));
+		const customCount = validatePorts(
+			'1234+',
+			argContext({ ...defaultPortsConfig, initial: 5000, count: 5 }),
+		);
 		deepStrictEqual(customCount, [1234, 1235, 1236, 1237, 1238]);
 	});
 

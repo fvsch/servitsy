@@ -9,14 +9,25 @@
 }
 
 :root {
+	--bg-base: hsl(0 0% 98%);
 	--text-base: hsl(0 0% 8%);
-	--text-secondary: hsl(0 0% 20%);
-	--text-low-contrast: hsl(0 0% 44%);
+	--text-secondary: hsl(0 0% 28%);
 	--text-highlight: hsl(330 60% 33%);
 	--text-link: hsl(210 85% 40%);
-	--bg-base: hsl(0 0% 98%);
+	--border-dim: hsl(0 0% 80%);
 	color: var(--text-base);
 	background-color: var(--bg-base);
+}
+
+@media (prefers-contrast: more) {
+	:root {
+		--bg-base: hsl(0 0% 98%);
+		--text-base: hsl(0 0% 4%);
+		--text-secondary: hsl(0 0% 16%);
+		--text-highlight: hsl(330, 70%, 28%);
+		--text-link: hsl(210, 86%, 30%);
+		--border-dim: hsl(0 0% 40%);
+	}
 }
 
 body {
@@ -24,20 +35,6 @@ body {
 	padding: 1.5rem;
 	line-height: 1.5;
 	font-family: system-ui, sans-serif;
-}
-
-/*
-tweaking font sizes to fractional sizes may defeat font hinting,
-which could look bad on low resolution screens
-*/
-@media (min-resolution: 1.5x) {
-	body,
-	code {
-		font-size-adjust: ex-height 0.525;
-	}
-	.files {
-		font-size: 0.96875rem;
-	}
 }
 
 @media (min-width: 40em) {
@@ -60,6 +57,7 @@ p {
 }
 
 code {
+	font-size-adjust: ex-height 0.525;
 	font-family: ui-monospace, monospace;
 	font-size: 100%;
 	color: var(--text-highlight);
@@ -71,12 +69,23 @@ code {
 	hyphenate-character: '';
 }
 
+code.filepath {
+	border: solid 1px #ccc;
+	padding: 2px 4px;
+	border-radius: 4px;
+	margin-inline: 2px;
+}
+
 .bc-current,
 .bc-link {
 	padding: 4px 2px;
 	border-radius: 4px;
 	color: inherit;
-	text-decoration: none;
+}
+
+.bc-link {
+	text-decoration: underline 1px #ccc;
+	text-underline-offset: 6px;
 }
 
 .bc-link:hover {
@@ -104,11 +113,21 @@ code {
 	font-variant-numeric: tabular-nums;
 }
 
+/*
+tweaking font sizes to fractional sizes may defeat font hinting,
+which could look bad on low resolution screens
+*/
+@media (min-resolution: 1.5x) {
+	.files {
+		font-size: 0.96875rem;
+	}
+}
+
 @media (min-width: 40em) {
 	.files {
-		max-width: max(30rem, var(--max-col-count) * 20rem + calc(var(--max-col-count) - 1) * 1rem);
+		max-width: max(30rem, var(--max-col-count) * 22.5rem + calc(var(--max-col-count) - 1) * 1rem);
 		column-count: var(--max-col-count);
-		column-width: 20rem;
+		column-width: 22.5rem;
 		column-gap: 1rem;
 	}
 }
@@ -125,8 +144,8 @@ code {
 	align-items: center;
 	min-height: 2.5rem;
 	border-radius: 4px;
-	padding: 0.25rem 0.75rem;
-	line-height: 1.25;
+	padding: 0.375rem 0.75rem;
+	line-height: 1.125rem;
 	color: var(--text-base);
 }
 
@@ -162,5 +181,10 @@ code {
 
 .files-name > span {
 	margin-inline-start: 0.2ch;
-	opacity: 0.75;
+}
+
+@media (prefers-contrast: no-preference) {
+	.files-name > span {
+		opacity: 0.6;
+	}
 }
