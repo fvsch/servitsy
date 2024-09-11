@@ -112,15 +112,35 @@ suite('FileResolver.#root', () => {
 	});
 });
 
-suite('FileResolver.urlToTargetPath', () => {
-	test('urlToTargetPath', () => {
-		const resolver = getResolver();
-		strictEqual(resolver.urlToTargetPath('/test'), root`test`);
-		strictEqual(resolver.urlToTargetPath('../test'), root`test`);
+suite('FileResolver.cleanUrlPath', () => {
+	const resolver = getResolver();
+	/** @type {(url: string, expected: string | null) => void} */
+	const check = (url = '', expected = '') => strictEqual(resolver.cleanUrlPath(url), expected);
 
-		// FIXME: broken
-		// strictEqual(resolver.urlToTargetPath('//test'), root('test'));
-		// strictEqual(resolver.urlToTargetPath('///test'), root('test'));
+	test('extracts URL pathname', () => {
+		check('https://example.com/hello/world', '/hello/world');
+		check('/hello/world?cool=test', '/hello/world');
+		check('/hello/world#right', '/hello/world');
+	});
+
+	test('keeps percent encoding', () => {
+		check('/Super%3F%20%C3%89patant%21/', '/Super%3F%20%C3%89patant%21/');
+		check('/%E3%82%88%E3%81%86%E3%81%93%E3%81%9D', '/%E3%82%88%E3%81%86%E3%81%93%E3%81%9D');
+	});
+
+	test('rejects URLs with forbidden characters in path', () => {
+		// cannot run test resolver.cleanUrlPath with literal .. or backslashes
+		// because those get resolved by new URL
+		check('/_%2F_%2F_', null);
+		check('/_%5C_%5C_', null);
+		check('/_%2f_%5c_', null);
+		check('/_%2E%2E_', null);
+
+		// so let's test the underlying function
+		strictEqual(resolver.validateUrlPath('/\\foo/'), false);
+		strictEqual(resolver.validateUrlPath('/a\\.\\b'), false);
+		strictEqual(resolver.validateUrlPath('/../bar'), false);
+		strictEqual(resolver.validateUrlPath('/%2E%2E/bar'), false);
 	});
 });
 
@@ -282,9 +302,10 @@ suite('FileResolver.find', () => {
 		const resolver = getResolver({ dirList: true }, find_files);
 
 		for (const urlPath of ['/section', '/section/']) {
-			deepStrictEqual(await resolver.find(urlPath), {
+			const result = await resolver.find(urlPath);
+			deepStrictEqual(result, {
 				urlPath,
-				filePath: root`section`,
+				filePath: root(urlPath),
 				kind: 'dir',
 				status: 200,
 			});
@@ -347,6 +368,7 @@ suite('FileResolver.find', () => {
 			filePath: root`index.html`,
 			kind: 'file',
 		});
+
 		for (const urlPath of ['/section', '/section/']) {
 			deepStrictEqual(await resolver.find(urlPath), {
 				urlPath,

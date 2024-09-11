@@ -1,15 +1,16 @@
 import { deepStrictEqual, strictEqual, throws } from 'node:assert';
-import { sep } from 'node:path';
+import { sep as dirSep } from 'node:path';
 import { suite, test } from 'node:test';
 
 import {
 	clamp,
 	contentType,
 	escapeHtml,
-	fwdPath,
+	fwdSlash,
 	getDirname,
 	isPrivateIPv4,
 	intRange,
+	trimSlash,
 } from '../lib/utils.js';
 
 suite('clamp', () => {
@@ -93,33 +94,33 @@ suite('escapeHtml', () => {
 	});
 });
 
-suite('fwdPath', () => {
+suite('fwdSlash', () => {
 	test('leaves conforming paths untouched', () => {
-		const paths = ['hello.jpg', './world', '/Users/bobesponja/Downloads/invoice.pdf', '/etc/hosts'];
+		const paths = ['hello.jpg', './hello', '/Users/bobesponja/Downloads/invoice.pdf', '/etc/hosts'];
 		for (const item of paths) {
-			strictEqual(fwdPath(item), item);
+			strictEqual(fwdSlash(item), item);
 		}
 	});
 
 	test('replaces backwards slashes', () => {
-		strictEqual(fwdPath('\\hello\\world'), '/hello/world');
-		strictEqual(fwdPath('/mixed\\slashes/around\\here'), '/mixed/slashes/around/here');
+		strictEqual(fwdSlash('\\hello\\world'), '/hello/world');
+		strictEqual(fwdSlash('/mixed\\slashes/around\\here'), '/mixed/slashes/around/here');
 		strictEqual(
-			fwdPath('C:\\Users\\BobEsponja\\Application Data'),
+			fwdSlash('C:\\Users\\BobEsponja\\Application Data'),
 			'C:/Users/BobEsponja/Application Data',
 		);
 	});
 
 	test('deduplicates slashes', () => {
-		strictEqual(fwdPath('//hello'), '/hello');
-		strictEqual(fwdPath('////////'), '/');
-		strictEqual(fwdPath('a//b\\\\//\\c////d'), 'a/b/c/d');
+		strictEqual(fwdSlash('//hello'), '/hello');
+		strictEqual(fwdSlash('////////'), '/');
+		strictEqual(fwdSlash('a//b\\\\//\\c////d'), 'a/b/c/d');
 	});
 
-	test('removes trailing slash', () => {
-		strictEqual(fwdPath('./hello/'), './hello');
-		strictEqual(fwdPath('ok/'), 'ok');
-		strictEqual(fwdPath('/'), '/');
+	test('keeps trailing slashes', () => {
+		strictEqual(fwdSlash('/hello/'), '/hello/');
+		strictEqual(fwdSlash('ok/'), 'ok/');
+		strictEqual(fwdSlash('/'), '/');
 	});
 });
 
@@ -155,7 +156,7 @@ suite('getDirname', () => {
 	test('returns the __dirname for a ESM module', () => {
 		strictEqual(
 			getDirname(import.meta.url)
-				.split(sep)
+				.split(dirSep)
 				.filter((s) => s.length > 0)
 				.at(-1),
 			'test',
@@ -189,5 +190,26 @@ suite('intRange', () => {
 		strictEqual(limit2.length, 0);
 
 		throws(() => intRange(1, 100, -50), /Invalid limit: -50/);
+	});
+});
+
+suite('trimSlash', () => {
+	test('trims start and end slashes by default', () => {
+		strictEqual(trimSlash('/hello/'), 'hello');
+		strictEqual(trimSlash('\\hello/'), 'hello');
+		strictEqual(trimSlash('/hello/world/'), 'hello/world');
+		strictEqual(trimSlash('\\hello\\world\\'), 'hello\\world');
+	});
+
+	test('only trims one slash per edge', () => {
+		strictEqual(trimSlash('///test///'), '//test//');
+		strictEqual(trimSlash('\\\\test\\\\'), '\\test\\');
+	});
+
+	test('edge options default to false when not provided', () => {
+		strictEqual(trimSlash('/test/', {}), '/test/');
+		strictEqual(trimSlash('/test/', { start: true }), 'test/');
+		strictEqual(trimSlash('/test/', { end: true }), '/test');
+		strictEqual(trimSlash('/test/', { start: true, end: true }), 'test');
 	});
 });

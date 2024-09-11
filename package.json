@@ -36,6 +36,7 @@
 		"typescript": "~5.5.4"
 	},
 	"prettier": {
+		"endOfLine": "lf",
 		"printWidth": 100,
 		"singleQuote": true,
 		"useTabs": true
