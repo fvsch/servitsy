@@ -202,6 +202,10 @@ suite('trimSlash', () => {
 	});
 
 	test('only trims one slash per edge', () => {
+		strictEqual(trimSlash('/'), '');
+		strictEqual(trimSlash('//'), '');
+		strictEqual(trimSlash('///'), '/');
+		strictEqual(trimSlash('////'), '//');
 		strictEqual(trimSlash('///test///'), '//test//');
 		strictEqual(trimSlash('\\\\test\\\\'), '\\test\\');
 	});
