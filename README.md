@@ -1,8 +1,8 @@
-# (itsy bitsy) servitsy
+# servitsy
 
-Local web server for static files, coming in a small package.
+Local HTTP server for static files, coming in a small package.
 
-- Small: zero dependencies, 22 kilobytes gzipped.
+- Small: zero dependencies, 24 kilobytes gzipped.
 - What: for your local testing needs.
 - How: with decent defaults, and no cool features.
 
@@ -37,7 +37,7 @@ There are good established alternatives to this package. Here is a brief and sub
 
 | Package                 | Size on disk† | Dependencies | Highlights                 |
 | ----------------------- | ------------- | ------------ | -------------------------- |
-| servitsy (v0.1.0)       | 104 kB        | 0            | Tiny                       |
+| servitsy (v0.1.2)       | 112 kB        | 0            | Tiny                       |
 | [servor] (v4.0.2)       | 144 kB        | 0            | Tiny, some cool features   |
 | [sirv-cli] (v2.0.2)     | 392 kB        | 12           | Small, good options        |
 | [serve] (v14.2.3)       | 7.6 MB        | 89           | Good defaults, easy to use |
