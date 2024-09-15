@@ -4,7 +4,6 @@ import { suite, test } from 'node:test';
 
 import {
 	clamp,
-	contentType,
 	escapeHtml,
 	fwdSlash,
 	getDirname,
@@ -34,40 +33,6 @@ suite('clamp', () => {
 		strictEqual(clamp(5, 10, 0), 0);
 		strictEqual(clamp(50, 10, 0), 0);
 		strictEqual(clamp(0, 10, -10), -10);
-	});
-});
-
-suite('contentType', () => {
-	const charset = 'UTF-8';
-	const typeOnly = (t = '') => contentType(t, null);
-
-	test('defaults to binary content type', () => {
-		strictEqual(typeOnly(''), 'application/octet-stream');
-	});
-
-	test('identifies text types from file name', () => {
-		strictEqual(typeOnly('file.txt'), 'text/plain');
-		strictEqual(typeOnly('README.MD'), 'text/markdown');
-		strictEqual(typeOnly('component.js'), 'text/javascript');
-		strictEqual(typeOnly('DATA.JSON'), 'application/json');
-		strictEqual(typeOnly('styles.css'), 'text/css');
-		strictEqual(typeOnly('.bashrc'), 'text/plain');
-		strictEqual(typeOnly('.gitkeep'), 'text/plain');
-		strictEqual(typeOnly('.npmignore'), 'text/plain');
-	});
-
-	test('identifies bin types from file name', () => {
-		strictEqual(typeOnly('image.png'), 'image/png');
-		strictEqual(typeOnly('Photos/DSC_4567.JPEG'), 'image/jpg');
-		strictEqual(typeOnly('myfont.woff2'), 'font/woff2');
-	});
-
-	test('adds optional charset for text types only', () => {
-		strictEqual(contentType('file1.txt'), 'text/plain; charset=UTF-8');
-		strictEqual(contentType('file2.txt', 'UTF8'), 'text/plain; charset=UTF8');
-		strictEqual(contentType('file3.txt', 'ISO-8859-1'), 'text/plain; charset=ISO-8859-1');
-		strictEqual(contentType('lib.so', charset), 'application/octet-stream');
-		strictEqual(contentType('image.png', charset), 'image/png');
 	});
 });
 

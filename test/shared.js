@@ -6,6 +6,7 @@ import { FileResolver } from '../lib/resolver.js';
 import { trimSlash } from '../lib/utils.js';
 
 /**
+@typedef {import('../lib/types.js').DirIndexItem} DirIndexItem
 @typedef {import('../lib/types.js').FSEntryKind} FSEntryKind
 @typedef {import('../lib/types.js').FSUtils} FSUtils
 @typedef {import('../lib/types.js').ResolveOptions} ResolveOptions
@@ -29,6 +30,23 @@ export function testPath(strings = '', ...values) {
 	// always use forward slashes in paths used by tests
 	const filePath = posixPath.join('/tmp/servitsy-test', subpath);
 	return trimSlash(filePath, { end: true });
+}
+
+/**
+ * @type {(localPath: string) => {filePath: string; localPath: string}}
+ */
+export function testPaths(localPath) {
+	return { filePath: testPath(localPath), localPath };
+}
+
+/**
+ * @type {(kind: FSEntryKind, localPath: string, target?: DirIndexItem) => DirIndexItem}
+ */
+export function indexItem(kind, localPath, target) {
+	/** @type {DirIndexItem} */
+	const item = { filePath: testPath(localPath), localPath, kind };
+	if (target) item.target = target;
+	return item;
 }
 
 /**

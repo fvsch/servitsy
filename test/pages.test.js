@@ -3,7 +3,7 @@ import { deepStrictEqual, doesNotReject, ok, strictEqual } from 'node:assert';
 import { suite, test } from 'node:test';
 
 import { dirListPage, errorPage } from '../lib/pages.js';
-import { testPath as root } from './shared.js';
+import { indexItem, testPath as root, testPaths } from './shared.js';
 
 /**
  * @param {Document} doc
@@ -38,13 +38,16 @@ function checkTemplate(doc, content) {
 suite('dirListPage', () => {
 	const serverOptions = { root: root``, ext: ['.html'] };
 
-	/** @type {(data: Parameters<typeof dirListPage>[0]) => Promise<Document>} */
+	/**
+	 * @type {(data: Parameters<typeof dirListPage>[0]) => Promise<Document>} */
 	async function dirListDoc(data) {
 		const html = await dirListPage(data, serverOptions);
 		return parseHTML(html).document;
 	}
 
-	/** @type {(doc: Document, shouldExist: boolean) => void} */
+	/**
+	 * @type {(doc: Document, shouldExist: boolean) => void}
+	 */
 	function checkParentLink(doc, shouldExist) {
 		const link = doc.querySelector('ul > li:first-child a');
 		if (shouldExist) {
@@ -58,14 +61,33 @@ suite('dirListPage', () => {
 	}
 
 	test('never gives you up', () => {
-		doesNotReject(dirListPage({ dirPath: '', urlPath: '', items: [] }, serverOptions));
-		doesNotReject(dirListPage({ dirPath: root``, urlPath: '/', items: [] }, serverOptions));
+		doesNotReject(
+			dirListPage(
+				{
+					filePath: '',
+					localPath: '',
+					items: [],
+				},
+				serverOptions,
+			),
+		);
+		doesNotReject(
+			dirListPage(
+				{
+					...testPaths(''),
+					items: [],
+				},
+				serverOptions,
+			),
+		);
 	});
 
 	test('empty list page (root)', async () => {
-		const doc = await dirListDoc({ dirPath: root``, urlPath: '/', items: [] });
+		const doc = await dirListDoc({
+			...testPaths(''),
+			items: [],
+		});
 		const list = doc.querySelector('ul');
-
 		checkTemplate(doc, { base: '/', title: 'Index of servitsy-test' });
 		strictEqual(list?.nodeName, 'UL');
 		strictEqual(list?.childElementCount, 0);
@@ -73,9 +95,9 @@ suite('dirListPage', () => {
 	});
 
 	test('empty list page (subfolder)', async () => {
+		const localPath = 'cool/folder';
 		const doc = await dirListDoc({
-			dirPath: root`cool/folder`,
-			urlPath: '/cool/folder/',
+			...testPaths(localPath),
 			items: [],
 		});
 		const list = doc.querySelector('ul');
@@ -88,23 +110,14 @@ suite('dirListPage', () => {
 
 	test('list page with items', async () => {
 		const doc = await dirListDoc({
-			dirPath: root`section`,
-			urlPath: '/section',
+			...testPaths('section'),
 			items: [
-				{ filePath: root`section/  I have spaces  `, kind: 'file' },
-				{ filePath: root`section/.gitignore`, kind: null },
-				{
-					filePath: root`section/CHANGELOG`,
-					kind: 'link',
-					target: { filePath: root`section/docs/changelog.md`, kind: 'file' },
-				},
-				{ filePath: root`section/Library`, kind: 'dir' },
-				{
-					filePath: root`section/public`,
-					kind: 'link',
-					target: { filePath: root`section/.vitepress/build`, kind: 'dir' },
-				},
-				{ filePath: root`section/README.md`, kind: 'file' },
+				indexItem('file', 'section/  I have spaces  '),
+				indexItem(null, 'section/.gitignore'),
+				indexItem('link', 'section/CHANGELOG', indexItem('file', 'section/docs/changelog.md')),
+				indexItem('dir', 'section/Library'),
+				indexItem('link', 'section/public', indexItem('dir', 'section/.vitepress/build')),
+				indexItem('file', 'section/README.md'),
 			],
 		});
 

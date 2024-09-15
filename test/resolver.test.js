@@ -2,7 +2,13 @@ import { deepStrictEqual, strictEqual, throws } from 'node:assert';
 import { suite, test } from 'node:test';
 
 import { FileResolver, PathMatcher } from '../lib/resolver.js';
-import { defaultResolveOptions, getFsUtils, getResolver, testPath as root } from './shared.js';
+import {
+	defaultResolveOptions,
+	getFsUtils,
+	getResolver,
+	indexItem,
+	testPath as root,
+} from './shared.js';
 
 suite('PathMatcher', () => {
 	test('does not match strings when no patterns are provided', () => {
@@ -226,7 +232,7 @@ suite('FileResolver.locateFile', () => {
 suite('FileResolver.#options', () => {
 	test('options: exclude', () => {
 		const resolver = getResolver({ exclude: ['.*', '*.md'] });
-		const allowed = (p = '') => resolver.allowedPath(root(p));
+		const allowed = (p = '') => resolver.allowedPath(p);
 
 		// should be allowed
 		strictEqual(allowed('robots.txt'), true);
@@ -241,7 +247,7 @@ suite('FileResolver.#options', () => {
 
 	test('options: exclude + include (custom)', () => {
 		const resolver = getResolver({ exclude: ['*.html', '!index.*'] });
-		const allowed = (p = '') => resolver.allowedPath(root(p));
+		const allowed = (p = '') => resolver.allowedPath(p);
 
 		strictEqual(allowed('page.html'), false);
 		strictEqual(allowed('some/dir/hello.html'), false);
@@ -251,7 +257,7 @@ suite('FileResolver.#options', () => {
 
 	test('options: exclude + include (defaults)', async () => {
 		const resolver = getResolver(defaultResolveOptions);
-		const allowed = (p = '') => resolver.allowedPath(root(p));
+		const allowed = (p = '') => resolver.allowedPath(p);
 
 		// paths that should be allowed with defaults
 		strictEqual(allowed('index.html'), true);
@@ -287,13 +293,12 @@ suite('FileResolver.find', () => {
 	test('find file with exact path', async () => {
 		const resolver = getResolver({}, find_files);
 
-		for (const [file, readable] of Object.entries(find_files)) {
-			const url = `/${file}`;
+		for (const [localPath, readable] of Object.entries(find_files)) {
+			const url = `/${localPath}`;
 			deepStrictEqual(await resolver.find(url), {
 				urlPath: url,
 				status: readable ? 200 : 403,
-				filePath: root(file),
-				kind: 'file',
+				file: indexItem('file', localPath),
 			});
 		}
 	});
@@ -304,10 +309,9 @@ suite('FileResolver.find', () => {
 		for (const urlPath of ['/section', '/section/']) {
 			const result = await resolver.find(urlPath);
 			deepStrictEqual(result, {
-				urlPath,
-				filePath: root(urlPath),
-				kind: 'dir',
 				status: 200,
+				urlPath,
+				file: indexItem('dir', 'section'),
 			});
 		}
 	});
@@ -319,8 +323,7 @@ suite('FileResolver.find', () => {
 			deepStrictEqual(await resolver.find(urlPath), {
 				urlPath,
 				status: 404,
-				filePath: null,
-				kind: null,
+				file: null,
 			});
 		}
 	});
@@ -328,14 +331,12 @@ suite('FileResolver.find', () => {
 	test('files with insufficient permissions are blocked', async () => {
 		const resolver = getResolver({}, find_files);
 
-		for (const file of ['secrets.json', 'section/forbidden.json']) {
-			const urlPath = `/${file}`;
-			const filePath = root(file);
+		for (const localPath of ['secrets.json', 'section/forbidden.json']) {
+			const urlPath = `/${localPath}`;
 			deepStrictEqual(await resolver.find(urlPath), {
 				urlPath,
 				status: 403,
-				filePath,
-				kind: 'file',
+				file: indexItem('file', localPath),
 			});
 		}
 	});
@@ -343,20 +344,20 @@ suite('FileResolver.find', () => {
 	test('default options block dotfiles', async () => {
 		const resolver = getResolver(defaultResolveOptions, find_files);
 		const find = (url = '/') =>
-			resolver.find(url).then((value) => `${value.status} ${value.filePath}`);
+			resolver.find(url).then((value) => `${value.status} ${value.file?.localPath ?? null}`);
 
 		// non-existing files are always a 404
 		strictEqual(await find('/doesnt-exist'), '404 null');
 		strictEqual(await find('/.doesnt-exist'), '404 null');
 
 		// existing dotfiles are excluded by default pattern
-		strictEqual(await find('/.env'), '404 ' + root`.env`);
-		strictEqual(await find('/.htpasswd'), '404 ' + root`.htpasswd`);
-		strictEqual(await find('/section/.gitignore'), '404 ' + root`section/.gitignore`);
+		strictEqual(await find('/.env'), '404 .env');
+		strictEqual(await find('/.htpasswd'), '404 .htpasswd');
+		strictEqual(await find('/section/.gitignore'), '404 section/.gitignore');
 
 		// Except the .well-known folder, allowed by default
-		strictEqual(await find('/.well-known'), '200 ' + root`.well-known`);
-		strictEqual(await find('/.well-known/security.txt'), '200 ' + root`.well-known/security.txt`);
+		strictEqual(await find('/.well-known'), '200 .well-known');
+		strictEqual(await find('/.well-known/security.txt'), '200 .well-known/security.txt');
 	});
 
 	test('default options resolve index.html', async () => {
@@ -365,16 +366,14 @@ suite('FileResolver.find', () => {
 		deepStrictEqual(await resolver.find('/'), {
 			urlPath: '/',
 			status: 200,
-			filePath: root`index.html`,
-			kind: 'file',
+			file: indexItem('file', 'index.html'),
 		});
 
 		for (const urlPath of ['/section', '/section/']) {
 			deepStrictEqual(await resolver.find(urlPath), {
 				urlPath,
 				status: 200,
-				filePath: root`section/index.html`,
-				kind: 'file',
+				file: indexItem('file', 'section/index.html'),
 			});
 		}
 	});
@@ -385,23 +384,20 @@ suite('FileResolver.find', () => {
 		// adds .html
 		for (const fileLike of ['index', 'page1', 'section/index']) {
 			const urlPath = `/${fileLike}`;
-			const filePath = root`${fileLike}.html`;
 			deepStrictEqual(await resolver.find(urlPath), {
 				urlPath,
 				status: 200,
-				filePath,
-				kind: 'file',
+				file: indexItem('file', `${fileLike}.html`),
 			});
 		}
 
 		// doesn't add other extensions
-		for (const fileLike of ['page2', 'section/page']) {
-			const urlPath = `/${fileLike}`;
+		for (const localPath of ['about', 'page2', 'section/page']) {
+			const urlPath = `/${localPath}`;
 			deepStrictEqual(await resolver.find(urlPath), {
 				urlPath,
 				status: 404,
-				filePath: null,
-				kind: null,
+				file: null,
 			});
 		}
 	});
@@ -430,17 +426,17 @@ suite('FileResolver.index', () => {
 	test('indexes directories when options.dirList is true', async () => {
 		const resolver = getResolver({ ...defaultResolveOptions }, index_files);
 		deepStrictEqual(await resolver.index(root()), [
-			{ filePath: root`.well-known`, kind: 'dir' },
-			{ filePath: root`about-us.html`, kind: 'file' },
-			{ filePath: root`index.html`, kind: 'file' },
-			{ filePath: root`products.html`, kind: 'file' },
-			{ filePath: root`section`, kind: 'dir' },
+			indexItem('dir', '.well-known'),
+			indexItem('file', 'about-us.html'),
+			indexItem('file', 'index.html'),
+			indexItem('file', 'products.html'),
+			indexItem('dir', 'section'),
 		]);
 
 		deepStrictEqual(await resolver.index(root`section`), [
-			{ filePath: root`section/forbidden.json`, kind: 'file' },
-			{ filePath: root`section/index.html`, kind: 'file' },
-			{ filePath: root`section/page.md`, kind: 'file' },
+			indexItem('file', 'section/forbidden.json'),
+			indexItem('file', 'section/index.html'),
+			indexItem('file', 'section/page.md'),
 		]);
 	});
 });
