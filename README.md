@@ -2,11 +2,11 @@
 
 Local HTTP server for static files, coming in a small package.
 
-- Small: zero dependencies, 24 kilobytes gzipped.
-- What: for your local testing needs.
-- How: with decent defaults, and no cool features.
+- **Small:** no dependencies, 25 kilobytes gzipped.
+- **Static:** serves static files and directory listings.
+- **Local:** designed for single-user local workflows, not for production.
 
-## Quick start
+## Usage
 
 ```sh
 npx servitsy [directory] [options]
@@ -17,44 +17,21 @@ By default, `servitsy` will:
 - serve the current directory at `http://localhost:8080` (listening on hostname `0.0.0.0`);
 - try the next port numbers if `8080` is not available;
 - serve `index.html` files for folders, and `.html` files when the extension was omitted in the URL;
-- show directory contents (for folders without an index file).
+- list directory contents (for folders without an index file).
 
-See `npx servitsy --help` — or [the Options section](#options) — if you want to configure this behavior.
+You can configure this behavior [with options](#options). Here are a couple examples:
 
-## When you shouldn’t use this package
+```sh
+# serve current folder on port 3000, with CORS headers
+npx servitsy -p 3000 --cors
 
-### ⛔️ In production
-
-There are safer and faster tools to serve a folder of static HTML to the public. Apache, Nginx, fastify-static, etc.
-
-### 🤔 For web app development…
-
-… if you want nice dev features like live-reload, transpilation, bundling, etc. — use something like [Vite](https://vitejs.dev/) instead.
-
-### 🌈 If you love another
-
-There are good established alternatives to this package. Here is a brief and subjective comparison of a few packages I like:
-
-| Package                 | Size on disk† | Dependencies | Highlights                 |
-| ----------------------- | ------------- | ------------ | -------------------------- |
-| servitsy (v0.1.2)       | 112 kB        | 0            | Tiny                       |
-| [servor] (v4.0.2)       | 144 kB        | 0            | Tiny, some cool features   |
-| [sirv-cli] (v2.0.2)     | 392 kB        | 12           | Small, good options        |
-| [serve] (v14.2.3)       | 7.6 MB        | 89           | Good defaults, easy to use |
-| [http-server] (v14.1.1) | 8.9 MB        | 45           | Good defaults, featureful  |
-
-The philosophy of `servitsy` is to have few opinions and bells and whistles (like `sirv-cli`), and to try to offer that in a zero-dependency package (like `servor`).
-
-If size and dependency count is not a concern and you want something stable and battle-tested, I recommend `serve` and `http-server`.
-
-† Size on disk is the uncompressed size of the package and its dependencies (as reported by `/usr/bin/du` on macOS with an APFS filesystem; exact size may depend on the OS and/or filesystem).
-
-[http-server]: https://www.npmjs.com/package/serve
-[serve]: https://www.npmjs.com/package/serve
-[servor]: https://www.npmjs.com/package/servor
-[sirv-cli]: https://www.npmjs.com/package/sirv-cli
+# serve 'dist' folder and disable directory listings
+npx servitsy dist --dir-list false
+```
 
 ## Options
+
+See `npx servitsy --help` for an overview of available options.
 
 ### `cors`
 
@@ -179,3 +156,30 @@ servitsy --port 8080-8099
 - `<number>-<number>`: a range of port numbers to try (from first to last).
 
 Defaults to `8080+`.
+
+## Alternatives
+
+> __🚨 Reminder: `servitsy` is not designed for production.__ There are safer and faster tools to serve a folder of static HTML to the public. See Apache, Nginx, [@fastify/static], etc.
+
+For local testing, here are a few established alternatives you may prefer, with their respective size:
+
+| Package       | Version | Dependencies | Size on disk† |
+| ------------- | ------- | ------------ | ------------- |
+| [servitsy]    | 0.1.3   | 0            | 124 kB        |
+| [servor]      | 4.0.2   | 0            | 144 kB        |
+| [sirv-cli]    | 2.0.2   | 12           | 392 kB        |
+| [serve]       | 14.2.3  | 89           | 7.6 MB        |
+| [http-server] | 14.1.1  | 45           | 8.9 MB        |
+
+If size and dependency count is not a concern and you want something stable and battle-tested, I recommend [serve] and [http-server].
+
+Otherwise, [servor], [sirv-cli] or [servitsy] might work for you.
+
+_† Size on disk is the uncompressed size of the package and its dependencies (as reported by `du` on macOS; exact size may depend on the OS and/or filesystem)._
+
+[@fastify/static]: https://www.npmjs.com/package/@fastify/static
+[http-server]: https://www.npmjs.com/package/http-server
+[serve]: https://www.npmjs.com/package/serve
+[servitsy]: https://www.npmjs.com/package/servitsy
+[servor]: https://www.npmjs.com/package/servor
+[sirv-cli]: https://www.npmjs.com/package/sirv-cli

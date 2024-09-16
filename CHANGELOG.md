@@ -1,5 +1,11 @@
 # servitsy changelog
 
+## v0.1.3 (2024-09-16)
+
+- add MIT license
+- feat: get content-type from file bytes (#18)
+- fix: use urlPath in dir listing page (#19)
+
 ## v0.1.2 (2024-09-12)
 
 - feat: list symlinks in folders or files depending on target
