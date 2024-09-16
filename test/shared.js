@@ -9,13 +9,14 @@ import { trimSlash } from '../lib/utils.js';
 @typedef {import('../lib/types.js').DirIndexItem} DirIndexItem
 @typedef {import('../lib/types.js').FSEntryKind} FSEntryKind
 @typedef {import('../lib/types.js').FSUtils} FSUtils
+@typedef {import('../lib/types.js').ResolvedFile} ResolvedFile
 @typedef {import('../lib/types.js').ResolveOptions} ResolveOptions
 @typedef {{path: string; kind: FSEntryKind, readable: boolean; link?: string}} VFile
 **/
 
 /** @type {ResolveOptions} */
 export const defaultResolveOptions = {
-	root: testPath(),
+	root: root(),
 	dirFile: [...DIR_FILE_DEFAULT],
 	dirList: true,
 	ext: [...EXTENSIONS_DEFAULT],
@@ -25,7 +26,7 @@ export const defaultResolveOptions = {
 /**
  * @type {(s?: string | TemplateStringsArray, ...v: string[]) => string}
  */
-export function testPath(strings = '', ...values) {
+export function root(strings = '', ...values) {
 	const subpath = String.raw({ raw: strings }, ...values);
 	// always use forward slashes in paths used by tests
 	const filePath = posixPath.join('/tmp/servitsy-test', subpath);
@@ -33,19 +34,19 @@ export function testPath(strings = '', ...values) {
 }
 
 /**
- * @type {(localPath: string) => {filePath: string; localPath: string}}
+ * @type {(localPath: string, kind?: FSEntryKind) => ResolvedFile}
  */
-export function testPaths(localPath) {
-	return { filePath: testPath(localPath), localPath };
+export function file(localPath, kind = 'file') {
+	return { filePath: root(localPath), localPath, kind };
 }
 
 /**
- * @type {(kind: FSEntryKind, localPath: string, target?: DirIndexItem) => DirIndexItem}
+ * @type {(localPath: string, target: ResolvedFile) => DirIndexItem}
  */
-export function indexItem(kind, localPath, target) {
+export function link(localPath, target) {
 	/** @type {DirIndexItem} */
-	const item = { filePath: testPath(localPath), localPath, kind };
-	if (target) item.target = target;
+	const item = file(localPath, 'link');
+	item.target = target;
 	return item;
 }
 
@@ -69,7 +70,7 @@ class TestFS {
 	 */
 	constructor(filePaths) {
 		// add root dir
-		this.files.set(testPath(), { path: testPath(), kind: 'dir', readable: true });
+		this.files.set(root(), { path: root(), kind: 'dir', readable: true });
 
 		// add dirs and files
 		for (const [key, value] of Object.entries(filePaths)) {
@@ -84,7 +85,7 @@ class TestFS {
 
 			for (const path of paths) {
 				const isDir = relPath.startsWith(`${path}/`);
-				const fullPath = testPath(path);
+				const fullPath = root(path);
 				if (this.has(fullPath)) continue;
 				this.set(fullPath, {
 					path: fullPath,
@@ -166,7 +167,7 @@ export function getFsUtils(filePaths) {
 export function getResolver(options = {}, files = {}) {
 	return new FileResolver(
 		{
-			root: options.root ?? testPath(),
+			root: options.root ?? root(),
 			...options,
 		},
 		getFsUtils(files),

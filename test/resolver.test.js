@@ -2,13 +2,7 @@ import { deepStrictEqual, strictEqual, throws } from 'node:assert';
 import { suite, test } from 'node:test';
 
 import { FileResolver, PathMatcher } from '../lib/resolver.js';
-import {
-	defaultResolveOptions,
-	getFsUtils,
-	getResolver,
-	indexItem,
-	testPath as root,
-} from './shared.js';
+import { defaultResolveOptions, file, getFsUtils, getResolver, root } from './shared.js';
 
 suite('PathMatcher', () => {
 	test('does not match strings when no patterns are provided', () => {
@@ -298,7 +292,7 @@ suite('FileResolver.find', () => {
 			deepStrictEqual(await resolver.find(url), {
 				urlPath: url,
 				status: readable ? 200 : 403,
-				file: indexItem('file', localPath),
+				file: file(localPath),
 			});
 		}
 	});
@@ -311,7 +305,7 @@ suite('FileResolver.find', () => {
 			deepStrictEqual(result, {
 				status: 200,
 				urlPath,
-				file: indexItem('dir', 'section'),
+				file: file('section', 'dir'),
 			});
 		}
 	});
@@ -336,7 +330,7 @@ suite('FileResolver.find', () => {
 			deepStrictEqual(await resolver.find(urlPath), {
 				urlPath,
 				status: 403,
-				file: indexItem('file', localPath),
+				file: file(localPath),
 			});
 		}
 	});
@@ -366,14 +360,14 @@ suite('FileResolver.find', () => {
 		deepStrictEqual(await resolver.find('/'), {
 			urlPath: '/',
 			status: 200,
-			file: indexItem('file', 'index.html'),
+			file: file('index.html'),
 		});
 
 		for (const urlPath of ['/section', '/section/']) {
 			deepStrictEqual(await resolver.find(urlPath), {
 				urlPath,
 				status: 200,
-				file: indexItem('file', 'section/index.html'),
+				file: file('section/index.html'),
 			});
 		}
 	});
@@ -387,7 +381,7 @@ suite('FileResolver.find', () => {
 			deepStrictEqual(await resolver.find(urlPath), {
 				urlPath,
 				status: 200,
-				file: indexItem('file', `${fileLike}.html`),
+				file: file(`${fileLike}.html`),
 			});
 		}
 
@@ -426,17 +420,17 @@ suite('FileResolver.index', () => {
 	test('indexes directories when options.dirList is true', async () => {
 		const resolver = getResolver({ ...defaultResolveOptions }, index_files);
 		deepStrictEqual(await resolver.index(root()), [
-			indexItem('dir', '.well-known'),
-			indexItem('file', 'about-us.html'),
-			indexItem('file', 'index.html'),
-			indexItem('file', 'products.html'),
-			indexItem('dir', 'section'),
+			file('.well-known', 'dir'),
+			file('about-us.html'),
+			file('index.html'),
+			file('products.html'),
+			file('section', 'dir'),
 		]);
 
 		deepStrictEqual(await resolver.index(root`section`), [
-			indexItem('file', 'section/forbidden.json'),
-			indexItem('file', 'section/index.html'),
-			indexItem('file', 'section/page.md'),
+			file('section/forbidden.json'),
+			file('section/index.html'),
+			file('section/page.md'),
 		]);
 	});
 });
