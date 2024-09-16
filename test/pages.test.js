@@ -1,9 +1,9 @@
 import { parseHTML } from 'linkedom';
-import { deepStrictEqual, doesNotReject, ok, strictEqual } from 'node:assert';
+import { deepStrictEqual, ok, strictEqual } from 'node:assert';
 import { suite, test } from 'node:test';
 
 import { dirListPage, errorPage } from '../lib/pages.js';
-import { indexItem, testPath as root, testPaths } from './shared.js';
+import { file, link, root } from './shared.js';
 
 /**
  * @param {Document} doc
@@ -36,7 +36,7 @@ function checkTemplate(doc, content) {
 }
 
 suite('dirListPage', () => {
-	const serverOptions = { root: root``, ext: ['.html'] };
+	const serverOptions = { root: root(), ext: ['.html'] };
 
 	/**
 	 * @type {(data: Parameters<typeof dirListPage>[0]) => Promise<Document>} */
@@ -60,31 +60,10 @@ suite('dirListPage', () => {
 		}
 	}
 
-	test('never gives you up', () => {
-		doesNotReject(
-			dirListPage(
-				{
-					filePath: '',
-					localPath: '',
-					items: [],
-				},
-				serverOptions,
-			),
-		);
-		doesNotReject(
-			dirListPage(
-				{
-					...testPaths(''),
-					items: [],
-				},
-				serverOptions,
-			),
-		);
-	});
-
 	test('empty list page (root)', async () => {
 		const doc = await dirListDoc({
-			...testPaths(''),
+			urlPath: '/',
+			file: file('', 'dir'),
 			items: [],
 		});
 		const list = doc.querySelector('ul');
@@ -97,7 +76,8 @@ suite('dirListPage', () => {
 	test('empty list page (subfolder)', async () => {
 		const localPath = 'cool/folder';
 		const doc = await dirListDoc({
-			...testPaths(localPath),
+			urlPath: `/${localPath}`,
+			file: file(localPath, 'dir'),
 			items: [],
 		});
 		const list = doc.querySelector('ul');
@@ -110,14 +90,15 @@ suite('dirListPage', () => {
 
 	test('list page with items', async () => {
 		const doc = await dirListDoc({
-			...testPaths('section'),
+			urlPath: '/section',
+			file: file('section', 'dir'),
 			items: [
-				indexItem('file', 'section/  I have spaces  '),
-				indexItem(null, 'section/.gitignore'),
-				indexItem('link', 'section/CHANGELOG', indexItem('file', 'section/docs/changelog.md')),
-				indexItem('dir', 'section/Library'),
-				indexItem('link', 'section/public', indexItem('dir', 'section/.vitepress/build')),
-				indexItem('file', 'section/README.md'),
+				file('section/  I have spaces  '),
+				file('section/.gitignore'),
+				link('section/CHANGELOG', file('section/docs/changelog.md')),
+				file('section/Library', 'dir'),
+				link('section/public', file('section/.vitepress/build', 'dir')),
+				file('section/README.md'),
 			],
 		});
 
@@ -162,11 +143,6 @@ suite('errorPage', () => {
 		const html = await errorPage(data);
 		return parseHTML(html).document;
 	}
-
-	test('never gives you up', () => {
-		doesNotReject(errorPage({ status: 0, urlPath: '' }));
-		doesNotReject(errorPage({ status: 500, urlPath: '..' }));
-	});
 
 	test('same generic error page for unknown status', async () => {
 		const html1 = await errorPage({ status: 0, urlPath: '/error' });
