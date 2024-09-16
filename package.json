@@ -35,7 +35,7 @@
 	"scripts": {
 		"format": "prettier --write '**/*.{js,css}' '**/*config*.json'",
 		"test": "node --test --test-reporter=spec",
-		"typecheck": "tsc -p jsconfig.json"
+		"typecheck": "tsc -p jsconfig.json && tsc -p test/jsconfig.json"
 	},
 	"devDependencies": {
 		"@types/node": "^20.16.5",
