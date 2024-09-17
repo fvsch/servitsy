@@ -7,9 +7,12 @@ import {
 	escapeHtml,
 	fwdSlash,
 	getDirname,
-	isPrivateIPv4,
+	headerCase,
 	intRange,
+	isPrivateIPv4,
+	strBytes,
 	trimSlash,
+	withResolvers,
 } from '../lib/utils.js';
 
 suite('clamp', () => {
@@ -89,6 +92,33 @@ suite('fwdSlash', () => {
 	});
 });
 
+suite('headerCase', () => {
+	const checkCase = (input = '', expected = '') => {
+		strictEqual(headerCase(input), expected);
+	};
+
+	test('keeps uppercase values as-is', () => {
+		checkCase('A', 'A');
+		checkCase('DNT', 'DNT');
+		checkCase('COOL_STUFF', 'COOL_STUFF');
+	});
+
+	test('keeps upper kebab case values as-is', () => {
+		checkCase('A-B-C', 'A-B-C');
+		checkCase('Aaa_Bbb_Ccc', 'Aaa_Bbb_Ccc');
+		checkCase('Content-Type', 'Content-Type');
+		checkCase('Access-Control-Allow-Origin', 'Access-Control-Allow-Origin');
+	});
+
+	test('turns lower kebab case to upper kebab case', () => {
+		checkCase('allow', 'Allow');
+		checkCase('a-b-c', 'A-B-C');
+		checkCase('aaa_bbb_ccc', 'Aaa_Bbb_Ccc');
+		checkCase('content-type', 'Content-Type');
+		checkCase('access-control-allow-origin', 'Access-Control-Allow-Origin');
+	});
+});
+
 suite('isPrivateIPv4', () => {
 	test('rejects invalid addresses', () => {
 		strictEqual(isPrivateIPv4(''), false);
@@ -158,6 +188,16 @@ suite('intRange', () => {
 	});
 });
 
+suite('strBytes', () => {
+	test('returns the UTF-8 byte length of a string', () => {
+		strictEqual(strBytes(''), 0);
+		strictEqual(strBytes('hello'), 5);
+		strictEqual(strBytes('Ça alors‽'), 12);
+		strictEqual(strBytes('👩🏽'), 8);
+		strictEqual(strBytes('😭'.repeat(100_000)), 400_000);
+	});
+});
+
 suite('trimSlash', () => {
 	test('trims start and end slashes by default', () => {
 		strictEqual(trimSlash('/hello/'), 'hello');
@@ -180,5 +220,19 @@ suite('trimSlash', () => {
 		strictEqual(trimSlash('/test/', { start: true }), 'test/');
 		strictEqual(trimSlash('/test/', { end: true }), '/test');
 		strictEqual(trimSlash('/test/', { start: true, end: true }), 'test');
+	});
+});
+
+suite('withResolvers', () => {
+	test('returns a promise with a resolve function', async () => {
+		const { promise, resolve } = withResolvers();
+		resolve('TEST');
+		strictEqual(await promise, 'TEST');
+	});
+
+	test('returns a promise with a reject function', async () => {
+		const { promise, reject } = withResolvers();
+		reject('TEST REJECTION');
+		strictEqual(await promise.catch((reason) => `reason: ${reason}`), 'reason: TEST REJECTION');
 	});
 });

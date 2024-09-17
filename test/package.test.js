@@ -1,7 +1,7 @@
 import { strictEqual } from 'node:assert';
 import { suite, test } from 'node:test';
 
-import { readPkgJson } from '../lib/node-fs.js';
+import { readPkgJson } from '../lib/fs-proxy.js';
 
 suite('package.json', () => {
 	const pkgJson = readPkgJson();
