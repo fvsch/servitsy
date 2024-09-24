@@ -1,5 +1,9 @@
 # servitsy changelog
 
+## v0.2.1 (2024-09-24)
+
+- add MIT license field in package.json
+
 ## v0.2.0 (2024-09-24)
 
 - feat: handle HEAD and OPTIONS requests (#20) 
