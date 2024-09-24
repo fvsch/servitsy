@@ -7,7 +7,7 @@ import { argify } from './shared.js';
 suite('CLIArgs', () => {
 	test('returns empty values', () => {
 		const args = new CLIArgs([]);
-		deepStrictEqual(args.data, {
+		deepStrictEqual(args.data(), {
 			map: [],
 			list: [],
 		});
@@ -24,11 +24,11 @@ suite('CLIArgs', () => {
 		//   'foo',
 		//   '  '
 		// ]
-		deepStrictEqual(new CLIArgs(['']).data, {
+		deepStrictEqual(new CLIArgs(['']).data(), {
 			map: [],
 			list: [''],
 		});
-		deepStrictEqual(new CLIArgs(['', ' ', '']).data, {
+		deepStrictEqual(new CLIArgs(['', ' ', '']).data(), {
 			map: [],
 			list: ['', ' ', ''],
 		});
@@ -50,7 +50,7 @@ suite('CLIArgs', () => {
 		const args = argify`-one value1 --two value2`;
 		strictEqual(args.get('-one'), 'value1');
 		strictEqual(args.get('--two'), 'value2');
-		deepStrictEqual(args.data.map, [
+		deepStrictEqual(args.data().map, [
 			['-one', 'value1'],
 			['--two', 'value2'],
 		]);
@@ -61,7 +61,7 @@ suite('CLIArgs', () => {
 		strictEqual(args.get(0), '.');
 		strictEqual(args.get(1), 'hello');
 		strictEqual(args.get(2), undefined);
-		deepStrictEqual(args.data.list, ['.', 'hello']);
+		deepStrictEqual(args.data().list, ['.', 'hello']);
 	});
 
 	test('can retrieve mapped args', () => {

@@ -2,7 +2,7 @@ import { deepStrictEqual, strictEqual, throws } from 'node:assert';
 import { suite, test } from 'node:test';
 
 import { FileResolver, PathMatcher } from '../lib/resolver.js';
-import { defaultResolveOptions, file, getFsUtils, getResolver, root } from './shared.js';
+import { defaultOptions, file, getResolver, root, testFsProxy } from './shared.js';
 
 suite('PathMatcher', () => {
 	test('does not match strings when no patterns are provided', () => {
@@ -95,7 +95,7 @@ suite('FileResolver.#root', () => {
 			new FileResolver(
 				// @ts-expect-error
 				{},
-				getFsUtils({}),
+				testFsProxy({}),
 			);
 		}, /Missing root directory/);
 	});
@@ -250,7 +250,7 @@ suite('FileResolver.#options', () => {
 	});
 
 	test('options: exclude + include (defaults)', async () => {
-		const resolver = getResolver(defaultResolveOptions);
+		const resolver = getResolver(defaultOptions);
 		const allowed = (p = '') => resolver.allowedPath(p);
 
 		// paths that should be allowed with defaults
@@ -336,7 +336,7 @@ suite('FileResolver.find', () => {
 	});
 
 	test('default options block dotfiles', async () => {
-		const resolver = getResolver(defaultResolveOptions, find_files);
+		const resolver = getResolver(defaultOptions, find_files);
 		const find = (url = '/') =>
 			resolver.find(url).then((value) => `${value.status} ${value.file?.localPath ?? null}`);
 
@@ -355,7 +355,7 @@ suite('FileResolver.find', () => {
 	});
 
 	test('default options resolve index.html', async () => {
-		const resolver = getResolver(defaultResolveOptions, find_files);
+		const resolver = getResolver(defaultOptions, find_files);
 
 		deepStrictEqual(await resolver.find('/'), {
 			urlPath: '/',
@@ -373,7 +373,7 @@ suite('FileResolver.find', () => {
 	});
 
 	test('default options resolve .html extension', async () => {
-		const resolver = getResolver(defaultResolveOptions, find_files);
+		const resolver = getResolver(defaultOptions, find_files);
 
 		// adds .html
 		for (const fileLike of ['index', 'page1', 'section/index']) {
@@ -411,14 +411,14 @@ suite('FileResolver.index', () => {
 	};
 
 	test('does not index directories when options.dirList is false', async () => {
-		const resolver = getResolver({ ...defaultResolveOptions, dirList: false }, index_files);
+		const resolver = getResolver({ ...defaultOptions, dirList: false }, index_files);
 		deepStrictEqual(await resolver.index(root()), []);
 		deepStrictEqual(await resolver.index(root`section`), []);
 		deepStrictEqual(await resolver.index(root`doesnt-exist`), []);
 	});
 
 	test('indexes directories when options.dirList is true', async () => {
-		const resolver = getResolver({ ...defaultResolveOptions }, index_files);
+		const resolver = getResolver({ ...defaultOptions }, index_files);
 		deepStrictEqual(await resolver.index(root()), [
 			file('.well-known', 'dir'),
 			file('about-us.html'),
