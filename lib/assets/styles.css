@@ -17,6 +17,7 @@
 	--border-dim: hsl(0 0% 80%);
 	color: var(--text-base);
 	background-color: var(--bg-base);
+	tab-size: 4;
 }
 
 @media (prefers-contrast: more) {
@@ -64,7 +65,7 @@ code {
 }
 
 .filepath {
-	white-space-collapse: preserve-spaces;
+	white-space-collapse: preserve;
 	word-break: break-word;
 	hyphenate-character: '';
 }
@@ -84,14 +85,15 @@ code.filepath {
 }
 
 .bc-link {
-	text-decoration: underline 1px #ccc;
+	text-decoration: underline;
+	text-decoration-thickness: 1px;
+	text-decoration-color: #ccc;
 	text-underline-offset: 6px;
 }
 
 .bc-link:hover {
 	color: var(--text-link);
-	text-decoration: underline;
-	text-decoration-thickness: 1px;
+	text-decoration-color: currentColor;
 }
 
 .bc-link:focus-visible {
