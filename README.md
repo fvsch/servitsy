@@ -2,7 +2,7 @@
 
 Local HTTP server for static files, coming in a small package.
 
-- **Small:** no dependencies, 25 kilobytes gzipped.
+- **Small:** no dependencies, 27 kilobytes gzipped.
 - **Static:** serves static files and directory listings.
 - **Local:** designed for single-user local workflows, not for production.
 
@@ -165,7 +165,7 @@ For local testing, here are a few established alternatives you may prefer, with 
 
 | Package       | Version | Dependencies | Size on disk† |
 | ------------- | ------- | ------------ | ------------- |
-| [servitsy]    | 0.1.3   | 0            | 124 kB        |
+| [servitsy]    | 0.2.0   | 0            | 128 kB        |
 | [servor]      | 4.0.2   | 0            | 144 kB        |
 | [sirv-cli]    | 2.0.2   | 12           | 392 kB        |
 | [serve]       | 14.2.3  | 89           | 7.6 MB        |

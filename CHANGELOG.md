@@ -1,5 +1,9 @@
 # servitsy changelog
 
+## v0.2.0 (2024-09-24)
+
+- feat: handle HEAD and OPTIONS requests (#20) 
+
 ## v0.1.3 (2024-09-16)
 
 - add MIT license
