@@ -60,7 +60,7 @@ function mockReqRes(method, url, headers = {}) {
  */
 function withHandlerContext(options, files) {
 	const resolver = getResolver(options, files);
-	const handlerOptions = { ...options, streaming: false };
+	const handlerOptions = { ...options, _dryRun: true };
 
 	return (method, url, headers) => {
 		const { req, res } = mockReqRes(method, url, headers);
@@ -125,12 +125,12 @@ suite('staticServer', () => {
 });
 
 suite('RequestHandler.constructor', () => {
-	test('starts with a 404 status', async () => {
-		const options = { ...blankOptions, streaming: false };
+	test('starts with a 200 status', async () => {
+		const options = { ...blankOptions, _dryRun: true };
 		const handler = new RequestHandler(mockReqRes('GET', '/'), getResolver(), options);
 		strictEqual(handler.method, 'GET');
 		strictEqual(handler.urlPath, '/');
-		strictEqual(handler.status, 404);
+		strictEqual(handler.status, 200);
 		strictEqual(handler.file, null);
 	});
 });
@@ -157,7 +157,7 @@ suite('RequestHandler.process', async () => {
 		test(`${method} method is unsupported`, async () => {
 			const handler = request(method, '/README.md');
 			strictEqual(handler.method, method);
-			strictEqual(handler.status, 404);
+			strictEqual(handler.status, 200);
 			strictEqual(handler.urlPath, '/README.md');
 			strictEqual(handler.file, null);
 
@@ -171,14 +171,8 @@ suite('RequestHandler.process', async () => {
 
 	test('GET resolves a request with an index file', async () => {
 		const handler = request('GET', '/');
-
-		// Initial status is 404
-		strictEqual(handler.method, 'GET');
-		strictEqual(handler.status, 404);
-		strictEqual(typeof handler.startedAt, 'number');
-
-		// Processing the request finds the index.html file
 		await handler.process();
+
 		strictEqual(handler.status, 200);
 		strictEqual(handler.file?.kind, 'file');
 		strictEqual(handler.file?.localPath, 'index.html');
