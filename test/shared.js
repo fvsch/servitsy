@@ -154,6 +154,10 @@ export function testFsProxy(filePaths = {}) {
 		async readFile(filePath) {
 			return readFile(filePath);
 		},
+		// @ts-expect-error (memfs ReadStream doesn't have ReadStream#close)
+		readStream(filePath) {
+			return fs.createReadStream(filePath, { autoClose: true, start: 0 });
+		},
 		async readable(filePath, kind) {
 			if (kind === undefined) {
 				kind = await this.kind(filePath);
