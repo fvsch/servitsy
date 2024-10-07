@@ -11,17 +11,14 @@ suite('responseLogLine', () => {
 	 * @param {string} expected
 	 */
 	const matchLogLine = (data, expected) => {
-		const time = Date.now();
-		const line = requestLogLine({
+		const rawLine = requestLogLine({
 			...data,
 			urlPath: data.url.split(/[\?\#]/)[0],
-			startedAt: time,
-			endedAt: time,
+			startedAt: Date.now(),
+			endedAt: undefined,
 		});
-		const rawLine = stripStyle(line);
-		const pattern = /^(?:\d{2}:\d{2}:\d{2} )(.*)$/;
-		match(rawLine, pattern);
-		strictEqual(rawLine.match(pattern)?.[1], expected);
+		const line = stripStyle(rawLine).replace(/^\d{2}:\d{2}:\d{2} /, '');
+		strictEqual(line, expected);
 	};
 
 	test('basic formatting', () => {
