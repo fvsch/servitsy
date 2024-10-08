@@ -26,6 +26,7 @@ export const blankOptions = {
 	exclude: [],
 	cors: false,
 	headers: [],
+	gzip: false,
 };
 
 /** @type {ServerOptions} */
@@ -37,6 +38,7 @@ export const defaultOptions = {
 	exclude: [...FILE_EXCLUDE_DEFAULT],
 	cors: false,
 	headers: [],
+	gzip: true,
 };
 
 /**

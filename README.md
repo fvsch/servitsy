@@ -106,6 +106,19 @@ servitsy --ext '.html' # default
 servitsy --ext '.xhtml' --ext '.html'
 ```
 
+### `gzip`
+
+Enables gzip compression for text files. Defaults to `true`.
+
+```sh
+# Enable (default)
+servitsy --gzip
+servitsy --gzip true
+
+# Disable
+servitsy --gzip false
+```
+
 ### `header`
 
 Add custom HTTP headers to responses, for all files or specific file patterns. Headers can be provided using a `header:value` syntax, or as a JSON string:
