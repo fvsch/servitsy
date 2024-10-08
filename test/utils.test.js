@@ -10,7 +10,6 @@ import {
 	headerCase,
 	intRange,
 	isPrivateIPv4,
-	strBytes,
 	trimSlash,
 	withResolvers,
 } from '../lib/utils.js';
@@ -185,16 +184,6 @@ suite('intRange', () => {
 		strictEqual(limit2.length, 0);
 
 		throws(() => intRange(1, 100, -50), /Invalid limit: -50/);
-	});
-});
-
-suite('strBytes', () => {
-	test('returns the UTF-8 byte length of a string', () => {
-		strictEqual(strBytes(''), 0);
-		strictEqual(strBytes('hello'), 5);
-		strictEqual(strBytes('Ça alors‽'), 12);
-		strictEqual(strBytes('👩🏽'), 8);
-		strictEqual(strBytes('😭'.repeat(100_000)), 400_000);
 	});
 });
 

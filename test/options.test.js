@@ -11,6 +11,7 @@ import {
 	validateDirList,
 	validateExclude,
 	validateExt,
+	validateGzip,
 	validateHeaders,
 	validateHost,
 	validatePorts,
@@ -53,7 +54,9 @@ suite('serverOptions', () => {
 	});
 
 	test('default options (arg mode)', () => {
-		const { errors, options } = serverOptions({}, argify(''));
+		const { errors, options } = serverOptions({
+			args: argify(''),
+		});
 		strictEqual(options.root, cwd());
 		match(options.host, hostWildcardPattern);
 		deepStrictEqual(options.ports, defaultPorts);
@@ -272,6 +275,35 @@ suite('validateExt', () => {
 			{ warn: `invalid --ext value: '.~/.ssh/id_rsa'` },
 			{ warn: `invalid --ext value: '.ha!'` },
 			{ warn: `invalid --ext value: '.çhe'` },
+		]);
+	});
+});
+
+suite('validateGzip', () => {
+	test('default is true', () => {
+		const context = validationContext('arg');
+		strictEqual(validateGzip(undefined, context), true);
+		strictEqual(validateGzip('', context), true);
+		deepStrictEqual(context.errors, []);
+	});
+
+	test('parses boolean-like arg values', () => {
+		const context = validationContext('arg');
+		strictEqual(validateGzip('', context), true);
+		strictEqual(validateGzip('true', context), true);
+		strictEqual(validateGzip('1', context), true);
+		strictEqual(validateGzip('false', context), false);
+		strictEqual(validateGzip('0', context), false);
+		deepStrictEqual(context.errors, []);
+	});
+
+	test('rejects invalid strings', () => {
+		const context = validationContext('arg');
+		validateGzip('aye', context);
+		validateGzip('NOPE', context);
+		deepStrictEqual(context.errors, [
+			{ warn: `invalid --gzip value: 'aye'` },
+			{ warn: `invalid --gzip value: 'NOPE'` },
 		]);
 	});
 });
