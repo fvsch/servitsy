@@ -1,5 +1,12 @@
 # servitsy changelog
 
+## v0.3.0 (2024-10-09)
+
+- feat: add gzip compression for responses (#22)
+- feat: add duration to logs (#22)
+- fix: leaky file handles for aborted requests (#21)
+- fix: css browser compat issues in directory lists
+
 ## v0.2.1 (2024-09-24)
 
 - add MIT license field in package.json

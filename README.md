@@ -178,7 +178,7 @@ For local testing, here are a few established alternatives you may prefer, with 
 
 | Package       | Version | Dependencies | Size on disk† |
 | ------------- | ------- | ------------ | ------------- |
-| [servitsy]    | 0.2.0   | 0            | 128 kB        |
+| [servitsy]    | 0.3.0   | 0            | 128 kB        |
 | [servor]      | 4.0.2   | 0            | 144 kB        |
 | [sirv-cli]    | 2.0.2   | 12           | 392 kB        |
 | [serve]       | 14.2.3  | 89           | 7.6 MB        |
