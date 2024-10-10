@@ -1,11 +1,11 @@
 import { deepStrictEqual, doesNotThrow, match, ok, strictEqual } from 'node:assert';
 import { IncomingMessage, Server, ServerResponse } from 'node:http';
 import { Duplex } from 'node:stream';
-import { suite, test } from 'node:test';
+import { after, suite, test } from 'node:test';
 
-import { readPkgFile } from '../lib/fs-proxy.js';
+import { FileResolver } from '../lib/resolver.js';
 import { fileHeaders, staticServer, RequestHandler } from '../lib/server.js';
-import { blankOptions, defaultOptions, file, getResolver } from './shared.js';
+import { fsFixture, getBlankOptions, getDefaultOptions } from './shared.js';
 
 /**
 @typedef {import('../lib/types.js').HttpHeaderRule} HttpHeaderRule
@@ -55,11 +55,10 @@ function mockReqRes(method, url, headers = {}) {
 
 /**
  * @param {ServerOptions} options
- * @param {Parameters<typeof getResolver>[1]} files
  * @returns {(method: string, url: string, headers?: Record<string, string | string[]>) => RequestHandler}
  */
-function withHandlerContext(options, files) {
-	const resolver = getResolver(options, files);
+function handlerContext(options) {
+	const resolver = new FileResolver(options);
 	const handlerOptions = { ...options, gzip: false, _noStream: true };
 
 	return (method, url, headers) => {
@@ -130,34 +129,41 @@ suite('fileHeaders', () => {
 suite('staticServer', () => {
 	test("it doesn't crash", () => {
 		doesNotThrow(() => {
-			staticServer(defaultOptions);
+			staticServer(getBlankOptions());
 		});
 	});
 	test('returns a Node.js http.Server', () => {
-		const server = staticServer(defaultOptions);
+		const server = staticServer(getBlankOptions());
 		ok(server instanceof Server);
 		strictEqual(typeof server.listen, 'function');
 	});
 });
 
 suite('RequestHandler', async () => {
-	const test_files = {
+	const { fixture, file, root } = await fsFixture({
 		'.gitignore': '*.html\n',
+		'.well-known/security.txt': '# hello',
+		'.well-known/something-else.json': '{"data":{}}',
 		'index.html': '<h1>Hello World</h1>',
 		'manifest.json': '{"hello": "world"}',
 		'README.md': '# Cool stuff\n',
 		'section/.htaccess': '# secret',
-		'section/favicon.svg': await readPkgFile('lib/assets/favicon-list.svg'),
+		'section/favicon.svg': '<svg xmlns="http://www.w3.org/2000/svg"></svg>',
 		'section/index.html': '<h1>Section</h1>',
 		'section/other-page.html': '<h1>Other page</h1>',
 		'section/page.html': '<h1>Cool page</h1>',
-		'.well-known/security.txt': '# hello',
-		'.well-known/something-else.json': '{"data":{}}',
-	};
-	const request = withHandlerContext(defaultOptions, test_files);
+		'some-folder/package.json': '{}',
+		'some-folder/README.md': '# Hello',
+	});
+	const blankOptions = getBlankOptions(root());
+	const defaultOptions = getDefaultOptions(root());
+	const request = handlerContext(defaultOptions);
+
+	after(() => fixture.rm());
 
 	test('starts with a 200 status', async () => {
-		const handler = withHandlerContext(blankOptions, {})('GET', '/');
+		const request = handlerContext(blankOptions);
+		const handler = request('GET', '/');
 		strictEqual(handler.method, 'GET');
 		strictEqual(handler.urlPath, '/');
 		strictEqual(handler.status, 200);
@@ -191,10 +197,6 @@ suite('RequestHandler', async () => {
 	});
 
 	test('GET returns a directory listing', async () => {
-		const dir_list_files = {
-			'some-folder/package.json': '{}',
-			'some-folder/README.md': '# Hello',
-		};
 		const parent = file('', 'dir');
 		const folder = file('some-folder', 'dir');
 		const cases = [
@@ -203,8 +205,9 @@ suite('RequestHandler', async () => {
 			{ dirList: true, url: '/', status: 200, file: parent },
 			{ dirList: true, url: '/some-folder', status: 200, file: folder },
 		];
+
 		for (const { dirList, url, status, file } of cases) {
-			const request = withHandlerContext({ ...blankOptions, dirList }, dir_list_files);
+			const request = handlerContext({ ...blankOptions, dirList });
 			const handler = request('GET', url);
 			await handler.process();
 			strictEqual(handler.status, status);
@@ -217,21 +220,24 @@ suite('RequestHandler', async () => {
 
 	test('GET returns a 404 for an unknown path', async () => {
 		const control = request('GET', '/index.html');
-		const noFile = request('GET', '/does/not/exist');
-		await Promise.all([control.process(), noFile.process()]);
+		await control.process();
 		strictEqual(control.status, 200);
 		strictEqual(control.file?.localPath, 'index.html');
+
+		const noFile = request('GET', '/does/not/exist');
+		await noFile.process();
 		strictEqual(noFile.status, 404);
 		strictEqual(noFile.file, null);
 	});
 
 	test('GET finds .html files without extension', async () => {
 		const page1 = request('GET', '/section/page');
-		const page2 = request('GET', '/section/other-page');
-
-		await Promise.all([page1.process(), page2.process()]);
+		await page1.process();
 		strictEqual(page1.status, 200);
 		strictEqual(page1.file?.localPath, 'section/page.html');
+
+		const page2 = request('GET', '/section/other-page');
+		await page2.process();
 		strictEqual(page2.status, 200);
 		strictEqual(page2.file?.localPath, 'section/other-page.html');
 	});
@@ -328,27 +334,25 @@ suite('RequestHandler', async () => {
 	});
 
 	test('CORS: no CORS headers by default', async () => {
-		const request = withHandlerContext(blankOptions, test_files);
+		const request = handlerContext(blankOptions);
 
 		const getReq = request('GET', '/manifest.json', {
 			Origin: 'https://example.com',
 			'Access-Control-Request-Method': 'GET',
 		});
-		const preflightReq = request('OPTIONS', '/manifest.json', {
-			Origin: 'https://example.com',
-			'Access-Control-Request-Method': 'POST',
-			'Access-Control-Request-Headers': 'X-Header1',
-		});
-
 		await getReq.process();
-		await preflightReq.process();
-
 		strictEqual(getReq.status, 200);
 		checkHeaders(getReq.headers, {
 			'content-type': 'application/json; charset=UTF-8',
 			'content-length': '18',
 		});
 
+		const preflightReq = request('OPTIONS', '/manifest.json', {
+			Origin: 'https://example.com',
+			'Access-Control-Request-Method': 'POST',
+			'Access-Control-Request-Headers': 'X-Header1',
+		});
+		await preflightReq.process();
 		strictEqual(preflightReq.status, 204);
 		checkHeaders(preflightReq.headers, {
 			allow: allowMethods,
@@ -357,7 +361,7 @@ suite('RequestHandler', async () => {
 	});
 
 	test('CORS headers when enabled', async () => {
-		const request = withHandlerContext({ ...blankOptions, cors: true }, test_files);
+		const request = handlerContext({ ...blankOptions, cors: true });
 
 		const getReq = request('GET', '/manifest.json', {
 			Origin: 'https://example.com',
@@ -370,8 +374,6 @@ suite('RequestHandler', async () => {
 			'content-type': 'application/json; charset=UTF-8',
 			'content-length': '18',
 		});
-
-		return;
 
 		const preflightReq = request('OPTIONS', '/manifest.json', {
 			Origin: 'https://example.com',

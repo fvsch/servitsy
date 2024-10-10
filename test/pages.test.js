@@ -3,7 +3,7 @@ import { deepStrictEqual, ok, strictEqual } from 'node:assert';
 import { suite, test } from 'node:test';
 
 import { dirListPage, errorPage } from '../lib/pages.js';
-import { file, link, root } from './shared.js';
+import { file, link, testPath } from './shared.js';
 
 /**
  * @param {Document} doc
@@ -36,7 +36,7 @@ function checkTemplate(doc, content) {
 }
 
 suite('dirListPage', () => {
-	const serverOptions = { root: root(), ext: ['.html'] };
+	const serverOptions = { root: testPath(), ext: ['.html'] };
 
 	/**
 	 * @type {(data: Parameters<typeof dirListPage>[0]) => Promise<Document>} */
@@ -67,7 +67,7 @@ suite('dirListPage', () => {
 			items: [],
 		});
 		const list = doc.querySelector('ul');
-		checkTemplate(doc, { base: '/', title: 'Index of servitsy-test' });
+		checkTemplate(doc, { base: '/', title: 'Index of _servitsy_test_' });
 		strictEqual(list?.nodeName, 'UL');
 		strictEqual(list?.childElementCount, 0);
 		checkParentLink(doc, false);
@@ -82,7 +82,7 @@ suite('dirListPage', () => {
 		});
 		const list = doc.querySelector('ul');
 
-		checkTemplate(doc, { base: '/cool/folder/', title: 'Index of servitsy-test/cool/folder' });
+		checkTemplate(doc, { base: '/cool/folder/', title: 'Index of _servitsy_test_/cool/folder' });
 		strictEqual(list?.nodeName, 'UL');
 		strictEqual(list?.childElementCount, 1);
 		checkParentLink(doc, true);
@@ -102,7 +102,7 @@ suite('dirListPage', () => {
 			],
 		});
 
-		checkTemplate(doc, { base: '/section/', title: 'Index of servitsy-test/section' });
+		checkTemplate(doc, { base: '/section/', title: 'Index of _servitsy_test_/section' });
 		checkParentLink(doc, true);
 
 		const items = doc.querySelectorAll('ul > li a');
