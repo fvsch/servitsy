@@ -31,13 +31,18 @@ suite('getContentType', () => {
 		strictEqual(await fromFileName('myfont.woff2'), 'font/woff2');
 	});
 
-	test('sniffs text files from file handle', async () => {
-		const thisFile = await open(join(cwd(), 'test/content-type.test.js'));
-		const otherFile = await open(join(cwd(), 'CHANGELOG.md'));
-		strictEqual(await fromFileHandle(thisFile), 'text/plain; charset=UTF-8');
-		strictEqual(await fromFileHandle(otherFile), 'text/plain; charset=UTF-8');
-		await thisFile.close();
-		await otherFile.close();
+	test('sniffs text or bin type from file handle', async () => {
+		const testCases = [
+			{ file: 'test/content-type.test.js', expected: 'text/plain; charset=UTF-8' },
+			{ file: 'doc/changelog.md', expected: 'text/plain; charset=UTF-8' },
+			{ file: 'doc/example.png', expected: 'application/octet-stream' },
+		];
+		for (const { file, expected } of testCases) {
+			const handle = await open(join(cwd(), file));
+			const result = await fromFileHandle(handle);
+			strictEqual(result, expected);
+			await handle.close();
+		}
 	});
 });
 

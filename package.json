@@ -2,7 +2,7 @@
 	"name": "servitsy",
 	"version": "0.3.0",
 	"license": "MIT",
-	"description": "Local HTTP server for static files. Small.",
+	"description": "Small, local HTTP server for static files",
 	"keywords": [
 		"cli",
 		"http",
