@@ -1,6 +1,6 @@
 # servitsy options
 
-`servitsy` supports the following command-line options:
+servitsy supports the following command-line options:
 
 - [`--cors`](#cors): send CORS HTTP headers in responses
 - [`--dir-file`](#dirfile): directory index file(s)
@@ -11,6 +11,9 @@
 - [`--header`](#header): add custom HTTP header(s) to responses
 - [`--host`](#host): bind to a specific host
 - [`--port`](#port): bind to a specific port or ports
+
+> [!NOTE]  
+> Examples on this page use the `servitsy` command. If you haven't installed servitsy globally, you can use `npx servitsy` instead.
 
 ## `cors`
 
