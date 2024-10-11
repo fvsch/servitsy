@@ -1,5 +1,5 @@
 import { createFixture } from 'fs-fixture';
-import { join } from 'node:path';
+import { join, sep as dirSep } from 'node:path';
 import { cwd } from 'node:process';
 
 import { CLIArgs } from '../lib/args.js';
@@ -13,10 +13,6 @@ import { trimSlash } from '../lib/utils.js';
 @typedef {import('../lib/types.js').ServerOptions} ServerOptions
 @typedef {{path: string; kind: FSEntryKind, readable: boolean; link?: string}} VFile
 **/
-
-export function testPath(localPath = '') {
-	return join(cwd(), '_servitsy_test_', localPath);
-}
 
 /** @type {(root?: string) => ServerOptions} */
 export function getBlankOptions(root) {
@@ -46,23 +42,31 @@ export function getDefaultOptions(root) {
 	};
 }
 
-/** @type {ServerOptions} */
-export const defaultOptions = {
-	root: testPath(),
-	dirFile: [...DIR_FILE_DEFAULT],
-	dirList: true,
-	ext: [...EXTENSIONS_DEFAULT],
-	exclude: [...FILE_EXCLUDE_DEFAULT],
-	cors: false,
-	headers: [],
-	gzip: true,
-};
+export function testPath(localPath = '') {
+	return join(cwd(), '_servitsy_test_', localPath);
+}
+
+/**
+ * @type {(path?: string | TemplateStringsArray, ...values: string[]) => string}
+ */
+export function platformSlash(path = '', ...values) {
+	path = String.raw({ raw: path }, ...values);
+	const wrong = dirSep === '/' ? '\\' : '/';
+	if (path.includes(wrong) && !path.includes(dirSep)) {
+		return path.replaceAll(wrong, dirSep);
+	}
+	return path;
+}
 
 /**
  * @type {(localPath: string, kind?: FSEntryKind) => ResolvedFile}
  */
 export function file(localPath, kind = 'file') {
-	return { filePath: testPath(localPath), localPath, kind };
+	return {
+		filePath: testPath(localPath),
+		localPath: platformSlash(localPath),
+		kind,
+	};
 }
 
 /**
@@ -86,11 +90,15 @@ export async function fsFixture(fileTree) {
 		fixture,
 		/** @type {(localPath: string, kind?: FSEntryKind) => ResolvedFile} */
 		file(localPath = '', kind = 'file') {
-			return { filePath: getPath(localPath), localPath, kind };
+			return {
+				filePath: getPath(localPath),
+				localPath: platformSlash(localPath),
+				kind,
+			};
 		},
-		/** @type {(s?: string | TemplateStringsArray, ...v: string[]) => string} */
-		root(s = '', ...v) {
-			return getPath(String.raw({ raw: s }, ...v));
+		/** @type {(localPath?: string | TemplateStringsArray, ...values: string[]) => string} */
+		root(localPath = '', ...values) {
+			return getPath(String.raw({ raw: localPath }, ...values));
 		},
 	};
 }

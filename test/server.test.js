@@ -5,7 +5,7 @@ import { after, suite, test } from 'node:test';
 
 import { FileResolver } from '../lib/resolver.js';
 import { fileHeaders, staticServer, RequestHandler } from '../lib/server.js';
-import { fsFixture, getBlankOptions, getDefaultOptions } from './shared.js';
+import { fsFixture, getBlankOptions, getDefaultOptions, platformSlash } from './shared.js';
 
 /**
 @typedef {import('../lib/types.js').HttpHeaderRule} HttpHeaderRule
@@ -234,12 +234,12 @@ suite('RequestHandler', async () => {
 		const page1 = request('GET', '/section/page');
 		await page1.process();
 		strictEqual(page1.status, 200);
-		strictEqual(page1.file?.localPath, 'section/page.html');
+		strictEqual(page1.file?.localPath, platformSlash`section/page.html`);
 
 		const page2 = request('GET', '/section/other-page');
 		await page2.process();
 		strictEqual(page2.status, 200);
-		strictEqual(page2.file?.localPath, 'section/other-page.html');
+		strictEqual(page2.file?.localPath, platformSlash`section/other-page.html`);
 	});
 
 	test('GET shows correct content-type', async () => {
