@@ -58,7 +58,7 @@ For local testing, here are a few established alternatives you may prefer, with 
 | ------------- | ------- | ------------ | --------------- |
 | [servitsy]    | 0.3.1   | 0            | 124 kB          |
 | [servor]      | 4.0.2   | 0            | 144 kB          |
-| [sirv-cli]    | 2.0.2   | 12           | 392 kB          |
+| [sirv-cli]    | 3.0.0   | 12           | 396 kB          |
 | [serve]       | 14.2.3  | 89           | 7.6 MB          |
 | [http-server] | 14.1.1  | 45           | 8.9 MB          |
 
