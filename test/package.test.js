@@ -1,10 +1,10 @@
 import { strictEqual } from 'node:assert';
 import { suite, test } from 'node:test';
 
-import { readPkgJson } from '../lib/fs-proxy.js';
+import { readPkgJson } from '../lib/fs-utils.js';
 
-suite('package.json', () => {
-	const pkgJson = readPkgJson();
+suite('package.json', async () => {
+	const pkgJson = await readPkgJson();
 
 	test('it has no dependencies', () => {
 		const keys = Object.keys(pkgJson);
