@@ -1,4 +1,4 @@
-import { match, strictEqual } from 'node:assert';
+import { strictEqual } from 'node:assert';
 import { suite, test } from 'node:test';
 
 import { stripStyle } from '../lib/color.js';

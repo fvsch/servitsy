@@ -1,6 +1,5 @@
 import { createFixture } from 'fs-fixture';
 import { join } from 'node:path';
-import posixPath from 'node:path/posix';
 import { cwd } from 'node:process';
 
 import { CLIArgs } from '../lib/args.js';
@@ -10,7 +9,6 @@ import { trimSlash } from '../lib/utils.js';
 /**
 @typedef {import('../lib/types.js').DirIndexItem} DirIndexItem
 @typedef {import('../lib/types.js').FSEntryKind} FSEntryKind
-@typedef {import('../lib/types.js').FSProxy} FSProxy
 @typedef {import('../lib/types.js').ResolvedFile} ResolvedFile
 @typedef {import('../lib/types.js').ServerOptions} ServerOptions
 @typedef {{path: string; kind: FSEntryKind, readable: boolean; link?: string}} VFile
