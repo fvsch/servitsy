@@ -1,5 +1,10 @@
 # servitsy changelog
 
+## v0.3.1 (2024-10-11)
+
+- refactor: remove unnecessary fs abstraction (#23)
+- docs: clarify usage with npx, move options docs out of README.md
+
 ## v0.3.0 (2024-10-09)
 
 - feat: add gzip compression for responses (#22)
