@@ -1,5 +1,5 @@
 {
-	"include": ["./bin", "./lib"],
+	"include": ["./bin", "./lib", "./globals.d.ts"],
 	"compilerOptions": {
 		"module": "NodeNext",
 		"target": "ES2022",

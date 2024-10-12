@@ -1,5 +1,5 @@
 {
-	"include": ["./*.js"],
+	"include": ["./*.js", "../globals.d.ts"],
 	"compilerOptions": {
 		"module": "NodeNext",
 		"target": "ES2022",

@@ -15,9 +15,17 @@ npx servitsy [directory] [options]
 ```
 
 > [!NOTE]
-> servitsy is a command-line tool, published as a npm package. It requires Node.js version 18 (or higher).
+> servitsy is a command-line tool, published as a npm package. It requires [Node.js] version 18 or higher, or a compatible runtime like [Deno] or [Bun].
 
-Calling servitsy without any option will:
+```sh
+# Running with Bun
+bunx servitsy
+
+# Running with Deno
+deno run --allow-net --allow-read --allow-sys npm:servitsy
+```
+
+Calling servitsy without options will:
 
 - serve the current directory at `http://localhost:8080` (listening on hostname `0.0.0.0`);
 - try the next port numbers if `8080` is not available;
@@ -29,10 +37,10 @@ Calling servitsy without any option will:
 You can configure servitsy's behavior [with options](https://github.com/fvsch/servitsy/blob/main/doc/options.md). For example:
 
 ```sh
-# serve current folder on port 3000, with CORS headers
+# Serve current folder on port 3000, with CORS headers
 npx servitsy -p 3000 --cors
 
-# serve 'dist' folder and disable directory listings
+# Serve 'dist' folder and disable directory listings
 npx servitsy dist --dir-list false
 ```
 
@@ -50,7 +58,7 @@ This package is licensed under [the MIT license](./LICENSE).
 ## Alternatives
 
 > [!WARNING]
-> **servitsy is not designed for production.** There are safer and faster tools to serve a folder of static HTML to the public. See Apache, Nginx, [@fastify/static], etc.
+> **servitsy is not designed for production.** There are safer and faster tools to serve a folder of static HTML to the public. See Apache, Nginx, `@fastify/static`, etc.
 
 For local testing, here are a few established alternatives you may prefer, with their respective size:
 
@@ -68,7 +76,9 @@ Otherwise, [servor], [sirv-cli] or [servitsy] might work for you.
 
 _† Installed size is the uncompressed size of the package and its dependencies (as reported by `du` on macOS; exact size may depend on the OS and/or filesystem)._
 
-[@fastify/static]: https://www.npmjs.com/package/@fastify/static
+[Bun]: https://bun.sh/
+[Deno]: https://deno.com/
+[Node.js]: https://nodejs.org/
 [http-server]: https://www.npmjs.com/package/http-server
 [serve]: https://www.npmjs.com/package/serve
 [servitsy]: https://www.npmjs.com/package/servitsy
