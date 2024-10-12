@@ -1,5 +1,9 @@
 # servitsy changelog
 
+## v0.3.2 (2024-10-12)
+
+- fix: terminal colors in Node 18 and Deno (#24)
+
 ## v0.3.1 (2024-10-11)
 
 - refactor: remove unnecessary fs abstraction (#23)
