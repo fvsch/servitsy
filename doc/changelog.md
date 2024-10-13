@@ -1,5 +1,9 @@
 # servitsy changelog
 
+## v0.3.3 (2024-10-14)
+
+- fix: improve deno compatibility (#25)
+
 ## v0.3.2 (2024-10-12)
 
 - fix: terminal colors in Node 18 and Deno (#24)

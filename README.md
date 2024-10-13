@@ -64,7 +64,7 @@ For local testing, here are a few established alternatives you may prefer, with 
 
 | Package       | Version | Dependencies | Installed size† |
 | ------------- | ------- | ------------ | --------------- |
-| [servitsy]    | 0.3.1   | 0            | 124 kB          |
+| [servitsy]    | 0.3.3   | 0            | 128 kB          |
 | [servor]      | 4.0.2   | 0            | 144 kB          |
 | [sirv-cli]    | 3.0.0   | 12           | 396 kB          |
 | [serve]       | 14.2.3  | 89           | 7.6 MB          |
