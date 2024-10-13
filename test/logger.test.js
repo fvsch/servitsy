@@ -1,8 +1,8 @@
 import { strictEqual } from 'node:assert';
 import { suite, test } from 'node:test';
 
-import { stripStyle } from '../lib/color.js';
 import { requestLogLine } from '../lib/logger.js';
+import { stripStyle } from '../lib/utils.js';
 import { file } from './shared.js';
 
 suite('responseLogLine', () => {
