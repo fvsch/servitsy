@@ -1,13 +1,64 @@
 import { strictEqual } from 'node:assert';
 import { suite, test } from 'node:test';
 
-import { requestLogLine } from '../lib/logger.js';
-import { stripStyle } from '../lib/utils.js';
+import { ColorUtils, requestLogLine, stripStyle } from '../lib/logger.js';
 import { file } from './shared.js';
+
+suite('ColorUtils', () => {
+	const color = new ColorUtils(true);
+	const noColor = new ColorUtils(false);
+
+	test('.style does nothing for empty format', () => {
+		strictEqual(color.style('TEST'), 'TEST');
+		strictEqual(color.style('TEST', ''), 'TEST');
+		strictEqual(noColor.style('TEST', ''), 'TEST');
+	});
+
+	test('.style adds color codes to strings', () => {
+		strictEqual(color.style('TEST', 'reset'), '\x1B[0mTEST\x1B[0m');
+		strictEqual(color.style('TEST', 'red'), '\x1B[31mTEST\x1B[39m');
+		strictEqual(color.style('TEST', 'dim underline'), '\x1B[2m\x1B[4mTEST\x1B[24m\x1B[22m');
+		strictEqual(noColor.style('TEST', 'reset'), 'TEST');
+		strictEqual(noColor.style('TEST', 'red'), 'TEST');
+		strictEqual(noColor.style('TEST', 'dim underline'), 'TEST');
+	});
+
+	test('.sequence applies styles to sequence', () => {
+		strictEqual(color.sequence(['(', 'TEST', ')']), '(TEST)');
+		strictEqual(color.sequence(['TE', 'ST'], 'blue'), '\x1B[34mTE\x1B[39mST');
+		strictEqual(color.sequence(['TE', 'ST'], ',blue'), 'TE\x1B[34mST\x1B[39m');
+		strictEqual(
+			color.sequence(['TE', 'ST'], 'blue,red,green'),
+			'\x1B[34mTE\x1B[39m\x1B[31mST\x1B[39m',
+		);
+		strictEqual(noColor.sequence(['TE', 'ST'], 'blue'), 'TEST');
+		strictEqual(noColor.sequence(['TE', 'ST'], 'blue,red,green'), 'TEST');
+	});
+
+	test('.strip removes formatting', () => {
+		strictEqual(color.strip(color.style('TEST', 'magentaBright')), 'TEST');
+		strictEqual(
+			color.strip(color.sequence(['T', 'E', 'S', 'T'], 'inverse,blink,bold,red')),
+			'TEST',
+		);
+	});
+
+	test('.brackets adds characters around input', () => {
+		strictEqual(color.brackets('TEST', ''), '[TEST]');
+		strictEqual(color.brackets('TEST', '', ['<<<', '>>>']), '<<<TEST>>>');
+		strictEqual(color.brackets('TEST', 'blue,,red'), '\x1B[34m[\x1B[39mTEST\x1B[31m]\x1B[39m');
+		strictEqual(color.brackets('TEST'), '\x1B[2m[\x1B[22mTEST\x1B[2m]\x1B[22m');
+		strictEqual(color.brackets('TEST', ',underline,', ['<<<', '>>>']), '<<<\x1B[4mTEST\x1B[24m>>>');
+	});
+});
+
+/**
+@typedef {import('../lib/types.d.ts').ReqResMeta} ReqResMeta
+**/
 
 suite('responseLogLine', () => {
 	/**
-	 * @param {Omit<import('../lib/types.js').ReqResMeta, 'startedAt' | 'endedAt' | 'urlPath'>} data
+	 * @param {Omit<ReqResMeta, 'startedAt' | 'endedAt' | 'urlPath'>} data
 	 * @param {string} expected
 	 */
 	const matchLogLine = (data, expected) => {

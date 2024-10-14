@@ -8,8 +8,8 @@ import { fileHeaders, staticServer, RequestHandler } from '../lib/server.js';
 import { fsFixture, getBlankOptions, getDefaultOptions, platformSlash } from './shared.js';
 
 /**
-@typedef {import('../lib/types.js').HttpHeaderRule} HttpHeaderRule
-@typedef {import('../lib/types.js').ServerOptions} ServerOptions
+@typedef {import('../lib/types.d.ts').HttpHeaderRule} HttpHeaderRule
+@typedef {import('../lib/types.d.ts').ServerOptions} ServerOptions
 @typedef {Record<string, undefined | number | string | string[]>} ResponseHeaders
 **/
 
