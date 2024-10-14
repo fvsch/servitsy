@@ -203,31 +203,49 @@ suite('isPrivateIPv4', () => {
 });
 
 suite('intRange', () => {
-	test('unlimited', () => {
+	test('throws for invalid params', () => {
+		throws(
+			// @ts-ignore
+			() => intRange(0.5, 5.5),
+			/Invalid start param: 0.5/,
+		);
+		throws(
+			// @ts-ignore
+			() => intRange(1, Infinity),
+			/Invalid end param: Infinity/,
+		);
+		throws(
+			// @ts-ignore
+			() => intRange(1, 100, null),
+			/Invalid limit param: null/,
+		);
+	});
+
+	test('increasing sequence', () => {
 		deepStrictEqual(intRange(1, 5), [1, 2, 3, 4, 5]);
-		deepStrictEqual(intRange(1, -5), [1, 0, -1, -2, -3, -4, -5]);
-		deepStrictEqual(intRange(-0.5, 9.5), [-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
-
+		deepStrictEqual(intRange(-1, 9), [-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
 		deepStrictEqual(intRange(10, 10), [10]);
-		deepStrictEqual(intRange(10.1, 10.9), [10]);
-		deepStrictEqual(intRange(10, 9), [10, 9]);
+	});
 
-		const oneThousand = intRange(1, 1000);
+	test('decreasing sequence', () => {
+		deepStrictEqual(intRange(1, -5), [1, 0, -1, -2, -3, -4, -5]);
+		deepStrictEqual(intRange(10, 9), [10, 9]);
+	});
+
+	test('applies implicit limit', () => {
+		const oneThousand = intRange(1, 10_000);
 		strictEqual(oneThousand.length, 1000);
 		strictEqual(oneThousand.at(500), 501);
 		strictEqual(oneThousand.at(-1), 1000);
 	});
 
-	test('with limit', () => {
+	test('applies explicit limit', () => {
 		const limit1 = intRange(1_000_001, 2_000_000, 50);
 		strictEqual(limit1.length, 50);
 		strictEqual(limit1.at(0), 1_000_001);
 		strictEqual(limit1.at(-1), 1_000_050);
-
 		const limit2 = intRange(1_000_001, 2_000_000, 0);
 		strictEqual(limit2.length, 0);
-
-		throws(() => intRange(1, 100, -50), /Invalid limit: -50/);
 	});
 });
 
