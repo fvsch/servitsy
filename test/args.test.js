@@ -1,8 +1,21 @@
 import { deepStrictEqual, strictEqual } from 'node:assert';
 import { suite, test } from 'node:test';
 
-import { CLIArgs } from '../lib/args.js';
+import {
+	CLIArgs,
+	parseArgs,
+	parseHeaders,
+	parsePort,
+	splitOptionValue,
+	strToBool,
+} from '../lib/args.js';
+import { errorsContext } from '../lib/utils.js';
 import { argify } from './shared.js';
+
+/**
+@typedef {import('../lib/types.js').HttpHeaderRule} HttpHeaderRule
+@typedef {import('../lib/utils.js').ErrorsContext} ErrorsContext
+**/
 
 suite('CLIArgs', () => {
 	test('returns empty values', () => {
@@ -84,5 +97,187 @@ suite('CLIArgs', () => {
 		const args = argify`-c config.js -f one.txt --file two.txt -f=three.txt`;
 		deepStrictEqual(args.all(['--config', '-c']), ['config.js']);
 		deepStrictEqual(args.all(['--file', '-f']), ['one.txt', 'two.txt', 'three.txt']);
+	});
+});
+
+suite('parseArgs', () => {
+	test('no errors for empty args', () => {
+		const context = errorsContext();
+		parseArgs(argify(''), context);
+		deepStrictEqual(context.errors, []);
+	});
+
+	test('sets warnings for unknown args', () => {
+		const context = errorsContext();
+		const args = argify`--help --port=9999 -never gonna --GIVE_YOU_UP`;
+		parseArgs(args, context);
+		deepStrictEqual(context.errors, [
+			{ warn: `unknown option '-never'` },
+			{ warn: `unknown option '--GIVE_YOU_UP'` },
+		]);
+	});
+});
+
+suite('parseHeaders', () => {
+	/** @type {(input: string, expected: HttpHeaderRule | undefined) => void} */
+	const checkHeaders = (input, expected) => {
+		const result = parseHeaders(input);
+		deepStrictEqual(result, expected);
+	};
+
+	test('no header rules for empty inputs', () => {
+		checkHeaders('', undefined);
+		checkHeaders('     ', undefined);
+		checkHeaders('\t\t\n\t\n', undefined);
+	});
+
+	test('parses key:value strings', () => {
+		checkHeaders('x-header1:value', { headers: { 'x-header1': 'value' } });
+		checkHeaders('  X-Header2:   value  ', { headers: { 'X-Header2': 'value' } });
+		checkHeaders('* x-header3: value', { headers: { 'x-header3': 'value' } });
+		checkHeaders('* HEADER_0001: {{value}}', { headers: { HEADER_0001: '{{value}}' } });
+
+		checkHeaders('a b ,  c\t \td: value', {
+			include: ['a b', 'c'],
+			headers: { d: 'value' },
+		});
+		checkHeaders('*.rst, *.rtxt Content-Type: text/x-rst; charset=ISO-8859-1', {
+			include: ['*.rst', '*.rtxt'],
+			headers: { 'Content-Type': 'text/x-rst; charset=ISO-8859-1' },
+		});
+	});
+
+	test('parses json values', () => {
+		checkHeaders('{"x-header1": "value", "x-header2": true, "x-header-3": 9000}', {
+			headers: { 'x-header1': 'value', 'x-header2': 'true', 'x-header-3': '9000' },
+		});
+		checkHeaders('.*,!.well-known {"HEADER_0001": "{{\\\\///|||}}"}', {
+			include: ['.*', '!.well-known'],
+			headers: { HEADER_0001: '{{\\///|||}}' },
+		});
+		checkHeaders('*.html, *.htm, *.shtml {"Content-Type": "text/html;charset=ISO-8859-1"}', {
+			include: ['*.html', '*.htm', '*.shtml'],
+			headers: { 'Content-Type': 'text/html;charset=ISO-8859-1' },
+		});
+	});
+
+	test('trim whitespace in header and values, ', () => {
+		checkHeaders('    x-hello\t\t: world !\r\n\r\n', {
+			headers: { 'x-hello': 'world !' },
+		});
+		checkHeaders('{"x-space-after  ": "value"}', {
+			headers: { 'x-space-after': 'value' },
+		});
+	});
+
+	test('drops empty headers and/or values', () => {
+		checkHeaders(': value', undefined);
+		checkHeaders('  \r\n\r\n    : value', undefined);
+		checkHeaders('x-header-1: ', undefined);
+		checkHeaders('x-header-2: \t\t\t\t', undefined);
+		checkHeaders('{"  ": "value1", "x-header-3": ""}', undefined);
+	});
+
+	test('does NOT validate header names and values', () => {
+		checkHeaders('{"çççç": "value"}', {
+			headers: { çççç: 'value' },
+		});
+		checkHeaders('a b  c\tinval!d=chars: value', {
+			include: ['a b  c'],
+			headers: { 'inval!d=chars': 'value' },
+		});
+		checkHeaders('{"x-header": "\\r\\nBRE\\r\\nAK!\\r\\n"}', {
+			headers: { 'x-header': 'BRE\r\nAK!' },
+		});
+	});
+});
+
+suite('parsePort', () => {
+	test('invalid values return undefined', () => {
+		strictEqual(parsePort(''), undefined);
+		strictEqual(parsePort('--'), undefined);
+		strictEqual(parsePort('hello'), undefined);
+		strictEqual(parsePort('9000!'), undefined);
+		strictEqual(parsePort('3.1415'), undefined);
+		strictEqual(parsePort('3141+5'), undefined);
+		strictEqual(parsePort('31415-'), undefined);
+	});
+
+	test('accepts a single integer number', () => {
+		deepStrictEqual(parsePort('0'), [0]);
+		deepStrictEqual(parsePort('10'), [10]);
+		deepStrictEqual(parsePort('1337'), [1337]);
+		deepStrictEqual(parsePort('65535'), [65_535]);
+		deepStrictEqual(parsePort('999999'), [999_999]);
+	});
+
+	test(`with format: 'int+'`, () => {
+		deepStrictEqual(parsePort('1+'), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+		const res1 = parsePort('80+');
+		strictEqual(res1?.length, 10);
+		strictEqual(res1?.at(0), 80);
+		strictEqual(res1?.at(-1), 89);
+		const res2 = parsePort('1337+');
+		strictEqual(res2?.length, 10);
+		strictEqual(res2?.at(0), 1337);
+		strictEqual(res2?.at(-1), 1346);
+	});
+
+	test(`with format: 'int-int'`, () => {
+		deepStrictEqual(parsePort('0-5'), [0, 1, 2, 3, 4, 5]);
+		deepStrictEqual(parsePort('1000000-1000000'), [1_000_000]);
+		deepStrictEqual(parsePort('1337-1333'), [1337, 1336, 1335, 1334, 1333]);
+	});
+
+	test('result is limited to 100 numbers', () => {
+		const res1 = parsePort('1000-9999');
+		strictEqual(res1?.length, 100);
+		strictEqual(res1?.at(0), 1000);
+		strictEqual(res1?.at(-1), 1099);
+		strictEqual(res1?.at(200), undefined);
+	});
+});
+
+suite('splitOptionValue', () => {
+	test('splits string on commas', () => {
+		deepStrictEqual(splitOptionValue([]), []);
+		deepStrictEqual(splitOptionValue(['hello world']), ['hello world']);
+		deepStrictEqual(splitOptionValue([' hello , world ']), ['hello', 'world']);
+		deepStrictEqual(splitOptionValue([',,,aaa,,,bbb,,,ccc,,,']), ['aaa', 'bbb', 'ccc']);
+	});
+
+	test('flattens split values', () => {
+		deepStrictEqual(splitOptionValue(['aaa', 'bbb', 'ccc']), ['aaa', 'bbb', 'ccc']);
+		deepStrictEqual(splitOptionValue(['a,b,c', 'd,e,f', '1,2,3']), 'abcdef123'.split(''));
+	});
+
+	test('drops empty values', () => {
+		deepStrictEqual(splitOptionValue(['', '']), []);
+		deepStrictEqual(splitOptionValue(['', ',,,', '']), []);
+		deepStrictEqual(splitOptionValue([',,,test,,,']), ['test']);
+	});
+});
+
+suite('strToBool', () => {
+	test('ignores invalid values', () => {
+		strictEqual(strToBool(), undefined);
+		// @ts-expect-error
+		strictEqual(strToBool(true), undefined);
+		// @ts-expect-error
+		strictEqual(strToBool({}, true), undefined);
+	});
+
+	test('matches non-empty strings', () => {
+		strictEqual(strToBool('True'), true);
+		strictEqual(strToBool(' FALSE '), false);
+		strictEqual(strToBool('1'), true);
+		strictEqual(strToBool('0'), false);
+	});
+
+	test('empty string returns emptyValue', () => {
+		strictEqual(strToBool('', true), true);
+		strictEqual(strToBool('\t  \t', true), true);
+		strictEqual(strToBool('', false), false);
+		strictEqual(strToBool('\t  \t', false), false);
 	});
 });

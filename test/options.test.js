@@ -5,7 +5,6 @@ import { suite, test } from 'node:test';
 
 import {
 	serverOptions,
-	validateArgPresence,
 	validateCors,
 	validateDirFile,
 	validateDirList,
@@ -23,15 +22,7 @@ import { argify } from './shared.js';
 /**
 @typedef {import('../lib/types.js').HttpHeaderRule} HttpHeaderRule
 @typedef {import('../lib/types.js').PortsConfig} PortsConfig
-@typedef {import('../lib/options.js').ValidationContext} ValidationContext
 **/
-
-/**
-@type {(mode: 'arg' | 'option') => ValidationContext}
-*/
-function validationContext(mode) {
-	return { mode, ...errorsContext() };
-}
 
 const hostWildcardPattern = /^(::|0\.0\.0\.0)$/;
 const defaultPorts = [8080, 8081, 8082, 8083, 8084, 8085, 8086, 8087, 8088, 8089];
@@ -44,7 +35,7 @@ const defaultPortsConfig = {
 
 suite('serverOptions', () => {
 	test('default options (option mode)', () => {
-		const { errors, options } = serverOptions({
+		const { errors, options } = legacyServerOptions({
 			root: cwd(),
 		});
 		strictEqual(options.root, cwd());
@@ -54,7 +45,7 @@ suite('serverOptions', () => {
 	});
 
 	test('default options (arg mode)', () => {
-		const { errors, options } = serverOptions({
+		const { errors, options } = legacyServerOptions({
 			args: argify(''),
 		});
 		strictEqual(options.root, cwd());
@@ -64,33 +55,15 @@ suite('serverOptions', () => {
 	});
 });
 
-suite('validateArgPresence', () => {
-	test('no errors for empty args', () => {
-		const context = validationContext('arg');
-		validateArgPresence(argify(''), context);
-		deepStrictEqual(context.errors, []);
-	});
-
-	test('has warnings for unknown args', () => {
-		const args = argify`--help --port=9999 -never gonna --GIVE_YOU_UP`;
-		const context = validationContext('arg');
-		validateArgPresence(args, context);
-		deepStrictEqual(context.errors, [
-			{ warn: `unknown option '-never'` },
-			{ warn: `unknown option '--GIVE_YOU_UP'` },
-		]);
-	});
-});
-
 suite('validateCors', () => {
 	test('default is false', () => {
-		const context = validationContext('arg');
+		const context = errorsContext();
 		strictEqual(validateCors(undefined, context), false);
 		deepStrictEqual(context.errors, []);
 	});
 
 	test('parses boolean-like arg values', () => {
-		const context = validationContext('arg');
+		const context = errorsContext();
 		strictEqual(validateCors('', context), true);
 		strictEqual(validateCors('true', context), true);
 		strictEqual(validateCors('1', context), true);
@@ -100,7 +73,7 @@ suite('validateCors', () => {
 	});
 
 	test('rejects invalid strings', () => {
-		const context = validationContext('arg');
+		const context = errorsContext();
 		validateCors('yes', context);
 		validateCors('NO', context);
 		validateCors('access-control-allow-origin:*', context);
@@ -114,7 +87,7 @@ suite('validateCors', () => {
 
 suite('validateDirFile', () => {
 	test('returns defaults', () => {
-		const context = validationContext('arg');
+		const context = errorsContext();
 		const defaults = ['index.html'];
 		deepStrictEqual(validateDirFile(undefined, context), defaults);
 		deepStrictEqual(validateDirFile([], context), defaults);
@@ -122,14 +95,14 @@ suite('validateDirFile', () => {
 	});
 
 	test('resets default with empty values', () => {
-		const context = validationContext('arg');
+		const context = errorsContext();
 		deepStrictEqual(validateDirFile([''], context), []);
 		deepStrictEqual(validateDirFile(['', ''], context), []);
 		deepStrictEqual(context.errors, []);
 	});
 
 	test('splits comma-separated values (arg mode)', () => {
-		const context = validationContext('arg');
+		const context = errorsContext();
 		deepStrictEqual(validateDirFile(['a', 'b,c', 'd,e'], context), ['a', 'b', 'c', 'd', 'e']);
 		deepStrictEqual(validateDirFile(['index.html,index.htm,page.html,page.htm'], context), [
 			'index.html',
@@ -141,7 +114,7 @@ suite('validateDirFile', () => {
 	});
 
 	test('rejects invalid patterns', () => {
-		const context = validationContext('arg');
+		const context = errorsContext();
 		deepStrictEqual(validateDirFile(['/index.html', '/sub/page.html', 'C:\\what'], context), []);
 		deepStrictEqual(context.errors, [
 			{ warn: `invalid --dir-file value: '/index.html'` },
@@ -153,14 +126,14 @@ suite('validateDirFile', () => {
 
 suite('validateDirList', () => {
 	test('default is true', () => {
-		const context = validationContext('arg');
+		const context = errorsContext();
 		strictEqual(validateDirList(undefined, context), true);
 		strictEqual(validateDirList('', context), true);
 		deepStrictEqual(context.errors, []);
 	});
 
 	test('parses boolean-like arg values', () => {
-		const context = validationContext('arg');
+		const context = errorsContext();
 		strictEqual(validateDirList('', context), true);
 		strictEqual(validateDirList('true', context), true);
 		strictEqual(validateDirList('1', context), true);
@@ -170,7 +143,7 @@ suite('validateDirList', () => {
 	});
 
 	test('rejects invalid strings', () => {
-		const context = validationContext('arg');
+		const context = errorsContext();
 		validateDirList('yes', context);
 		validateDirList('NEVERmind', context);
 		deepStrictEqual(context.errors, [
@@ -182,7 +155,7 @@ suite('validateDirList', () => {
 
 suite('validateExclude', () => {
 	test('returns defaults', () => {
-		const context = validationContext('arg');
+		const context = errorsContext();
 		const defaults = ['.*', '!.well-known'];
 		deepStrictEqual(validateExclude(undefined, context), defaults);
 		deepStrictEqual(validateExclude([], context), defaults);
@@ -190,14 +163,14 @@ suite('validateExclude', () => {
 	});
 
 	test('resets default with empty values', () => {
-		const context = validationContext('arg');
+		const context = errorsContext();
 		deepStrictEqual(validateExclude([''], context), []);
 		deepStrictEqual(validateExclude(['', ''], context), []);
 		deepStrictEqual(context.errors, []);
 	});
 
 	test('accepts valid values', () => {
-		const context = validationContext('arg');
+		const context = errorsContext();
 		const values1 = ['f00', 'B 4 R', '__test__', 'L’Épopée post-médiévale'];
 		const values2 = ['*', '.*', '**', '*.*', '*.html'];
 		const values3 = ['!*', '!!', '!!!!', '!?*!?'];
@@ -208,7 +181,7 @@ suite('validateExclude', () => {
 	});
 
 	test('rejects invalid patterns', () => {
-		const context = validationContext('arg');
+		const context = errorsContext();
 		deepStrictEqual(validateExclude(['\\\\hello', '**/section/*', '*:*'], context), []);
 		deepStrictEqual(context.errors, [
 			{ warn: `ignoring invalid --exclude pattern: '\\\\hello'` },
@@ -218,7 +191,7 @@ suite('validateExclude', () => {
 	});
 
 	test('splits comma-separated values (arg mode)', () => {
-		const context = validationContext('arg');
+		const context = errorsContext();
 		deepStrictEqual(validateExclude(['*.md, _*, !_meta'], context), ['*.md', '_*', '!_meta']);
 		deepStrictEqual(context.errors, []);
 	});
@@ -226,27 +199,27 @@ suite('validateExclude', () => {
 
 suite('validateExt', () => {
 	test('returns defaults', () => {
-		const context = validationContext('arg');
+		const context = errorsContext();
 		deepStrictEqual(validateExt(undefined, context), ['.html']);
 		deepStrictEqual(validateExt([], context), ['.html']);
 		deepStrictEqual(context.errors, []);
 	});
 
 	test('empty string is discarded', () => {
-		const context = validationContext('arg');
+		const context = errorsContext();
 		deepStrictEqual(validateExt([''], context), []);
 		deepStrictEqual(validateExt(['', '.foo', ''], context), ['.foo']);
 		deepStrictEqual(context.errors, []);
 	});
 
 	test('splits comma-separated values (arg mode)', () => {
-		const context = validationContext('arg');
+		const context = errorsContext();
 		deepStrictEqual(validateExt(['.a,.b,.c'], context), ['.a', '.b', '.c']);
 		deepStrictEqual(context.errors, []);
 	});
 
 	test('accepts extensions with leading dot', () => {
-		const context = validationContext('arg');
+		const context = errorsContext();
 		const values1 = ['.htm', '.XML', '.7z', '.no'];
 		const values2 = ['.de.html', '.htm.br', '.a.b.c.1.2.3.gz'];
 		deepStrictEqual(validateExt(values1, context), values1);
@@ -255,7 +228,7 @@ suite('validateExt', () => {
 	});
 
 	test('accepts extensions without a leading dot', () => {
-		const context = validationContext('arg');
+		const context = errorsContext();
 		deepStrictEqual(validateExt(['html', 'XML'], context), ['.html', '.XML']);
 		deepStrictEqual(validateExt(['json5', '7z'], context), ['.json5', '.7z']);
 		deepStrictEqual(validateExt(['index.html', 'page.html'], context), [
@@ -266,7 +239,7 @@ suite('validateExt', () => {
 	});
 
 	test('rejects invalid strings', () => {
-		const context = validationContext('arg');
+		const context = errorsContext();
 		deepStrictEqual(validateExt(['.'], context), []);
 		deepStrictEqual(validateExt(['~/.ssh/id_rsa'], context), []);
 		deepStrictEqual(validateExt(['.ha!', 'çhe'], context), []);
@@ -281,14 +254,14 @@ suite('validateExt', () => {
 
 suite('validateGzip', () => {
 	test('default is true', () => {
-		const context = validationContext('arg');
+		const context = errorsContext();
 		strictEqual(validateGzip(undefined, context), true);
 		strictEqual(validateGzip('', context), true);
 		deepStrictEqual(context.errors, []);
 	});
 
 	test('parses boolean-like arg values', () => {
-		const context = validationContext('arg');
+		const context = errorsContext();
 		strictEqual(validateGzip('', context), true);
 		strictEqual(validateGzip('true', context), true);
 		strictEqual(validateGzip('1', context), true);
@@ -298,7 +271,7 @@ suite('validateGzip', () => {
 	});
 
 	test('rejects invalid strings', () => {
-		const context = validationContext('arg');
+		const context = errorsContext();
 		validateGzip('aye', context);
 		validateGzip('NOPE', context);
 		deepStrictEqual(context.errors, [
@@ -309,113 +282,8 @@ suite('validateGzip', () => {
 });
 
 suite('validateHeaders', () => {
-	/** @type {(context: ValidationContext) => (input: string, expected: HttpHeaderRule) => void} */
-	const getCheckHeaders = (context) => {
-		return (input = '', expected) => {
-			const result = validateHeaders([input], context).at(0);
-			deepStrictEqual(result, expected);
-		};
-	};
-
-	test('no header rules for empty inputs', () => {
-		const context = validationContext('arg');
-		const headers1 = validateHeaders([], context);
-		const headers2 = validateHeaders(
-			// @ts-expect-error
-			[undefined, null, '', '\t\t\n\t\n', {}, []],
-			context,
-		);
-		deepStrictEqual(headers1, []);
-		deepStrictEqual(headers2, []);
-		deepStrictEqual(context.errors, []);
-	});
-
-	test('parses key:value strings', () => {
-		const context = validationContext('arg');
-		const checkHeaders = getCheckHeaders(context);
-
-		checkHeaders('x-header1:value', {
-			headers: { 'x-header1': 'value' },
-		});
-
-		checkHeaders('  X-Header2:   value  ', {
-			headers: { 'X-Header2': 'value' },
-		});
-
-		checkHeaders('* x-header3: value', {
-			headers: { 'x-header3': 'value' },
-		});
-
-		checkHeaders('a b ,  c\t \td: value', {
-			include: ['a b', 'c'],
-			headers: { d: 'value' },
-		});
-
-		checkHeaders('* HEADER_0001: {{value}}', {
-			headers: { HEADER_0001: '{{value}}' },
-		});
-
-		checkHeaders('*.rst, *.rtxt Content-Type: text/x-rst; charset=ISO-8859-1', {
-			include: ['*.rst', '*.rtxt'],
-			headers: { 'Content-Type': 'text/x-rst; charset=ISO-8859-1' },
-		});
-
-		deepStrictEqual(context.errors, []);
-	});
-
-	test('parses json values', () => {
-		const context = validationContext('arg');
-		const checkHeaders = getCheckHeaders(context);
-
-		checkHeaders('{"x-header1": "value", "x-header2": true}', {
-			headers: { 'x-header1': 'value', 'x-header2': 'true' },
-		});
-
-		checkHeaders('{   "x-header3":    "  json syntax keeps whitespace  " }', {
-			headers: { 'x-header3': '  json syntax keeps whitespace  ' },
-		});
-
-		checkHeaders('.*,!.well-known {"HEADER_0001": "{{\\\\///|||}}"}', {
-			include: ['.*', '!.well-known'],
-			headers: { HEADER_0001: '{{\\///|||}}' },
-		});
-
-		checkHeaders('*.html, *.htm, *.shtml {"Content-Type": "text/html;charset=ISO-8859-1"}', {
-			include: ['*.html', '*.htm', '*.shtml'],
-			headers: { 'Content-Type': 'text/html;charset=ISO-8859-1' },
-		});
-
-		deepStrictEqual(context.errors, []);
-	});
-
-	test('rejects invalid header names', () => {
-		const context = validationContext('arg');
-
-		const rules = validateHeaders(
-			[
-				': value',
-				'a b  c\tinval!d=chars: value',
-				'{"çççç": "value"}',
-				'{"  ": "value"}',
-				'{"space-after ": "value"}',
-			],
-			context,
-		);
-
-		deepStrictEqual(rules, []);
-		deepStrictEqual(context.errors, [
-			{ warn: `invalid --header value: ': value'` },
-			{
-				error: `invalid --header value: {"headers":{"inval!d=chars":"value"},"include":["a b  c"]}`,
-			},
-			{ error: `invalid --header value: {"headers":{"çççç":"value"}}` },
-			{ error: `invalid --header value: {"headers":{"  ":"value"}}` },
-			{ error: `invalid --header value: {"headers":{"space-after ":"value"}}` },
-		]);
-	});
-
 	test('rejects invalid headers rules', () => {
-		const context = validationContext('option');
+		const context = errorsContext();
 		const inputs = [
 			'x-custom: not valid',
 			{ is: { not: 'valid' } },
@@ -433,7 +301,7 @@ suite('validateHeaders', () => {
 		deepStrictEqual(
 			context.errors,
 			inputs.map((value) => ({
-				error: `invalid headers value: ${JSON.stringify(value)}`,
+				error: `invalid header value: ${JSON.stringify(value)}`,
 			})),
 		);
 	});
@@ -441,7 +309,7 @@ suite('validateHeaders', () => {
 
 suite('validateHost', () => {
 	test('with no input, returns a wildcard host', () => {
-		const context = validationContext('option');
+		const context = errorsContext();
 		const defaultHost = validateHost(undefined, context);
 		match(defaultHost, hostWildcardPattern);
 		deepStrictEqual(context.errors, []);
@@ -451,7 +319,7 @@ suite('validateHost', () => {
 suite('validatePorts', () => {
 	/** @param {Partial<PortsConfig>} [config] */
 	const argContext = (config) => ({
-		...validationContext('arg'),
+		...errorsContext(),
 		config: { ...defaultPortsConfig, ...config },
 	});
 
@@ -530,7 +398,7 @@ suite('validatePorts', () => {
 
 suite('validateRoot', () => {
 	test('resolves from cwd', () => {
-		const context = validationContext('arg');
+		const context = errorsContext();
 		strictEqual(validateRoot('.', context), cwd());
 		strictEqual(validateRoot('lib', context), join(cwd(), 'lib'));
 	});

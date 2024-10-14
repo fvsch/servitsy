@@ -11,7 +11,6 @@ import { trimSlash } from '../lib/utils.js';
 @typedef {import('../lib/types.js').FSEntryKind} FSEntryKind
 @typedef {import('../lib/types.js').ResolvedFile} ResolvedFile
 @typedef {import('../lib/types.js').ServerOptions} ServerOptions
-@typedef {{path: string; kind: FSEntryKind, readable: boolean; link?: string}} VFile
 **/
 
 /** @type {(root?: string) => ServerOptions} */
