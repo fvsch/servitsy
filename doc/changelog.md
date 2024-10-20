@@ -1,5 +1,10 @@
 # servitsy changelog
 
+## v0.4.0 (2024-10-20)
+
+- BREAKING: invalid CLI arguments now stop the program (#26)
+- refactor: split arg parsing and option validation (#26)
+
 ## v0.3.3 (2024-10-14)
 
 - fix: improve deno compatibility (#25)
