@@ -3,28 +3,21 @@ import { join, sep as dirSep } from 'node:path';
 import { cwd } from 'node:process';
 
 import { CLIArgs } from '../lib/args.js';
-import { DIR_FILE_DEFAULT, EXTENSIONS_DEFAULT, FILE_EXCLUDE_DEFAULT } from '../lib/constants.js';
+import { DEFAULT_OPTIONS, MINIMAL_OPTIONS } from '../lib/constants.js';
 import { trimSlash } from '../lib/utils.js';
 
 /**
-@typedef {import('../lib/types.js').DirIndexItem} DirIndexItem
-@typedef {import('../lib/types.js').FSEntryKind} FSEntryKind
-@typedef {import('../lib/types.js').ResolvedFile} ResolvedFile
-@typedef {import('../lib/types.js').ServerOptions} ServerOptions
-@typedef {{path: string; kind: FSEntryKind, readable: boolean; link?: string}} VFile
+@typedef {import('../lib/types.d.ts').DirIndexItem} DirIndexItem
+@typedef {import('../lib/types.d.ts').FSEntryKind} FSEntryKind
+@typedef {import('../lib/types.d.ts').ResolvedFile} ResolvedFile
+@typedef {import('../lib/types.d.ts').ServerOptions} ServerOptions
 **/
 
 /** @type {(root?: string) => ServerOptions} */
 export function getBlankOptions(root) {
 	return {
 		root: root ?? testPath(),
-		dirFile: [],
-		dirList: false,
-		ext: [],
-		exclude: [],
-		cors: false,
-		headers: [],
-		gzip: false,
+		...MINIMAL_OPTIONS,
 	};
 }
 
@@ -32,13 +25,7 @@ export function getBlankOptions(root) {
 export function getDefaultOptions(root) {
 	return {
 		root: root ?? testPath(),
-		dirFile: [...DIR_FILE_DEFAULT],
-		dirList: true,
-		ext: [...EXTENSIONS_DEFAULT],
-		exclude: [...FILE_EXCLUDE_DEFAULT],
-		cors: false,
-		headers: [],
-		gzip: true,
+		...DEFAULT_OPTIONS,
 	};
 }
 
