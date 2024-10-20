@@ -41,7 +41,7 @@
 		"typecheck": "tsc -p jsconfig.json && tsc -p test/jsconfig.json"
 	},
 	"devDependencies": {
-		"@types/node": "^20.16.13",
+		"@types/node": "^20.17.0",
 		"fs-fixture": "^2.5.0",
 		"linkedom": "^0.18.5",
 		"prettier": "^3.3.3",
