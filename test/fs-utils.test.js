@@ -94,7 +94,7 @@ suite('readPkg', () => {
 		const license = await readPkgFile('LICENSE');
 		match(license, /The MIT License/);
 
-		const icons = await readPkgFile('lib/assets/icons.svg');
+		const icons = await readPkgFile('assets/icons.svg');
 		match(icons, / xmlns="http:\/\/www\.w3\.org\/2000\/svg"/);
 	});
 
