@@ -11,20 +11,20 @@ import { fsFixture, getBlankOptions, getDefaultOptions, platformSlash } from './
 @typedef {import('../lib/types.d.ts').HttpHeaderRule} HttpHeaderRule
 @typedef {import('../lib/types.d.ts').ServerOptions} ServerOptions
 @typedef {Record<string, undefined | number | string | string[]>} ResponseHeaders
-**/
+*/
 
 const allowMethods = 'GET, HEAD, OPTIONS, POST';
 
 /**
- * @param {ResponseHeaders} actual
- * @param {ResponseHeaders} expected */
+@type {(actual: ResponseHeaders, expected: ResponseHeaders) => void}
+*/
 function checkHeaders(actual, expected) {
 	deepStrictEqual(actual, headersObj(expected));
 }
 
 /**
- * @param {ResponseHeaders} data
- */
+@type {(data: ResponseHeaders) => ResponseHeaders}
+*/
 function headersObj(data) {
 	/** @type {ResponseHeaders} */
 	const result = Object.create(null);
@@ -35,10 +35,10 @@ function headersObj(data) {
 }
 
 /**
- * @param {string} method
- * @param {string} url
- * @param {Record<string, string | string[]>} [headers]
- */
+@param {string} method
+@param {string} url
+@param {Record<string,  string | string[]>} [headers]
+*/
 function mockReqRes(method, url, headers = {}) {
 	const req = new IncomingMessage(
 		// @ts-expect-error (we don't have a socket, hoping this is enough for testing)
@@ -54,9 +54,9 @@ function mockReqRes(method, url, headers = {}) {
 }
 
 /**
- * @param {ServerOptions} options
- * @returns {(method: string, url: string, headers?: Record<string, string | string[]>) => RequestHandler}
- */
+@param {ServerOptions} options
+@returns {(method: string, url: string, headers?: Record<string, string | string[]>) => RequestHandler}
+*/
 function handlerContext(options) {
 	const resolver = new FileResolver(options);
 	const handlerOptions = { ...options, gzip: false, _noStream: true };
@@ -68,10 +68,10 @@ function handlerContext(options) {
 }
 
 /**
- * @param {HttpHeaderRule[]} rules
- * @param {string[]} [blockList]
- * @returns {(filePath: string) => Array<{name: string; value: string}>}
- */
+@param {HttpHeaderRule[]} rules
+@param {string[]} [blockList]
+@returns {(filePath: string) => ReturnType<typeof fileHeaders>}
+*/
 function withHeaderRules(rules, blockList) {
 	return (filePath) => fileHeaders(filePath, rules, blockList);
 }

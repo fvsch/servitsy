@@ -6,14 +6,14 @@ import { PathMatcher } from '../lib/path-matcher.js';
 suite('PathMatcher', () => {
 	test('does not match strings when no patterns are provided', () => {
 		const matcher = new PathMatcher([]);
-		deepStrictEqual(matcher.rules, { positive: [], negative: [] });
+		deepStrictEqual(matcher.data(), { positive: [], negative: [] });
 		strictEqual(matcher.test('foo'), false);
 		strictEqual(matcher.test('cool/story/bro.md'), false);
 	});
 
 	test('ignores empty patterns and those containing slashes', () => {
 		const matcher = new PathMatcher(['', '!', 'foo/bar', 'foo\\bar']);
-		deepStrictEqual(matcher.rules, { positive: [], negative: [] });
+		deepStrictEqual(matcher.data(), { positive: [], negative: [] });
 		strictEqual(matcher.test(''), false);
 		strictEqual(matcher.test('foo'), false);
 		strictEqual(matcher.test('bar'), false);
@@ -23,6 +23,7 @@ suite('PathMatcher', () => {
 
 	test('patterns may match every path segment', () => {
 		const matcher = new PathMatcher(['yes']);
+		deepStrictEqual(matcher.data(), { positive: ['yes'], negative: [] });
 		strictEqual(matcher.test('yes/nope'), true);
 		strictEqual(matcher.test('nope\\yes'), true);
 		// all slashes are treated as path separators
@@ -31,6 +32,7 @@ suite('PathMatcher', () => {
 
 	test('patterns without wildcard must match entire segment', () => {
 		const matcher = new PathMatcher(['README']);
+		deepStrictEqual(matcher.data(), { positive: ['README'], negative: [] });
 		strictEqual(matcher.test('project/README'), true);
 		strictEqual(matcher.test('project/README.md'), false);
 		strictEqual(matcher.test('project/DO_NOT_README'), false);

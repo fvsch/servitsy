@@ -47,10 +47,10 @@ suite('FileResolver.cleanUrlPath', () => {
 		check('/_%2E%2E_', null);
 
 		// so let's test the underlying function
-		strictEqual(resolver.validateUrlPath('/\\foo/'), false);
-		strictEqual(resolver.validateUrlPath('/a\\.\\b'), false);
-		strictEqual(resolver.validateUrlPath('/../bar'), false);
-		strictEqual(resolver.validateUrlPath('/%2E%2E/bar'), false);
+		strictEqual(resolver.allowedUrlPath('/\\foo/'), false);
+		strictEqual(resolver.allowedUrlPath('/a\\.\\b'), false);
+		strictEqual(resolver.allowedUrlPath('/../bar'), false);
+		strictEqual(resolver.allowedUrlPath('/%2E%2E/bar'), false);
 	});
 });
 
