@@ -1,5 +1,10 @@
 # servitsy changelog
 
+## v0.4.1 (2024-10-25)
+
+- fix(deno): check required dir access before server start (#27)
+- fix(deno): handle.stat not available (#30)
+
 ## v0.4.0 (2024-10-20)
 
 - BREAKING: invalid CLI arguments now stop the program (#26)

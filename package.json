@@ -1,6 +1,6 @@
 {
 	"name": "servitsy",
-	"version": "0.4.0",
+	"version": "0.4.1",
 	"license": "MIT",
 	"description": "Small, local HTTP server for static files",
 	"keywords": [
@@ -42,7 +42,7 @@
 		"typecheck": "tsc -p jsconfig.json && tsc -p test/jsconfig.json"
 	},
 	"devDependencies": {
-		"@types/node": "^20.17.0",
+		"@types/node": "^20.17.1",
 		"fs-fixture": "^2.5.0",
 		"linkedom": "^0.18.5",
 		"prettier": "^3.3.3",
