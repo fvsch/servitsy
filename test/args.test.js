@@ -15,7 +15,7 @@ import { argify } from './shared.js';
 
 /**
 @typedef {import('../lib/types.d.ts').HttpHeaderRule} HttpHeaderRule
-**/
+*/
 
 suite('CLIArgs', () => {
 	test('returns empty values', () => {

@@ -6,17 +6,15 @@ import { dirListPage, errorPage } from '../lib/pages.js';
 import { file, link, testPath } from './shared.js';
 
 /**
- * @param {Document} doc
- * @param {string} selector
- */
+@type {(doc: Document, selector: string) => string | undefined}
+*/
 function textContent(doc, selector) {
 	return doc.querySelector(selector)?.textContent?.trim();
 }
 
 /**
- * @param {Document} doc
- * @param {{ title: string, desc?: string, base?: string }} content
- */
+@type {(doc: Document, content: { title: string, desc?: string, base?: string }) => void}
+*/
 function checkTemplate(doc, content) {
 	const text = (s = '') => textContent(doc, s);
 
@@ -39,15 +37,16 @@ suite('dirListPage', () => {
 	const serverOptions = { root: testPath(), ext: ['.html'] };
 
 	/**
-	 * @type {(data: Parameters<typeof dirListPage>[0]) => Promise<Document>} */
+	@type {(data: Parameters<typeof dirListPage>[0]) => Promise<Document>}
+	*/
 	async function dirListDoc(data) {
 		const html = await dirListPage(data, serverOptions);
 		return parseHTML(html).document;
 	}
 
 	/**
-	 * @type {(doc: Document, shouldExist: boolean) => void}
-	 */
+	@type {(doc: Document, shouldExist: boolean) => void}
+	*/
 	function checkParentLink(doc, shouldExist) {
 		const link = doc.querySelector('ul > li:first-child a');
 		if (shouldExist) {
@@ -137,8 +136,8 @@ suite('dirListPage', () => {
 
 suite('errorPage', () => {
 	/**
-	 * @type {(data: { status: number; urlPath: string }) => Promise<Document>}
-	 */
+	@type {(data: { status: number; urlPath: string }) => Promise<Document>}
+	*/
 	async function errorDoc(data) {
 		const html = await errorPage(data);
 		return parseHTML(html).document;

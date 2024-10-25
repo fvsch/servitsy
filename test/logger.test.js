@@ -54,13 +54,13 @@ suite('ColorUtils', () => {
 
 /**
 @typedef {import('../lib/types.d.ts').ReqResMeta} ReqResMeta
-**/
+*/
 
 suite('responseLogLine', () => {
 	/**
-	 * @param {Omit<ReqResMeta, 'startedAt' | 'endedAt' | 'urlPath'>} data
-	 * @param {string} expected
-	 */
+	@param {Omit<ReqResMeta, 'startedAt' | 'endedAt' | 'urlPath'>} data
+	@param {string} expected
+	*/
 	const matchLogLine = (data, expected) => {
 		const rawLine = requestLogLine({
 			...data,

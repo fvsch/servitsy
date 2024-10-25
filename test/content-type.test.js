@@ -14,12 +14,12 @@ import {
 suite('getContentType', () => {
 	/** @type {(path: string) => Promise<string>} */
 	const fromFileName = async (path) => {
-		const result = await getContentType({ filePath: path });
+		const result = await getContentType({ path });
 		return result.toString();
 	};
 	/** @type {(handle: import('node:fs/promises').FileHandle) => Promise<string>} */
 	const fromFileHandle = async (handle) => {
-		const result = await getContentType({ fileHandle: handle });
+		const result = await getContentType({ handle });
 		return result.toString();
 	};
 

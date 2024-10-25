@@ -11,7 +11,7 @@ import { trimSlash } from '../lib/utils.js';
 @typedef {import('../lib/types.d.ts').FSEntryKind} FSEntryKind
 @typedef {import('../lib/types.d.ts').ResolvedFile} ResolvedFile
 @typedef {import('../lib/types.d.ts').ServerOptions} ServerOptions
-**/
+*/
 
 /** @type {(root?: string) => ServerOptions} */
 export function getBlankOptions(root) {
@@ -41,9 +41,7 @@ export function testPath(localPath = '') {
 	return join(cwd(), '_servitsy_test_', localPath);
 }
 
-/**
- * @type {(path?: string | TemplateStringsArray, ...values: string[]) => string}
- */
+/** @type {(path?: string | TemplateStringsArray, ...values: string[]) => string} */
 export function platformSlash(path = '', ...values) {
 	path = String.raw({ raw: path }, ...values);
 	const wrong = dirSep === '/' ? '\\' : '/';
@@ -53,9 +51,7 @@ export function platformSlash(path = '', ...values) {
 	return path;
 }
 
-/**
- * @type {(localPath: string, kind?: FSEntryKind) => ResolvedFile}
- */
+/** @type {(localPath: string, kind?: FSEntryKind) => ResolvedFile} */
 export function file(localPath, kind = 'file') {
 	return {
 		filePath: testPath(localPath),
@@ -64,9 +60,7 @@ export function file(localPath, kind = 'file') {
 	};
 }
 
-/**
- * @type {(localPath: string, target: ResolvedFile) => DirIndexItem}
- */
+/** @type {(localPath: string, target: ResolvedFile) => DirIndexItem} */
 export function link(localPath, target) {
 	/** @type {DirIndexItem} */
 	const item = file(localPath, 'link');
@@ -75,8 +69,8 @@ export function link(localPath, target) {
 }
 
 /**
- * @param {import('fs-fixture').FileTree} fileTree
- */
+@param {import('fs-fixture').FileTree} fileTree
+*/
 export async function fsFixture(fileTree) {
 	const fixture = await createFixture(fileTree);
 	const getPath = (localPath = '') => trimSlash(fixture.getPath(localPath), { end: true });
@@ -98,9 +92,7 @@ export async function fsFixture(fileTree) {
 	};
 }
 
-/**
- * @type {(s?: string | TemplateStringsArray, ...v: string[]) => CLIArgs}
- */
+/** @type {(s?: string | TemplateStringsArray, ...v: string[]) => CLIArgs} */
 export function argify(strings = '', ...values) {
 	return new CLIArgs(
 		String.raw({ raw: strings }, ...values)

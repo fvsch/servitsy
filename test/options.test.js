@@ -15,9 +15,9 @@ import {
 import { errorList } from '../lib/utils.js';
 
 /**
- * @param {(input: any) => boolean} isValidFn
- * @returns {{ valid: (input: any) => void, invalid: (input: any) => void }}
- */
+@param {(input: any) => boolean} isValidFn
+@returns {{ valid: (input: any) => void, invalid: (input: any) => void }}
+*/
 function makeValidChecks(isValidFn) {
 	/** @type {(expected: boolean, input: any) => string} */
 	const msg = (expected, input) => {
