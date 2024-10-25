@@ -3,7 +3,7 @@ import { join, sep as dirSep } from 'node:path';
 import { cwd } from 'node:process';
 
 import { CLIArgs } from '../lib/args.js';
-import { DEFAULT_OPTIONS, MINIMAL_OPTIONS } from '../lib/constants.js';
+import { DEFAULT_OPTIONS } from '../lib/constants.js';
 import { trimSlash } from '../lib/utils.js';
 
 /**
@@ -17,7 +17,15 @@ import { trimSlash } from '../lib/utils.js';
 export function getBlankOptions(root) {
 	return {
 		root: root ?? testPath(),
-		...MINIMAL_OPTIONS,
+		host: '::',
+		ports: [8080],
+		gzip: false,
+		cors: false,
+		headers: [],
+		dirList: false,
+		dirFile: [],
+		ext: [],
+		exclude: [],
 	};
 }
 

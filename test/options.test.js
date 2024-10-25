@@ -2,7 +2,7 @@ import { deepStrictEqual, ok, strictEqual } from 'node:assert';
 import { cwd } from 'node:process';
 import { suite, test } from 'node:test';
 
-import { DEFAULT_OPTIONS, MINIMAL_OPTIONS } from '../lib/constants.js';
+import { DEFAULT_OPTIONS } from '../lib/constants.js';
 import {
 	isValidExt,
 	isValidHeader,
@@ -10,7 +10,6 @@ import {
 	isValidHost,
 	isValidPattern,
 	isValidPort,
-	OptionsValidator,
 	serverOptions,
 } from '../lib/options.js';
 import { errorList } from '../lib/utils.js';

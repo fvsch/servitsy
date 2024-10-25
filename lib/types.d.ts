@@ -20,7 +20,14 @@ export interface HttpHeaderRule {
 	headers: Record<string, string | number | boolean>;
 }
 
-export type OptionName =
+export interface OptionSpec {
+	help: string;
+	names: string[];
+	negate?: string;
+	default?: string | string[];
+}
+
+export type OptionSpecs = Record<
 	| 'cors'
 	| 'dirFile'
 	| 'dirList'
@@ -31,14 +38,9 @@ export type OptionName =
 	| 'help'
 	| 'host'
 	| 'port'
-	| 'version';
-
-export interface OptionSpec {
-	help: string;
-	names: string[];
-	negate?: string;
-	default?: string | string[];
-}
+	| 'version',
+	OptionSpec
+>;
 
 export interface PortsConfig {
 	initial: number;
