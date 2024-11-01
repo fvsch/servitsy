@@ -8,8 +8,8 @@ import { trimSlash } from '../lib/utils.js';
 
 /**
 @typedef {import('../lib/types.d.ts').DirIndexItem} DirIndexItem
+@typedef {import('../lib/types.d.ts').FSEntryBase} FSEntryBase
 @typedef {import('../lib/types.d.ts').FSEntryKind} FSEntryKind
-@typedef {import('../lib/types.d.ts').ResolvedFile} ResolvedFile
 @typedef {import('../lib/types.d.ts').ServerOptions} ServerOptions
 */
 
@@ -51,16 +51,12 @@ export function platformSlash(path = '', ...values) {
 	return path;
 }
 
-/** @type {(localPath: string, kind?: FSEntryKind) => ResolvedFile} */
+/** @type {(localPath: string, kind?: FSEntryKind) => FSEntryBase} */
 export function file(localPath, kind = 'file') {
-	return {
-		filePath: testPath(localPath),
-		localPath: platformSlash(localPath),
-		kind,
-	};
+	return { filePath: testPath(localPath), kind };
 }
 
-/** @type {(localPath: string, target: ResolvedFile) => DirIndexItem} */
+/** @type {(localPath: string, target: FSEntryBase) => DirIndexItem} */
 export function link(localPath, target) {
 	/** @type {DirIndexItem} */
 	const item = file(localPath, 'link');
@@ -77,13 +73,9 @@ export async function fsFixture(fileTree) {
 	return {
 		fileTree,
 		fixture,
-		/** @type {(localPath: string, kind?: FSEntryKind) => ResolvedFile} */
+		/** @type {(localPath: string, kind?: FSEntryKind) => FSEntryBase} */
 		file(localPath = '', kind = 'file') {
-			return {
-				filePath: getPath(localPath),
-				localPath: platformSlash(localPath),
-				kind,
-			};
+			return { filePath: getPath(localPath), kind };
 		},
 		/** @type {(localPath?: string | TemplateStringsArray, ...values: string[]) => string} */
 		root(localPath = '', ...values) {

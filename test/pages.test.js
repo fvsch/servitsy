@@ -62,7 +62,7 @@ suite('dirListPage', () => {
 	test('empty list page (root)', async () => {
 		const doc = await dirListDoc({
 			urlPath: '/',
-			file: file('', 'dir'),
+			filePath: testPath(''),
 			items: [],
 		});
 		const list = doc.querySelector('ul');
@@ -76,7 +76,7 @@ suite('dirListPage', () => {
 		const localPath = 'cool/folder';
 		const doc = await dirListDoc({
 			urlPath: `/${localPath}`,
-			file: file(localPath, 'dir'),
+			filePath: testPath(localPath),
 			items: [],
 		});
 		const list = doc.querySelector('ul');
@@ -90,7 +90,7 @@ suite('dirListPage', () => {
 	test('list page with items', async () => {
 		const doc = await dirListDoc({
 			urlPath: '/section',
-			file: file('section', 'dir'),
+			filePath: testPath('section'),
 			items: [
 				file('section/  I have spaces  '),
 				file('section/.gitignore'),

@@ -78,7 +78,7 @@ suite('responseLogLine', () => {
 				method: 'GET',
 				status: 200,
 				url: '/',
-				file: file('', 'dir'),
+				localPath: '',
 			},
 			'200 — GET /',
 		);
@@ -87,7 +87,7 @@ suite('responseLogLine', () => {
 				method: 'GET',
 				status: 404,
 				url: '/favicon.ico',
-				file: null,
+				localPath: null,
 			},
 			`404 — GET /favicon.ico`,
 		);
@@ -96,7 +96,7 @@ suite('responseLogLine', () => {
 				method: 'GET',
 				status: 403,
 				url: '/.htaccess',
-				file: file('.htaccess'),
+				localPath: '.htaccess',
 			},
 			`403 — GET /.htaccess`,
 		);
@@ -108,7 +108,7 @@ suite('responseLogLine', () => {
 				method: 'GET',
 				status: 200,
 				url: '/',
-				file: file('index.html'),
+				localPath: 'index.html',
 			},
 			`200 — GET /[index.html]`,
 		);
@@ -117,7 +117,7 @@ suite('responseLogLine', () => {
 				method: 'GET',
 				status: 200,
 				url: '/some/page',
-				file: file('some/page.htm'),
+				localPath: 'some/page.htm',
 			},
 			`200 — GET /some/page[.htm]`,
 		);
@@ -126,7 +126,7 @@ suite('responseLogLine', () => {
 				method: 'GET',
 				status: 200,
 				url: '/other/page/',
-				file: file('other/page.html'),
+				localPath: 'other\\page.html',
 			},
 			`200 — GET /other/page[.html]/`,
 		);
@@ -135,7 +135,7 @@ suite('responseLogLine', () => {
 				method: 'POST',
 				status: 201,
 				url: '/api/hello',
-				file: file('api/hello.json'),
+				localPath: 'api\\hello.json',
 			},
 			`201 — POST /api/hello[.json]`,
 		);
@@ -147,7 +147,7 @@ suite('responseLogLine', () => {
 				method: 'GET',
 				status: 200,
 				url: '/',
-				file: file('', 'dir'),
+				localPath: '',
 			},
 			`200 — GET /`,
 		);
@@ -156,7 +156,7 @@ suite('responseLogLine', () => {
 				method: 'GET',
 				status: 200,
 				url: '/section1',
-				file: file('section1', 'dir'),
+				localPath: 'section1',
 			},
 			`200 — GET /section1`,
 		);
@@ -165,7 +165,7 @@ suite('responseLogLine', () => {
 				method: 'GET',
 				status: 200,
 				url: '/a/b/c/d/',
-				file: file('a\\b\\c\\d', 'dir'),
+				localPath: 'a\\b\\c\\d',
 			},
 			`200 — GET /a/b/c/d/`,
 		);
@@ -177,7 +177,7 @@ suite('responseLogLine', () => {
 				method: 'GET',
 				status: 403,
 				url: '/.env',
-				file: file('.env'),
+				localPath: '.env',
 			},
 			`403 — GET /.env`,
 		);
@@ -186,7 +186,7 @@ suite('responseLogLine', () => {
 				method: 'GET',
 				status: 404,
 				url: '/robots.txt',
-				file: file('robots.txt'),
+				localPath: 'robots.txt',
 			},
 			`404 — GET /robots.txt`,
 		);
