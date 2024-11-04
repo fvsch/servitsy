@@ -1,5 +1,9 @@
 # servitsy changelog
 
+## v0.4.2 (2024-11-04)
+
+- fix: better symlink handling (#31)
+
 ## v0.4.1 (2024-10-25)
 
 - fix(deno): check required dir access before server start (#27)
@@ -36,7 +40,7 @@
 
 ## v0.2.0 (2024-09-24)
 
-- feat: handle HEAD and OPTIONS requests (#20) 
+- feat: handle HEAD and OPTIONS requests (#20)
 
 ## v0.1.3 (2024-09-16)
 
