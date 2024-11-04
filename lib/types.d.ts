@@ -1,6 +1,6 @@
-export type DirIndexItem = ResolvedFile & {
+export type DirIndexItem = FSEntryBase & {
 	isParent?: boolean;
-	target?: ResolvedFile;
+	target?: FSEntryBase;
 };
 
 export interface ErrorList {
@@ -51,22 +51,20 @@ export interface PortsConfig {
 export interface ResolveResult {
 	status: number;
 	urlPath: string;
-	file: ResolvedFile | null;
+	filePath: string | null;
+	kind: FSEntryKind | null;
 }
 
-export type ReqResMeta = ResolveResult & {
-	readonly startedAt: number;
+export type ReqResMeta = {
+	method: string;
+	status: number;
+	url: string;
+	urlPath: string;
+	localPath: string | null;
+	startedAt: number;
 	endedAt?: number;
-	readonly method: string;
-	readonly url: string;
 	error?: Error | string;
 };
-
-export interface ResolvedFile {
-	kind: FSEntryKind;
-	filePath: string;
-	localPath: string | null;
-}
 
 export interface HttpOptions {
 	host: string;

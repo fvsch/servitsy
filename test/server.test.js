@@ -167,7 +167,7 @@ suite('RequestHandler', async () => {
 		strictEqual(handler.method, 'GET');
 		strictEqual(handler.urlPath, '/');
 		strictEqual(handler.status, 200);
-		strictEqual(handler.file, null);
+		strictEqual(handler.filePath, null);
 	});
 
 	for (const method of ['PUT', 'DELETE']) {
@@ -176,7 +176,7 @@ suite('RequestHandler', async () => {
 			strictEqual(handler.method, method);
 			strictEqual(handler.status, 200);
 			strictEqual(handler.urlPath, '/README.md');
-			strictEqual(handler.file, null);
+			strictEqual(handler.filePath, null);
 
 			await handler.process();
 			strictEqual(handler.status, 405);
@@ -191,8 +191,8 @@ suite('RequestHandler', async () => {
 		await handler.process();
 
 		strictEqual(handler.status, 200);
-		strictEqual(handler.file?.kind, 'file');
-		strictEqual(handler.file?.localPath, 'index.html');
+		strictEqual(handler.kind, 'file');
+		strictEqual(handler.localPath, 'index.html');
 		strictEqual(handler.error, undefined);
 	});
 
@@ -212,7 +212,8 @@ suite('RequestHandler', async () => {
 			await handler.process();
 			strictEqual(handler.status, status);
 			// folder is still resolved when status is 404, just not used
-			deepStrictEqual(handler.file, file);
+			deepStrictEqual(handler.filePath, file.filePath);
+			deepStrictEqual(handler.kind, file.kind);
 			// both error and list pages are HTML
 			strictEqual(handler.headers['content-type'], 'text/html; charset=UTF-8');
 		}
@@ -222,24 +223,25 @@ suite('RequestHandler', async () => {
 		const control = request('GET', '/index.html');
 		await control.process();
 		strictEqual(control.status, 200);
-		strictEqual(control.file?.localPath, 'index.html');
+		strictEqual(control.localPath, 'index.html');
 
 		const noFile = request('GET', '/does/not/exist');
 		await noFile.process();
 		strictEqual(noFile.status, 404);
-		strictEqual(noFile.file, null);
+		strictEqual(noFile.filePath, null);
+		strictEqual(noFile.localPath, null);
 	});
 
 	test('GET finds .html files without extension', async () => {
 		const page1 = request('GET', '/section/page');
 		await page1.process();
 		strictEqual(page1.status, 200);
-		strictEqual(page1.file?.localPath, platformSlash`section/page.html`);
+		strictEqual(page1.localPath, platformSlash`section/page.html`);
 
 		const page2 = request('GET', '/section/other-page');
 		await page2.process();
 		strictEqual(page2.status, 200);
-		strictEqual(page2.file?.localPath, platformSlash`section/other-page.html`);
+		strictEqual(page2.localPath, platformSlash`section/other-page.html`);
 	});
 
 	test('GET shows correct content-type', async () => {
@@ -262,22 +264,23 @@ suite('RequestHandler', async () => {
 		const cases = [
 			{ url: '/', localPath: 'index.html', status: 200 },
 			{ url: '/manifest.json', localPath: 'manifest.json', status: 200 },
-			{ url: '/doesnt/exist', localPath: undefined, status: 404 },
+			{ url: '/doesnt/exist', localPath: null, status: 404 },
 		];
 		for (const { url, localPath, status } of cases) {
 			const getReq = request('GET', url);
 			await getReq.process();
 			strictEqual(getReq.method, 'GET');
 			strictEqual(getReq.status, status);
-			strictEqual(getReq.file?.localPath, localPath);
+			strictEqual(getReq.localPath, localPath);
 
 			const postReq = request('POST', url);
 			await postReq.process();
 			strictEqual(postReq.method, 'POST');
 			strictEqual(postReq.status, status);
-			strictEqual(postReq.file?.localPath, localPath);
+			strictEqual(postReq.localPath, localPath);
 
-			deepStrictEqual(getReq.file, postReq.file);
+			strictEqual(getReq.filePath, postReq.filePath);
+			strictEqual(getReq.kind, postReq.kind);
 		}
 	});
 
@@ -286,7 +289,7 @@ suite('RequestHandler', async () => {
 		await handler.process();
 		strictEqual(handler.method, 'HEAD');
 		strictEqual(handler.status, 200);
-		strictEqual(handler.file?.localPath, 'index.html');
+		strictEqual(handler.localPath, 'index.html');
 		strictEqual(handler.headers['content-type'], 'text/html; charset=UTF-8');
 		match(`${handler.headers['content-length']}`, /^\d+$/);
 	});
@@ -296,7 +299,7 @@ suite('RequestHandler', async () => {
 		await handler.process();
 		strictEqual(handler.method, 'HEAD');
 		strictEqual(handler.status, 404);
-		strictEqual(handler.file, null);
+		strictEqual(handler.filePath, null);
 		strictEqual(handler.headers['content-type'], 'text/html; charset=UTF-8');
 		match(`${handler.headers['content-length']}`, /^\d+$/);
 	});
