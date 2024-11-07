@@ -2,10 +2,12 @@ import { deepStrictEqual, strictEqual, throws } from 'node:assert';
 import { after, suite, test } from 'node:test';
 
 import { FileResolver, isValidUrlPath, resolveUrlPath } from '../lib/resolver.js';
-import { fsFixture, getDefaultOptions, platformSlash, testPath } from './shared.js';
+import { fsFixture, getDefaultOptions, loc, platformSlash } from './shared.js';
 import { getLocalPath } from '../lib/fs-utils.js';
 
 suite('FileResolver.#root', () => {
+	const { path } = loc;
+
 	test('throws when root is not defined', () => {
 		throws(() => {
 			// @ts-expect-error
@@ -14,17 +16,16 @@ suite('FileResolver.#root', () => {
 	});
 
 	test('withinRoot', () => {
-		const resolver = new FileResolver({ root: testPath() });
-
-		strictEqual(resolver.withinRoot(testPath('index.html')), true);
-		strictEqual(resolver.withinRoot(testPath('some/dir')), true);
-		strictEqual(resolver.withinRoot(testPath('../../.zshrc')), false);
-		strictEqual(resolver.withinRoot('/etc/hosts'), false);
+		const resolver = new FileResolver({ root: path() });
+		strictEqual(resolver.withinRoot(path`index.html`), true);
+		strictEqual(resolver.withinRoot(path`some/dir`), true);
+		strictEqual(resolver.withinRoot(path`../../.zshrc`), false);
+		strictEqual(resolver.withinRoot(path`/etc/hosts`), false);
 	});
 });
 
 suite('FileResolver.locateFile', async () => {
-	const { fileTree, fixture, root, file } = await fsFixture({
+	const { fileTree, fixture, path, file, dir } = await fsFixture({
 		'index.html': '<h1>Hello</h1>',
 		'page1.html': '<h1>Page 1</h1>',
 		'section1/index.html': '',
@@ -35,33 +36,35 @@ suite('FileResolver.locateFile', async () => {
 
 	test('locates exact paths', async () => {
 		const resolver = new FileResolver({
-			root: root(),
+			root: path(),
 			ext: [],
 			dirFile: [],
 		});
-		const locate = (localPath = '') => resolver.locateFile(root(localPath));
+		const locate = (localPath = '') => resolver.locateFile(path(localPath));
 
 		for (const localFilePath of Object.keys(fileTree)) {
 			deepStrictEqual(await locate(localFilePath), file(localFilePath));
 		}
-
 		for (const localDirPath of ['section1', 'section2', 'section2/sub-page']) {
-			deepStrictEqual(await locate(localDirPath), file(localDirPath, 'dir'));
+			deepStrictEqual(await locate(localDirPath), dir(localDirPath));
 		}
 	});
 
 	test('locates variants with options.ext', async () => {
-		const resolver = new FileResolver({ root: root(), ext: ['.html', '.txt'] });
+		const resolver = new FileResolver({
+			root: path(),
+			ext: ['.html', '.txt'],
+		});
 		/** @type {(localPath: string, expected: ReturnType<typeof file>) => Promise<void>} */
 		const locate = async (localPath, expected) => {
-			const filePath = root(localPath);
+			const filePath = path(localPath);
 			const result = await resolver.locateFile(filePath);
 			deepStrictEqual(result, expected);
 		};
 
-		await locate('', file('', 'dir'));
-		await locate('section1', file('section1', 'dir'));
-		await locate('section2/sub-page', file('section2/sub-page', 'dir'));
+		await locate('', dir(''));
+		await locate('section1', dir('section1'));
+		await locate('section2/sub-page', dir('section2/sub-page'));
 		await locate('index', file('index.html'));
 		await locate('page1', file('page1.html'));
 		await locate('section1/index', file('section1/index.html'));
@@ -69,11 +72,13 @@ suite('FileResolver.locateFile', async () => {
 	});
 
 	test('locates variants with options.dirFile', async () => {
-		const resolver = new FileResolver({ root: root(), dirFile: ['index.html'] });
+		const resolver = new FileResolver({
+			root: path(),
+			dirFile: ['index.html'],
+		});
 		/** @type {(localPath: string, expected: ReturnType<typeof file>) => Promise<void>} */
 		const locate = async (localPath, expected) => {
-			const filePath = root(localPath);
-			const result = await resolver.locateFile(filePath);
+			const result = await resolver.locateFile(path(localPath));
 			deepStrictEqual(result, expected);
 		};
 
@@ -82,18 +87,25 @@ suite('FileResolver.locateFile', async () => {
 		await locate('section1', file('section1/index.html'));
 
 		// does not add .html or find non-dirFile children
-		await locate('page1', { filePath: root`page1`, kind: null });
-		await locate('section2/sub-page', file('section2/sub-page', 'dir'));
+		await locate('page1', {
+			filePath: path`page1`,
+			kind: null,
+		});
+		await locate('section2/sub-page', {
+			filePath: path`section2/sub-page`,
+			kind: 'dir',
+		});
 	});
 });
 
 suite('FileResolver.#options', () => {
+	const { path } = loc;
 	test('options: exclude', () => {
 		const resolver = new FileResolver({
-			root: testPath(),
+			root: path(),
 			exclude: ['.*', '*.md'],
 		});
-		const allowed = (p = '') => resolver.allowedPath(testPath(p));
+		const allowed = (p = '') => resolver.allowedPath(path(p));
 
 		// should be allowed
 		strictEqual(allowed('robots.txt'), true);
@@ -108,10 +120,10 @@ suite('FileResolver.#options', () => {
 
 	test('options: exclude + include (custom)', () => {
 		const resolver = new FileResolver({
-			root: testPath(),
+			root: path(),
 			exclude: ['*.html', '!index.*'],
 		});
-		const allowed = (p = '') => resolver.allowedPath(testPath(p));
+		const allowed = (p = '') => resolver.allowedPath(path(p));
 
 		strictEqual(allowed('page.html'), false);
 		strictEqual(allowed('some/dir/hello.html'), false);
@@ -121,7 +133,7 @@ suite('FileResolver.#options', () => {
 
 	test('options: exclude + include (defaults)', async () => {
 		const resolver = new FileResolver(getDefaultOptions());
-		const allowed = (p = '') => resolver.allowedPath(testPath(p));
+		const allowed = (p = '') => resolver.allowedPath(path(p));
 
 		// paths that should be allowed with defaults
 		strictEqual(allowed('index.html'), true);
@@ -139,7 +151,7 @@ suite('FileResolver.#options', () => {
 });
 
 suite('FileResolver.find', async () => {
-	const { fixture, root, file } = await fsFixture({
+	const { fixture, path, file, dir } = await fsFixture({
 		'.env': '',
 		'.htpasswd': '',
 		'.well-known/security.txt': '',
@@ -151,8 +163,8 @@ suite('FileResolver.find', async () => {
 		'section/index.html': '',
 		'section/page.md': '',
 	});
-	const minimalOptions = { root: root() };
-	const defaultOptions = getDefaultOptions(root());
+	const minimalOptions = { root: path() };
+	const defaultOptions = getDefaultOptions(path());
 
 	after(() => fixture.rm());
 
@@ -164,7 +176,7 @@ suite('FileResolver.find', async () => {
 			deepStrictEqual(await resolver.find(url), {
 				status: 200,
 				urlPath: url,
-				...file(localPath),
+				file: file(localPath),
 			});
 		}
 	});
@@ -177,7 +189,7 @@ suite('FileResolver.find', async () => {
 			deepStrictEqual(result, {
 				status: 200,
 				urlPath,
-				...file('section', 'dir'),
+				file: dir('section'),
 			});
 		}
 	});
@@ -189,8 +201,6 @@ suite('FileResolver.find', async () => {
 			deepStrictEqual(await resolver.find(urlPath), {
 				urlPath,
 				status: 404,
-				filePath: null,
-				kind: null,
 			});
 		}
 	});
@@ -198,9 +208,9 @@ suite('FileResolver.find', async () => {
 	test('default options block dotfiles', async () => {
 		const resolver = new FileResolver(defaultOptions);
 		const check = async (url = '', expected = '') => {
-			const result = await resolver.find(url);
-			const localPath = result.filePath && getLocalPath(defaultOptions.root, result.filePath);
-			strictEqual(`${result.status} ${localPath}`, platformSlash(expected));
+			const { status, file } = await resolver.find(url);
+			const result = `${status} ${file ? getLocalPath(defaultOptions.root, file.filePath) : null}`;
+			strictEqual(result, platformSlash(expected));
 		};
 
 		// non-existing files are always a 404
@@ -223,14 +233,14 @@ suite('FileResolver.find', async () => {
 		deepStrictEqual(await resolver.find('/'), {
 			urlPath: '/',
 			status: 200,
-			...file('index.html'),
+			file: file('index.html'),
 		});
 
 		for (const urlPath of ['/section', '/section/']) {
 			deepStrictEqual(await resolver.find(urlPath), {
 				urlPath,
 				status: 200,
-				...file('section/index.html'),
+				file: file('section/index.html'),
 			});
 		}
 	});
@@ -244,7 +254,7 @@ suite('FileResolver.find', async () => {
 			deepStrictEqual(await resolver.find(urlPath), {
 				urlPath,
 				status: 200,
-				...file(`${fileLike}.html`),
+				file: file(`${fileLike}.html`),
 			});
 		}
 
@@ -254,15 +264,13 @@ suite('FileResolver.find', async () => {
 			deepStrictEqual(await resolver.find(urlPath), {
 				urlPath,
 				status: 404,
-				filePath: null,
-				kind: null,
 			});
 		}
 	});
 });
 
 suite('FileResolver.index', async () => {
-	const { fixture, root, file } = await fsFixture({
+	const { fixture, path, file, dir } = await fsFixture({
 		'.env': '',
 		'index.html': '',
 		'products.html': '',
@@ -273,27 +281,27 @@ suite('FileResolver.index', async () => {
 		'section/forbidden.json': '',
 		'section/index.html': '',
 	});
-	const defaultOptions = getDefaultOptions(root());
+	const defaultOptions = getDefaultOptions(path());
 
 	after(() => fixture.rm());
 
 	test('does not index directories when options.dirList is false', async () => {
 		const resolver = new FileResolver({ ...defaultOptions, dirList: false });
-		deepStrictEqual(await resolver.index(root()), []);
-		deepStrictEqual(await resolver.index(root`section`), []);
-		deepStrictEqual(await resolver.index(root`doesnt-exist`), []);
+		deepStrictEqual(await resolver.index(path()), []);
+		deepStrictEqual(await resolver.index(path`section`), []);
+		deepStrictEqual(await resolver.index(path`doesnt-exist`), []);
 	});
 
 	test('indexes directories when options.dirList is true', async () => {
 		const resolver = new FileResolver({ ...defaultOptions, dirList: true });
-		deepStrictEqual(await resolver.index(root()), [
-			file('.well-known', 'dir'),
+		deepStrictEqual(await resolver.index(path()), [
+			dir('.well-known'),
 			file('about-us.html'),
 			file('index.html'),
 			file('products.html'),
-			file('section', 'dir'),
+			dir('section'),
 		]);
-		deepStrictEqual(await resolver.index(root`section`), [
+		deepStrictEqual(await resolver.index(path`section`), [
 			file('section/forbidden.json'),
 			file('section/index.html'),
 			file('section/page.md'),
@@ -301,7 +309,7 @@ suite('FileResolver.index', async () => {
 	});
 });
 
-suite.only('isValidUrlPath', () => {
+suite('isValidUrlPath', () => {
 	/** @type {(urlPath: string, expected: boolean) => void} */
 	const check = (urlPath, expected = true) => strictEqual(isValidUrlPath(urlPath), expected);
 
@@ -335,13 +343,13 @@ suite.only('isValidUrlPath', () => {
 });
 
 suite('resolveUrlPath', () => {
-	/** @type {(url: string, expected: string | null) => void} */
-	const checkUrl = (url, expected) =>
-		strictEqual(resolveUrlPath(testPath(), url).urlPath, expected);
+	const { path } = loc;
 
 	/** @type {(url: string, expected: string | null) => void} */
-	const checkPath = (url, expected) =>
-		strictEqual(resolveUrlPath(testPath(), url).filePath, expected);
+	const checkUrl = (url, expected) => strictEqual(resolveUrlPath(path(), url).urlPath, expected);
+
+	/** @type {(url: string, expected: string | null) => void} */
+	const checkPath = (url, expected) => strictEqual(resolveUrlPath(path(), url).filePath, expected);
 
 	test('extracts URL pathname', () => {
 		checkUrl('https://example.com/hello/world', '/hello/world');
@@ -365,8 +373,8 @@ suite('resolveUrlPath', () => {
 	});
 
 	test('resolves to valid file path', () => {
-		checkPath('/', testPath(''));
-		checkPath('https://example.com/hello/world', testPath('hello/world'));
-		checkPath('/a/b/../d/./e/f', testPath('a/d/e/f'));
+		checkPath('/', path());
+		checkPath('https://example.com/hello/world', path`hello/world`);
+		checkPath('/a/b/../d/./e/f', path`a/d/e/f`);
 	});
 });

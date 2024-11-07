@@ -18,7 +18,7 @@ const isWindows = platform() === 'win32';
 suite('fsUtils', async () => {
 	// creating symlinks throws on Windows when not running as admin,
 	// so we'll have to skip all symlink testing on Windows.
-	const { fixture, root } = await fsFixture({
+	const { fixture, path } = await fsFixture({
 		'blocked/file.txt': '!!!',
 		'blocked/link.txt': isWindows ? '' : ({ symlink }) => symlink('./file.txt'),
 		'index.html': '<h1>Hello</h1>',
@@ -33,47 +33,47 @@ suite('fsUtils', async () => {
 	after(() => fixture.rm());
 
 	test('getIndex', async () => {
-		const rootIndex = await getIndex(root());
+		const rootIndex = await getIndex(path());
 		deepStrictEqual(rootIndex, [
-			{ filePath: root`blocked`, kind: 'dir' },
-			{ filePath: root`index.html`, kind: 'file' },
-			{ filePath: root`page1.html`, kind: 'file' },
-			{ filePath: root`section1`, kind: 'dir' },
-			{ filePath: root`section2`, kind: 'dir' },
+			{ filePath: path`blocked`, kind: 'dir' },
+			{ filePath: path`index.html`, kind: 'file' },
+			{ filePath: path`page1.html`, kind: 'file' },
+			{ filePath: path`section1`, kind: 'dir' },
+			{ filePath: path`section2`, kind: 'dir' },
 		]);
 
-		const sectionIndex = await getIndex(root`section1`);
+		const sectionIndex = await getIndex(path`section1`);
 		deepStrictEqual(sectionIndex, [
-			{ filePath: root`section1/index.html`, kind: 'file' },
-			{ filePath: root`section1/other-page.html`, kind: 'file' },
-			{ filePath: root`section1/sub-section`, kind: 'dir' },
+			{ filePath: path`section1/index.html`, kind: 'file' },
+			{ filePath: path`section1/other-page.html`, kind: 'file' },
+			{ filePath: path`section1/sub-section`, kind: 'dir' },
 		]);
 	});
 
 	test('getKind', async () => {
-		strictEqual(await getKind(root``), 'dir');
-		strictEqual(await getKind(root`section1`), 'dir');
-		strictEqual(await getKind(root`index.html`), 'file');
-		strictEqual(await getKind(root`section1/sub-section/index.html`), 'file');
-		strictEqual(await getKind(root`section2/link.html`), isWindows ? 'file' : 'link');
+		strictEqual(await getKind(path``), 'dir');
+		strictEqual(await getKind(path`section1`), 'dir');
+		strictEqual(await getKind(path`index.html`), 'file');
+		strictEqual(await getKind(path`section1/sub-section/index.html`), 'file');
+		strictEqual(await getKind(path`section2/link.html`), isWindows ? 'file' : 'link');
 	});
 
 	test('getRealpath', async () => {
-		strictEqual(await getRealpath(root``), root``);
-		strictEqual(await getRealpath(root`page1.html`), root`page1.html`);
+		strictEqual(await getRealpath(path``), path``);
+		strictEqual(await getRealpath(path`page1.html`), path`page1.html`);
 		strictEqual(
-			await getRealpath(root`section2/link.html`),
-			isWindows ? root`section2/link.html` : root`page1.html`,
+			await getRealpath(path`section2/link.html`),
+			isWindows ? path`section2/link.html` : path`page1.html`,
 		);
 	});
 
 	test('isReadable(file)', async () => {
-		strictEqual(await isReadable(root``), true);
-		strictEqual(await isReadable(root`page1.html`), true);
-		strictEqual(await isReadable(root`section1/sub-section`), true);
+		strictEqual(await isReadable(path``), true);
+		strictEqual(await isReadable(path`page1.html`), true);
+		strictEqual(await isReadable(path`section1/sub-section`), true);
 
 		// make one file unreadable
-		const blockedPath = root`blocked/file.txt`;
+		const blockedPath = path`blocked/file.txt`;
 		strictEqual(await isReadable(blockedPath), true);
 		if (!isWindows) {
 			await chmod(blockedPath, 0o000);
@@ -83,8 +83,8 @@ suite('fsUtils', async () => {
 		// symlinks reflect the readable state of their target
 		// (caveat: does not check +x permission if target is a dir)
 		if (!isWindows) {
-			strictEqual(await isReadable(root`section2/link.html`), true);
-			strictEqual(await isReadable(root`blocked/link.txt`), false);
+			strictEqual(await isReadable(path`section2/link.html`), true);
+			strictEqual(await isReadable(path`blocked/link.txt`), false);
 		}
 	});
 });

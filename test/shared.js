@@ -1,22 +1,43 @@
-import { createFixture } from 'fs-fixture';
-import { join, sep as dirSep } from 'node:path';
+import { join, resolve, sep as dirSep } from 'node:path';
 import { cwd } from 'node:process';
+import { createFixture } from 'fs-fixture';
 
 import { CLIArgs } from '../lib/args.js';
 import { DEFAULT_OPTIONS } from '../lib/constants.js';
 import { trimSlash } from '../lib/utils.js';
 
 /**
-@typedef {import('../lib/types.d.ts').DirIndexItem} DirIndexItem
-@typedef {import('../lib/types.d.ts').FSEntryBase} FSEntryBase
-@typedef {import('../lib/types.d.ts').FSEntryKind} FSEntryKind
+@typedef {import('../lib/types.d.ts').FSLocation} FSLocation
 @typedef {import('../lib/types.d.ts').ServerOptions} ServerOptions
 */
 
-/** @type {(root?: string) => ServerOptions} */
+export const loc = testPathUtils(join(cwd(), '_servitsy_test_'));
+
+/**
+@type {(s?: string | TemplateStringsArray, ...v: string[]) => CLIArgs}
+*/
+export function argify(strings = '', ...values) {
+	return new CLIArgs(
+		String.raw({ raw: strings }, ...values)
+			.trim()
+			.split(/\s+/g),
+	);
+}
+
+/**
+@param {import('fs-fixture').FileTree} fileTree
+*/
+export async function fsFixture(fileTree) {
+	const fixture = await createFixture(fileTree);
+	return { fileTree, fixture, ...testPathUtils(fixture.path) };
+}
+
+/**
+@type {(root?: string) => ServerOptions}
+*/
 export function getBlankOptions(root) {
 	return {
-		root: root ?? testPath(),
+		root: root ?? loc.path(),
 		host: '::',
 		ports: [8080],
 		gzip: false,
@@ -29,19 +50,19 @@ export function getBlankOptions(root) {
 	};
 }
 
-/** @type {(root?: string) => ServerOptions} */
+/**
+@type {(root?: string) => ServerOptions}
+*/
 export function getDefaultOptions(root) {
 	return {
-		root: root ?? testPath(),
+		root: root ?? loc.path(),
 		...DEFAULT_OPTIONS,
 	};
 }
 
-export function testPath(localPath = '') {
-	return join(cwd(), '_servitsy_test_', localPath);
-}
-
-/** @type {(path?: string | TemplateStringsArray, ...values: string[]) => string} */
+/**
+@type {(path?: string | TemplateStringsArray, ...values: string[]) => string}
+*/
 export function platformSlash(path = '', ...values) {
 	path = String.raw({ raw: path }, ...values);
 	const wrong = dirSep === '/' ? '\\' : '/';
@@ -51,44 +72,29 @@ export function platformSlash(path = '', ...values) {
 	return path;
 }
 
-/** @type {(localPath: string, kind?: FSEntryKind) => FSEntryBase} */
-export function file(localPath, kind = 'file') {
-	return { filePath: testPath(localPath), kind };
-}
-
-/** @type {(localPath: string, target: FSEntryBase) => DirIndexItem} */
-export function link(localPath, target) {
-	/** @type {DirIndexItem} */
-	const item = file(localPath, 'link');
-	item.target = target;
-	return item;
-}
-
 /**
-@param {import('fs-fixture').FileTree} fileTree
+@param {string} root
 */
-export async function fsFixture(fileTree) {
-	const fixture = await createFixture(fileTree);
-	const getPath = (localPath = '') => trimSlash(fixture.getPath(localPath), { end: true });
+function testPathUtils(root) {
+	/** @type {(localPath?: string | TemplateStringsArray, ...values: string[]) => string} */
+	const path = (localPath = '', ...values) => {
+		const subpath = String.raw({ raw: localPath }, ...values);
+		const full = resolve(root, subpath);
+		return full.length >= 2 ? trimSlash(full, { start: false, end: true }) : full;
+	};
+
 	return {
-		fileTree,
-		fixture,
-		/** @type {(localPath: string, kind?: FSEntryKind) => FSEntryBase} */
-		file(localPath = '', kind = 'file') {
-			return { filePath: getPath(localPath), kind };
+		path,
+		/** @type {(localPath: string) => FSLocation} */
+		dir(localPath) {
+			return { filePath: path(localPath), kind: 'dir' };
 		},
-		/** @type {(localPath?: string | TemplateStringsArray, ...values: string[]) => string} */
-		root(localPath = '', ...values) {
-			return getPath(String.raw({ raw: localPath }, ...values));
+		/** @type {(localPath: string, target?: FSLocation) => FSLocation} */
+		file(localPath, target) {
+			if (target) {
+				return { filePath: path(localPath), kind: 'link', target };
+			}
+			return { filePath: path(localPath), kind: 'file' };
 		},
 	};
-}
-
-/** @type {(s?: string | TemplateStringsArray, ...v: string[]) => CLIArgs} */
-export function argify(strings = '', ...values) {
-	return new CLIArgs(
-		String.raw({ raw: strings }, ...values)
-			.trim()
-			.split(/\s+/g),
-	);
 }

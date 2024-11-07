@@ -102,29 +102,28 @@ suite('CLIArgs', () => {
 
 suite('parseArgs', () => {
 	test('no errors for empty args', () => {
-		const context = { error: errorList() };
-		parseArgs(argify``, context);
-		deepStrictEqual(context.error.list, []);
+		const onError = errorList();
+		parseArgs(argify``, { onError });
+		deepStrictEqual(onError.list, []);
 	});
 
 	test('does not validate host and root strings', () => {
-		const context = { error: errorList() };
+		const onError = errorList();
 		const args = new CLIArgs(['--host', ' not a hostname!\n', 'https://not-a-valid-root']);
-		const options = parseArgs(args, context);
+		const options = parseArgs(args, { onError });
 		strictEqual(options.host, 'not a hostname!');
 		strictEqual(options.root, 'https://not-a-valid-root');
-		deepStrictEqual(context.error.list, []);
+		deepStrictEqual(onError.list, []);
 	});
 
 	test('validates --port syntax', () => {
-		const context = { error: errorList() };
-		deepStrictEqual(parseArgs(argify`--port 1000+`, context), {
-			ports: intRange(1000, 1009),
-		});
-		deepStrictEqual(parseArgs(argify`--port +1000`, context), {});
-		deepStrictEqual(parseArgs(argify`--port whatever`, context), {});
-		deepStrictEqual(parseArgs(argify`--port {"some":"json"}`, context), {});
-		deepStrictEqual(context.error.list, [
+		const onError = errorList();
+		const parse = (str = '') => parseArgs(argify(str), { onError });
+		deepStrictEqual(parse(`--port 1000+`), { ports: intRange(1000, 1009) });
+		deepStrictEqual(parse(`--port +1000`), {});
+		deepStrictEqual(parse(`--port whatever`), {});
+		deepStrictEqual(parse(`--port {"some":"json"}`), {});
+		deepStrictEqual(onError.list, [
 			`invalid --port value: '+1000'`,
 			`invalid --port value: 'whatever'`,
 			`invalid --port value: '{"some":"json"}'`,
@@ -132,9 +131,9 @@ suite('parseArgs', () => {
 	});
 
 	test('accepts valid --header syntax', () => {
-		const context = { error: errorList() };
+		const onError = errorList();
 		const getRule = (value = '') =>
-			parseArgs(new CLIArgs(['--header', value]), context).headers?.at(0);
+			parseArgs(new CLIArgs(['--header', value]), { onError }).headers?.at(0);
 		deepStrictEqual(getRule('x-header-1: true'), {
 			headers: { 'x-header-1': 'true' },
 		});
@@ -148,28 +147,25 @@ suite('parseArgs', () => {
 	});
 
 	test('rejects invalid --header syntax', () => {
-		const context = { error: errorList() };
+		const onError = errorList();
 		const getRule = (value = '') => {
 			const args = new CLIArgs(['--header', value]);
-			return parseArgs(args, context).headers?.at(0);
+			return parseArgs(args, { onError }).headers?.at(0);
 		};
 
 		strictEqual(getRule('basic string'), undefined);
 		strictEqual(getRule('*.md {"bad": [json]}'), undefined);
-		deepStrictEqual(context.error.list, [
+		deepStrictEqual(onError.list, [
 			`invalid --header value: 'basic string'`,
 			`invalid --header value: '*.md {"bad": [json]}'`,
 		]);
 	});
 
 	test('sets warnings for unknown args', () => {
-		const context = { error: errorList() };
+		const onError = errorList();
 		const args = argify`--help --port=9999 --never gonna -GiveYouUp`;
-		parseArgs(args, context);
-		deepStrictEqual(context.error.list, [
-			`unknown option '--never'`,
-			`unknown option '-GiveYouUp'`,
-		]);
+		parseArgs(args, { onError });
+		deepStrictEqual(onError.list, [`unknown option '--never'`, `unknown option '-GiveYouUp'`]);
 	});
 });
 

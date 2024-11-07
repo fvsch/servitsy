@@ -1,18 +1,9 @@
-export type DirIndexItem = FSEntryBase & {
-	isParent?: boolean;
-	target?: FSEntryBase;
-};
+export type FSKind = 'dir' | 'file' | 'link' | null;
 
-export interface ErrorList {
-	(msg: string): void;
-	list: string[];
-}
-
-export type FSEntryKind = 'dir' | 'file' | 'link';
-
-export interface FSEntryBase {
+export interface FSLocation {
 	filePath: string;
-	kind: FSEntryKind | null;
+	kind: FSKind;
+	target?: { filePath: string; kind: FSKind };
 }
 
 export interface HttpHeaderRule {
@@ -27,44 +18,14 @@ export interface OptionSpec {
 	default?: string | string[];
 }
 
-export type OptionSpecs = Record<
-	| 'cors'
-	| 'dirFile'
-	| 'dirList'
-	| 'exclude'
-	| 'ext'
-	| 'gzip'
-	| 'header'
-	| 'help'
-	| 'host'
-	| 'port'
-	| 'version',
-	OptionSpec
->;
-
-export interface PortsConfig {
-	initial: number;
-	count: number;
-	maxCount: number;
-}
-
-export interface ResolveResult {
-	status: number;
-	urlPath: string;
-	filePath: string | null;
-	kind: FSEntryKind | null;
-}
-
-export type ReqResMeta = {
+export interface ResMetaData {
 	method: string;
 	status: number;
-	url: string;
 	urlPath: string;
 	localPath: string | null;
-	startedAt: number;
-	endedAt?: number;
+	timing: { start: number; send?: number; close?: number };
 	error?: Error | string;
-};
+}
 
 export interface HttpOptions {
 	host: string;
