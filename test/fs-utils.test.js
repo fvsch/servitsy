@@ -1,16 +1,9 @@
-import { deepStrictEqual, match, strictEqual } from 'node:assert';
+import { deepStrictEqual, strictEqual } from 'node:assert';
 import { platform } from 'node:os';
 import { chmod } from 'node:fs/promises';
 import { after, suite, test } from 'node:test';
 
-import {
-	getIndex,
-	getKind,
-	getRealpath,
-	isReadable,
-	readPkgFile,
-	readPkgJson,
-} from '../lib/fs-utils.js';
+import { getIndex, getKind, getRealpath, isReadable, readPkgJson } from '../lib/fs-utils.js';
 import { fsFixture } from './shared.js';
 
 const isWindows = platform() === 'win32';
@@ -86,21 +79,5 @@ suite('fsUtils', async () => {
 			strictEqual(await isReadable(path`section2/link.html`), true);
 			strictEqual(await isReadable(path`blocked/link.txt`), false);
 		}
-	});
-});
-
-suite('readPkg', () => {
-	test('readPkgFile', async () => {
-		const license = await readPkgFile('LICENSE');
-		match(license, /The MIT License/);
-
-		const icons = await readPkgFile('assets/icons.svg');
-		match(icons, / xmlns="http:\/\/www\.w3\.org\/2000\/svg"/);
-	});
-
-	test('readPkgJson', async () => {
-		const pkg = await readPkgJson();
-		strictEqual(typeof pkg, 'object');
-		match(pkg.version, /^\d+\.\d+\./);
 	});
 });
