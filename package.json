@@ -1,6 +1,6 @@
 {
 	"name": "servitsy",
-	"version": "0.4.2",
+	"version": "0.4.3",
 	"license": "MIT",
 	"description": "Small, local HTTP server for static files",
 	"keywords": [

@@ -21,8 +21,8 @@ npx servitsy [directory] [options]
 # Running with Bun
 bunx servitsy
 
-# Running with Deno
-deno run --allow-net --allow-read --allow-sys npm:servitsy
+# Running with Deno (will prompt for read access)
+deno run --allow-net --allow-sys npm:servitsy
 ```
 
 Calling servitsy without options will:
@@ -64,7 +64,7 @@ For local testing, here are a few established alternatives you may prefer, with 
 
 | Package       | Version | Dependencies | Installed size† |
 | ------------- | ------- | ------------ | --------------- |
-| [servitsy]    | 0.4.1   | 0            | 124 kB          |
+| [servitsy]    | 0.4.3   | 0            | 116 kB          |
 | [servor]      | 4.0.2   | 0            | 144 kB          |
 | [sirv-cli]    | 3.0.0   | 12           | 396 kB          |
 | [serve]       | 14.2.4  | 87           | 7.5 MB          |
@@ -72,7 +72,7 @@ For local testing, here are a few established alternatives you may prefer, with 
 
 If size and dependency count is not a concern and you want something stable and battle-tested, I recommend [serve] and [http-server].
 
-Otherwise, [servor], [sirv-cli] or [servitsy] might work for you.
+Otherwise [servitsy], [sirv-cli] or [servor] might work for you.
 
 _† Installed size is the uncompressed size of the package and its dependencies (as reported by `du` on macOS; exact size may depend on the OS and/or filesystem)._
 

@@ -1,5 +1,9 @@
 # servitsy changelog
 
+## v0.4.3 (2024-11-08)
+
+- fix(deno): bundle assets to avoid permission prompt (#33)
+
 ## v0.4.2 (2024-11-04)
 
 - fix: better symlink handling (#31)
