@@ -30,13 +30,14 @@
 		"servitsy": "bin/servitsy.js"
 	},
 	"files": [
-		"./assets",
 		"./bin",
 		"./lib",
 		"./LICENSE",
 		"./README.md"
 	],
 	"scripts": {
+		"prepack": "npm run build && npm run typecheck && npm test",
+		"build": "node scripts/bundle.js",
 		"format": "prettier --write '**/*.{js,css}' '**/*config*.json'",
 		"test": "node --test --test-reporter=spec",
 		"typecheck": "tsc -p jsconfig.json && tsc -p test/jsconfig.json"
