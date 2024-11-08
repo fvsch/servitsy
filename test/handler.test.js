@@ -1,10 +1,10 @@
-import { deepStrictEqual, doesNotThrow, match, ok, strictEqual } from 'node:assert';
-import { IncomingMessage, Server, ServerResponse } from 'node:http';
+import { deepStrictEqual, match, strictEqual } from 'node:assert';
+import { IncomingMessage, ServerResponse } from 'node:http';
 import { Duplex } from 'node:stream';
 import { after, suite, test } from 'node:test';
 
 import { FileResolver } from '../lib/resolver.js';
-import { fileHeaders, staticServer, RequestHandler } from '../lib/server.js';
+import { fileHeaders, RequestHandler } from '../lib/handler.js';
 import { fsFixture, getBlankOptions, getDefaultOptions, platformSlash } from './shared.js';
 
 /**
@@ -63,7 +63,7 @@ function handlerContext(options) {
 
 	return (method, url, headers) => {
 		const { req, res } = mockReqRes(method, url, headers);
-		return new RequestHandler({ req, res }, resolver, handlerOptions);
+		return new RequestHandler({ req, res, resolver, options: handlerOptions });
 	};
 }
 
@@ -126,21 +126,8 @@ suite('fileHeaders', () => {
 	});
 });
 
-suite('staticServer', () => {
-	test("it doesn't crash", () => {
-		doesNotThrow(() => {
-			staticServer(getBlankOptions());
-		});
-	});
-	test('returns a Node.js http.Server', () => {
-		const server = staticServer(getBlankOptions());
-		ok(server instanceof Server);
-		strictEqual(typeof server.listen, 'function');
-	});
-});
-
 suite('RequestHandler', async () => {
-	const { fixture, file, root } = await fsFixture({
+	const { fixture, dir, path } = await fsFixture({
 		'.gitignore': '*.html\n',
 		'.well-known/security.txt': '# hello',
 		'.well-known/something-else.json': '{"data":{}}',
@@ -155,8 +142,8 @@ suite('RequestHandler', async () => {
 		'some-folder/package.json': '{}',
 		'some-folder/README.md': '# Hello',
 	});
-	const blankOptions = getBlankOptions(root());
-	const defaultOptions = getDefaultOptions(root());
+	const blankOptions = getBlankOptions(path());
+	const defaultOptions = getDefaultOptions(path());
 	const request = handlerContext(defaultOptions);
 
 	after(() => fixture.rm());
@@ -167,7 +154,7 @@ suite('RequestHandler', async () => {
 		strictEqual(handler.method, 'GET');
 		strictEqual(handler.urlPath, '/');
 		strictEqual(handler.status, 200);
-		strictEqual(handler.filePath, null);
+		strictEqual(handler.file, null);
 	});
 
 	for (const method of ['PUT', 'DELETE']) {
@@ -176,7 +163,7 @@ suite('RequestHandler', async () => {
 			strictEqual(handler.method, method);
 			strictEqual(handler.status, 200);
 			strictEqual(handler.urlPath, '/README.md');
-			strictEqual(handler.filePath, null);
+			strictEqual(handler.file, null);
 
 			await handler.process();
 			strictEqual(handler.status, 405);
@@ -191,14 +178,14 @@ suite('RequestHandler', async () => {
 		await handler.process();
 
 		strictEqual(handler.status, 200);
-		strictEqual(handler.kind, 'file');
+		strictEqual(handler.file?.kind, 'file');
 		strictEqual(handler.localPath, 'index.html');
 		strictEqual(handler.error, undefined);
 	});
 
 	test('GET returns a directory listing', async () => {
-		const parent = file('', 'dir');
-		const folder = file('some-folder', 'dir');
+		const parent = dir('');
+		const folder = dir('some-folder');
 		const cases = [
 			{ dirList: false, url: '/', status: 404, file: parent },
 			{ dirList: false, url: '/some-folder/', status: 404, file: folder },
@@ -211,11 +198,10 @@ suite('RequestHandler', async () => {
 			const handler = request('GET', url);
 			await handler.process();
 			strictEqual(handler.status, status);
-			// folder is still resolved when status is 404, just not used
-			deepStrictEqual(handler.filePath, file.filePath);
-			deepStrictEqual(handler.kind, file.kind);
 			// both error and list pages are HTML
 			strictEqual(handler.headers['content-type'], 'text/html; charset=UTF-8');
+			// folder is still resolved when status is 404, just not used
+			deepStrictEqual(handler.file, file);
 		}
 	});
 
@@ -228,7 +214,7 @@ suite('RequestHandler', async () => {
 		const noFile = request('GET', '/does/not/exist');
 		await noFile.process();
 		strictEqual(noFile.status, 404);
-		strictEqual(noFile.filePath, null);
+		strictEqual(noFile.file, null);
 		strictEqual(noFile.localPath, null);
 	});
 
@@ -279,8 +265,9 @@ suite('RequestHandler', async () => {
 			strictEqual(postReq.status, status);
 			strictEqual(postReq.localPath, localPath);
 
-			strictEqual(getReq.filePath, postReq.filePath);
-			strictEqual(getReq.kind, postReq.kind);
+			// other than method, results are identical
+			strictEqual(getReq.status, postReq.status);
+			deepStrictEqual(getReq.file, postReq.file);
 		}
 	});
 
@@ -299,7 +286,7 @@ suite('RequestHandler', async () => {
 		await handler.process();
 		strictEqual(handler.method, 'HEAD');
 		strictEqual(handler.status, 404);
-		strictEqual(handler.filePath, null);
+		strictEqual(handler.file, null);
 		strictEqual(handler.headers['content-type'], 'text/html; charset=UTF-8');
 		match(`${handler.headers['content-length']}`, /^\d+$/);
 	});

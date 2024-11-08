@@ -177,7 +177,7 @@ which could look bad on low resolution screens
 	display: block;
 }
 
-.files-item--parent .files-name {
+.files-link[aria-label*='parent' i] .files-name {
 	letter-spacing: 0.15ch;
 }
 

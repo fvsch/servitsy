@@ -198,14 +198,14 @@ suite('isValidPort', () => {
 
 suite('serverOptions', () => {
 	test('returns default options with empty input', () => {
-		const context = { error: errorList() };
-		const { root, ...result } = serverOptions({ root: cwd() }, context);
+		const onError = errorList();
+		const { root, ...result } = serverOptions({ root: cwd() }, { onError });
 		deepStrictEqual(result, DEFAULT_OPTIONS);
-		deepStrictEqual(context.error.list, []);
+		deepStrictEqual(onError.list, []);
 	});
 
 	test('preserves valid options', () => {
-		const context = { error: errorList() };
+		const onError = errorList();
 
 		/** @type {Parameters<serverOptions>[0]} */
 		const testOptions1 = {
@@ -214,7 +214,7 @@ suite('serverOptions', () => {
 			gzip: false,
 			cors: true,
 		};
-		deepStrictEqual(serverOptions(testOptions1, context), {
+		deepStrictEqual(serverOptions(testOptions1, { onError }), {
 			...DEFAULT_OPTIONS,
 			...testOptions1,
 		});
@@ -228,16 +228,16 @@ suite('serverOptions', () => {
 			headers: [{ include: ['*.md', '*.html'], headers: { dnt: 1 } }],
 			host: '192.168.1.199',
 		};
-		deepStrictEqual(serverOptions(testOptions2, context), {
+		deepStrictEqual(serverOptions(testOptions2, { onError }), {
 			...DEFAULT_OPTIONS,
 			...testOptions2,
 		});
 
-		deepStrictEqual(context.error.list, []);
+		deepStrictEqual(onError.list, []);
 	});
 
 	test('rejects invalid values', () => {
-		const context = { error: errorList() };
+		const onError = errorList();
 		const inputs = {
 			root: 'this/path/doesnt/exist',
 			cors: null,
@@ -253,7 +253,7 @@ suite('serverOptions', () => {
 		const { root, ...result } = serverOptions(
 			// @ts-expect-error
 			inputs,
-			context,
+			{ onError },
 		);
 		ok(typeof root === 'string');
 		ok(Object.keys(result).length >= 9);

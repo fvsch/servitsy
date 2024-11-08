@@ -3,7 +3,7 @@ import { deepStrictEqual, ok, strictEqual } from 'node:assert';
 import { suite, test } from 'node:test';
 
 import { dirListPage, errorPage } from '../lib/pages.js';
-import { file, link, testPath } from './shared.js';
+import { loc } from './shared.js';
 
 /**
 @type {(doc: Document, selector: string) => string | undefined}
@@ -34,7 +34,7 @@ function checkTemplate(doc, content) {
 }
 
 suite('dirListPage', () => {
-	const serverOptions = { root: testPath(), ext: ['.html'] };
+	const serverOptions = { root: loc.path(), ext: ['.html'] };
 
 	/**
 	@type {(data: Parameters<typeof dirListPage>[0]) => Promise<Document>}
@@ -62,7 +62,7 @@ suite('dirListPage', () => {
 	test('empty list page (root)', async () => {
 		const doc = await dirListDoc({
 			urlPath: '/',
-			filePath: testPath(''),
+			filePath: loc.path(),
 			items: [],
 		});
 		const list = doc.querySelector('ul');
@@ -76,7 +76,7 @@ suite('dirListPage', () => {
 		const localPath = 'cool/folder';
 		const doc = await dirListDoc({
 			urlPath: `/${localPath}`,
-			filePath: testPath(localPath),
+			filePath: loc.path(localPath),
 			items: [],
 		});
 		const list = doc.querySelector('ul');
@@ -90,14 +90,14 @@ suite('dirListPage', () => {
 	test('list page with items', async () => {
 		const doc = await dirListDoc({
 			urlPath: '/section',
-			filePath: testPath('section'),
+			filePath: loc.path('section'),
 			items: [
-				file('section/  I have spaces  '),
-				file('section/.gitignore'),
-				link('section/CHANGELOG', file('section/docs/changelog.md')),
-				file('section/Library', 'dir'),
-				link('section/public', file('section/.vitepress/build', 'dir')),
-				file('section/README.md'),
+				loc.file('section/  I have spaces  '),
+				loc.file('section/.gitignore'),
+				loc.file('section/CHANGELOG', loc.file('section/docs/changelog.md')),
+				loc.dir('section/Library'),
+				loc.file('section/public', loc.dir('section/.vitepress/build')),
+				loc.file('section/README.md'),
 			],
 		});
 

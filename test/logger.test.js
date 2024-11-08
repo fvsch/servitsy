@@ -2,7 +2,6 @@ import { strictEqual } from 'node:assert';
 import { suite, test } from 'node:test';
 
 import { ColorUtils, requestLogLine, stripStyle } from '../lib/logger.js';
-import { file } from './shared.js';
 
 suite('ColorUtils', () => {
 	const color = new ColorUtils(true);
@@ -52,21 +51,15 @@ suite('ColorUtils', () => {
 	});
 });
 
-/**
-@typedef {import('../lib/types.d.ts').ReqResMeta} ReqResMeta
-*/
-
 suite('responseLogLine', () => {
 	/**
-	@param {Omit<ReqResMeta, 'startedAt' | 'endedAt' | 'urlPath'>} data
+	@param {Omit<import('../lib/types.d.ts').ResMetaData, 'timing'>} data
 	@param {string} expected
 	*/
 	const matchLogLine = (data, expected) => {
 		const rawLine = requestLogLine({
+			timing: { start: Date.now() },
 			...data,
-			urlPath: data.url.split(/[\?\#]/)[0],
-			startedAt: Date.now(),
-			endedAt: undefined,
 		});
 		const line = stripStyle(rawLine).replace(/^\d{2}:\d{2}:\d{2} /, '');
 		strictEqual(line, expected);
@@ -77,7 +70,7 @@ suite('responseLogLine', () => {
 			{
 				method: 'GET',
 				status: 200,
-				url: '/',
+				urlPath: '/',
 				localPath: '',
 			},
 			'200 — GET /',
@@ -86,7 +79,7 @@ suite('responseLogLine', () => {
 			{
 				method: 'GET',
 				status: 404,
-				url: '/favicon.ico',
+				urlPath: '/favicon.ico',
 				localPath: null,
 			},
 			`404 — GET /favicon.ico`,
@@ -95,7 +88,7 @@ suite('responseLogLine', () => {
 			{
 				method: 'GET',
 				status: 403,
-				url: '/.htaccess',
+				urlPath: '/.htaccess',
 				localPath: '.htaccess',
 			},
 			`403 — GET /.htaccess`,
@@ -107,7 +100,7 @@ suite('responseLogLine', () => {
 			{
 				method: 'GET',
 				status: 200,
-				url: '/',
+				urlPath: '/',
 				localPath: 'index.html',
 			},
 			`200 — GET /[index.html]`,
@@ -116,7 +109,7 @@ suite('responseLogLine', () => {
 			{
 				method: 'GET',
 				status: 200,
-				url: '/some/page',
+				urlPath: '/some/page',
 				localPath: 'some/page.htm',
 			},
 			`200 — GET /some/page[.htm]`,
@@ -125,7 +118,7 @@ suite('responseLogLine', () => {
 			{
 				method: 'GET',
 				status: 200,
-				url: '/other/page/',
+				urlPath: '/other/page/',
 				localPath: 'other\\page.html',
 			},
 			`200 — GET /other/page[.html]/`,
@@ -134,7 +127,7 @@ suite('responseLogLine', () => {
 			{
 				method: 'POST',
 				status: 201,
-				url: '/api/hello',
+				urlPath: '/api/hello',
 				localPath: 'api\\hello.json',
 			},
 			`201 — POST /api/hello[.json]`,
@@ -146,7 +139,7 @@ suite('responseLogLine', () => {
 			{
 				method: 'GET',
 				status: 200,
-				url: '/',
+				urlPath: '/',
 				localPath: '',
 			},
 			`200 — GET /`,
@@ -155,7 +148,7 @@ suite('responseLogLine', () => {
 			{
 				method: 'GET',
 				status: 200,
-				url: '/section1',
+				urlPath: '/section1',
 				localPath: 'section1',
 			},
 			`200 — GET /section1`,
@@ -164,7 +157,7 @@ suite('responseLogLine', () => {
 			{
 				method: 'GET',
 				status: 200,
-				url: '/a/b/c/d/',
+				urlPath: '/a/b/c/d/',
 				localPath: 'a\\b\\c\\d',
 			},
 			`200 — GET /a/b/c/d/`,
@@ -176,7 +169,7 @@ suite('responseLogLine', () => {
 			{
 				method: 'GET',
 				status: 403,
-				url: '/.env',
+				urlPath: '/.env',
 				localPath: '.env',
 			},
 			`403 — GET /.env`,
@@ -185,7 +178,7 @@ suite('responseLogLine', () => {
 			{
 				method: 'GET',
 				status: 404,
-				url: '/robots.txt',
+				urlPath: '/robots.txt',
 				localPath: 'robots.txt',
 			},
 			`404 — GET /robots.txt`,
