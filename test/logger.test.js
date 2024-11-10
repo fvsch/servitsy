@@ -53,12 +53,13 @@ suite('ColorUtils', () => {
 
 suite('responseLogLine', () => {
 	/**
-	@param {Omit<import('../lib/types.d.ts').ResMetaData, 'timing'>} data
+	@param {Omit<import('../lib/types.d.ts').ResMetaData, 'url' | 'timing'>} data
 	@param {string} expected
 	*/
 	const matchLogLine = (data, expected) => {
 		const rawLine = requestLogLine({
 			timing: { start: Date.now() },
+			url: `http://localhost:8080${data.urlPath}`,
 			...data,
 		});
 		const line = stripStyle(rawLine).replace(/^\d{2}:\d{2}:\d{2} /, '');

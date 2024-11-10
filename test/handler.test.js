@@ -3,8 +3,8 @@ import { IncomingMessage, ServerResponse } from 'node:http';
 import { Duplex } from 'node:stream';
 import { after, suite, test } from 'node:test';
 
+import { extractUrlPath, fileHeaders, isValidUrlPath, RequestHandler } from '../lib/handler.js';
 import { FileResolver } from '../lib/resolver.js';
-import { fileHeaders, RequestHandler } from '../lib/handler.js';
 import { fsFixture, getBlankOptions, getDefaultOptions, platformSlash } from './shared.js';
 
 /**
@@ -76,6 +76,65 @@ function withHeaderRules(rules, blockList) {
 	return (filePath) => fileHeaders(filePath, rules, blockList);
 }
 
+suite('isValidUrlPath', () => {
+	/** @type {(urlPath: string, expected: boolean) => void} */
+	const check = (urlPath, expected = true) => strictEqual(isValidUrlPath(urlPath), expected);
+
+	test('rejects invalid paths', () => {
+		check('', false);
+		check('anything', false);
+		check('https://example.com/hello', false);
+		check('/hello?', false);
+		check('/hello#intro', false);
+		check('/hello//world', false);
+		check('/hello\\world', false);
+		check('/..', false);
+		check('/%2E%2E/etc', false);
+		check('/_%2F_%2F_', false);
+		check('/_%5C_%5C_', false);
+		check('/_%2f_%5c_', false);
+	});
+
+	test('accepts valid url paths', () => {
+		check('/', true);
+		check('/hello/world', true);
+		check('/YES!/YES!!/THE TIGER IS OUT!', true);
+		check('/.well-known/security.txt', true);
+		check('/cool..story', true);
+		check('/%20%20%20%20spaces%0A%0Aand%0A%0Alinebreaks%0A%0A%20%20%20%20', true);
+		check(
+			'/%E5%BA%A7%E9%96%93%E5%91%B3%E5%B3%B6%E3%81%AE%E5%8F%A4%E5%BA%A7%E9%96%93%E5%91%B3%E3%83%93%E3%83%BC%E3%83%81%E3%80%81%E6%B2%96%E7%B8%84%E7%9C%8C%E5%B3%B6%E5%B0%BB%E9%83%A1%E5%BA%A7%E9%96%93%E5%91%B3%E6%9D%91',
+			true,
+		);
+	});
+});
+
+suite('extractUrlPath', () => {
+	/** @type {(url: string, expected: string | null) => void} */
+	const checkUrl = (url, expected) => strictEqual(extractUrlPath(url), expected);
+
+	test('extracts URL pathname', () => {
+		checkUrl('https://example.com/hello/world', '/hello/world');
+		checkUrl('/hello/world?cool=test', '/hello/world');
+		checkUrl('/hello/world#right', '/hello/world');
+	});
+
+	test('keeps percent encoding', () => {
+		checkUrl('/Super%3F%20%C3%89patant%21/', '/Super%3F%20%C3%89patant%21/');
+		checkUrl('/%E3%82%88%E3%81%86%E3%81%93%E3%81%9D', '/%E3%82%88%E3%81%86%E3%81%93%E3%81%9D');
+	});
+
+	test('resolves double-dots and slashes', () => {
+		// `new URL` treats backslashes as forward slashes
+		checkUrl('/a\\b', '/a/b');
+		checkUrl('/a\\.\\b', '/a/b');
+		checkUrl('/\\foo/', '/');
+		// double dots are resolved
+		checkUrl('/../bar', '/bar');
+		checkUrl('/%2E%2E/bar', '/bar');
+	});
+});
+
 suite('fileHeaders', () => {
 	test('headers without include patterns are added for all responses', () => {
 		const headers = withHeaderRules([
@@ -131,6 +190,7 @@ suite('RequestHandler', async () => {
 		'.gitignore': '*.html\n',
 		'.well-known/security.txt': '# hello',
 		'.well-known/something-else.json': '{"data":{}}',
+		'最近の更新.html': '<h1>最近の更新</h1>',
 		'index.html': '<h1>Hello World</h1>',
 		'manifest.json': '{"hello": "world"}',
 		'README.md': '# Cool stuff\n',
@@ -139,8 +199,8 @@ suite('RequestHandler', async () => {
 		'section/index.html': '<h1>Section</h1>',
 		'section/other-page.html': '<h1>Other page</h1>',
 		'section/page.html': '<h1>Cool page</h1>',
-		'some-folder/package.json': '{}',
-		'some-folder/README.md': '# Hello',
+		'Some Folder/package.json': '{}',
+		'Some Folder/README.md': '# Hello',
 	});
 	const blankOptions = getBlankOptions(path());
 	const defaultOptions = getDefaultOptions(path());
@@ -185,12 +245,12 @@ suite('RequestHandler', async () => {
 
 	test('GET returns a directory listing', async () => {
 		const parent = dir('');
-		const folder = dir('some-folder');
+		const folder = dir('Some Folder');
 		const cases = [
 			{ dirList: false, url: '/', status: 404, file: parent },
-			{ dirList: false, url: '/some-folder/', status: 404, file: folder },
+			{ dirList: false, url: '/Some%20Folder/', status: 404, file: folder },
 			{ dirList: true, url: '/', status: 200, file: parent },
-			{ dirList: true, url: '/some-folder', status: 200, file: folder },
+			{ dirList: true, url: '/Some%20Folder/', status: 200, file: folder },
 		];
 
 		for (const { dirList, url, status, file } of cases) {
@@ -231,19 +291,22 @@ suite('RequestHandler', async () => {
 	});
 
 	test('GET shows correct content-type', async () => {
-		const cases = [
-			{ url: '/manifest.json', contentType: 'application/json; charset=UTF-8' },
-			{ url: '/README.md', contentType: 'text/markdown; charset=UTF-8' },
-			{ url: '/section/favicon.svg', contentType: 'image/svg+xml; charset=UTF-8' },
-			{ url: '/section/page', contentType: 'text/html; charset=UTF-8' },
-		];
-
-		for (const { url, contentType } of cases) {
+		const checkType = async (url = '', contentType = '') => {
 			const handler = request('GET', url);
 			await handler.process();
-			strictEqual(handler.status, 200);
-			strictEqual(handler.headers['content-type'], contentType);
-		}
+			strictEqual(handler.status, 200, `Correct status for GET ${url}`);
+			strictEqual(
+				handler.headers['content-type'],
+				contentType,
+				`Correct content-type for GET ${url}`,
+			);
+		};
+
+		await checkType('/manifest.json', 'application/json; charset=UTF-8');
+		await checkType('/README.md', 'text/markdown; charset=UTF-8');
+		await checkType('/section/favicon.svg', 'image/svg+xml; charset=UTF-8');
+		await checkType('/section/page', 'text/html; charset=UTF-8');
+		await checkType('/%E6%9C%80%E8%BF%91%E3%81%AE%E6%9B%B4%E6%96%B0', 'text/html; charset=UTF-8');
 	});
 
 	test('POST is handled as GET', async () => {
@@ -252,6 +315,7 @@ suite('RequestHandler', async () => {
 			{ url: '/manifest.json', localPath: 'manifest.json', status: 200 },
 			{ url: '/doesnt/exist', localPath: null, status: 404 },
 		];
+
 		for (const { url, localPath, status } of cases) {
 			const getReq = request('GET', url);
 			await getReq.process();

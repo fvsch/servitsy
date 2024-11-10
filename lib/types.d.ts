@@ -21,7 +21,8 @@ export interface OptionSpec {
 export interface ResMetaData {
 	method: string;
 	status: number;
-	urlPath: string;
+	url: string;
+	urlPath: string | null;
 	localPath: string | null;
 	timing: { start: number; send?: number; close?: number };
 	error?: Error | string;

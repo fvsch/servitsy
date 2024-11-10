@@ -37,10 +37,13 @@ suite('dirListPage', () => {
 	const serverOptions = { root: loc.path(), ext: ['.html'] };
 
 	/**
-	@type {(data: Parameters<typeof dirListPage>[0]) => Promise<Document>}
+	@type {(data: Omit<Parameters<typeof dirListPage>[0], 'root' | 'ext'>) => Promise<Document>}
 	*/
 	async function dirListDoc(data) {
-		const html = await dirListPage(data, serverOptions);
+		const html = await dirListPage({
+			...serverOptions,
+			...data,
+		});
 		return parseHTML(html).document;
 	}
 
@@ -136,24 +139,40 @@ suite('dirListPage', () => {
 
 suite('errorPage', () => {
 	/**
-	@type {(data: { status: number; urlPath: string }) => Promise<Document>}
+	@type {(data: { status: number; urlPath: string | null }) => Promise<Document>}
 	*/
 	async function errorDoc(data) {
-		const html = await errorPage(data);
+		const html = await errorPage({ ...data, url: data.urlPath ?? '<unknown>' });
 		return parseHTML(html).document;
 	}
 
 	test('same generic error page for unknown status', async () => {
-		const html1 = await errorPage({ status: 0, urlPath: '/error' });
-		const html2 = await errorPage({ status: 200, urlPath: '/some/other/path' });
+		const html1 = await errorPage({
+			status: 0,
+			url: '/error',
+			urlPath: '/error',
+		});
+		const html2 = await errorPage({
+			status: 200,
+			url: '/some/other/path',
+			urlPath: '/some/other/path',
+		});
 		strictEqual(html1, html2);
 	});
 
 	test('generic error page', async () => {
-		const doc = await errorDoc({ status: 400, urlPath: '/error' });
+		const doc = await errorDoc({ status: 499, urlPath: '/error' });
 		checkTemplate(doc, {
 			title: 'Error',
 			desc: 'Something went wrong',
+		});
+	});
+
+	test('400 error page', async () => {
+		const doc = await errorDoc({ status: 400, urlPath: null });
+		checkTemplate(doc, {
+			title: '400: Bad request',
+			desc: 'Invalid request for <unknown>',
 		});
 	});
 
