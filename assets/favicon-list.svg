@@ -1,10 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16">
-	<style>
-		svg { fill: #333 }
-		@media (prefers-color-scheme: dark) {
-			svg { fill: #ccc }
-		}
-	</style>
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+	style="color-scheme: light dark; fill: light-dark(#333, #ccc)">
 	<rect x="1" y="2.75" width="2" height="2" rx="1"/>
 	<rect x="1" y="7.25" width="2" height="2" rx="1"/>
 	<rect x="1" y="11.75" width="2" height="2" rx="1"/>
