@@ -1,9 +1,8 @@
-import { deepStrictEqual, strictEqual } from 'node:assert';
 import { platform } from 'node:os';
 import { chmod } from 'node:fs/promises';
-import { after, suite, test } from 'node:test';
+import { afterAll, expect, suite, test } from 'vitest';
 
-import { getIndex, getKind, getRealpath, isReadable, readPkgJson } from '../lib/fs-utils.js';
+import { getIndex, getKind, getRealpath, isReadable } from '#src/fs-utils.js';
 import { fsFixture } from './shared.js';
 
 const isWindows = platform() === 'win32';
@@ -23,11 +22,11 @@ suite('fsUtils', async () => {
 		'section2/link.html': isWindows ? '' : ({ symlink }) => symlink('../page1.html'),
 	});
 
-	after(() => fixture.rm());
+	afterAll(() => fixture.rm());
 
 	test('getIndex', async () => {
 		const rootIndex = await getIndex(path());
-		deepStrictEqual(rootIndex, [
+		expect(rootIndex).toEqual([
 			{ filePath: path`blocked`, kind: 'dir' },
 			{ filePath: path`index.html`, kind: 'file' },
 			{ filePath: path`page1.html`, kind: 'file' },
@@ -36,7 +35,7 @@ suite('fsUtils', async () => {
 		]);
 
 		const sectionIndex = await getIndex(path`section1`);
-		deepStrictEqual(sectionIndex, [
+		expect(sectionIndex).toEqual([
 			{ filePath: path`section1/index.html`, kind: 'file' },
 			{ filePath: path`section1/other-page.html`, kind: 'file' },
 			{ filePath: path`section1/sub-section`, kind: 'dir' },
@@ -44,40 +43,41 @@ suite('fsUtils', async () => {
 	});
 
 	test('getKind', async () => {
-		strictEqual(await getKind(path``), 'dir');
-		strictEqual(await getKind(path`section1`), 'dir');
-		strictEqual(await getKind(path`index.html`), 'file');
-		strictEqual(await getKind(path`section1/sub-section/index.html`), 'file');
-		strictEqual(await getKind(path`section2/link.html`), isWindows ? 'file' : 'link');
+		expect(await getKind(path``)).toBe('dir');
+		expect(await getKind(path`section1`)).toBe('dir');
+		expect(await getKind(path`index.html`)).toBe('file');
+		expect(await getKind(path`section1/sub-section/index.html`)).toBe('file');
+		if (!isWindows) {
+			expect(await getKind(path`section2/link.html`)).toBe('link');
+		}
 	});
 
 	test('getRealpath', async () => {
-		strictEqual(await getRealpath(path``), path``);
-		strictEqual(await getRealpath(path`page1.html`), path`page1.html`);
-		strictEqual(
-			await getRealpath(path`section2/link.html`),
-			isWindows ? path`section2/link.html` : path`page1.html`,
-		);
+		expect(await getRealpath(path``)).toBe(path``);
+		expect(await getRealpath(path`page1.html`)).toBe(path`page1.html`);
+		if (!isWindows) {
+			expect(await getRealpath(path`section2/link.html`)).toBe(path`page1.html`);
+		}
 	});
 
 	test('isReadable(file)', async () => {
-		strictEqual(await isReadable(path``), true);
-		strictEqual(await isReadable(path`page1.html`), true);
-		strictEqual(await isReadable(path`section1/sub-section`), true);
+		expect(await isReadable(path``)).toBe(true);
+		expect(await isReadable(path`page1.html`)).toBe(true);
+		expect(await isReadable(path`section1/sub-section`)).toBe(true);
 
 		// make one file unreadable
 		const blockedPath = path`blocked/file.txt`;
-		strictEqual(await isReadable(blockedPath), true);
+		expect(await isReadable(blockedPath)).toBe(true);
 		if (!isWindows) {
 			await chmod(blockedPath, 0o000);
-			strictEqual(await isReadable(blockedPath), false);
+			expect(await isReadable(blockedPath)).toBe(false);
 		}
 
 		// symlinks reflect the readable state of their target
 		// (caveat: does not check +x permission if target is a dir)
 		if (!isWindows) {
-			strictEqual(await isReadable(path`section2/link.html`), true);
-			strictEqual(await isReadable(path`blocked/link.txt`), false);
+			expect(await isReadable(path`section2/link.html`)).toBe(true);
+			expect(await isReadable(path`blocked/link.txt`)).toBe(false);
 		}
 	});
 });

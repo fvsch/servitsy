@@ -1,4 +1,5 @@
-/** @type {string[]} */
+import type { OptionName, OptionSpec, ServerOptions } from './types.d.ts';
+
 export const HOSTS_LOCAL = ['localhost', '127.0.0.1', '::1'];
 
 export const HOSTS_WILDCARD = {
@@ -12,13 +13,11 @@ export const PORTS_CONFIG = {
 	maxCount: 100,
 };
 
-/** @type {string[]} */
 export const SUPPORTED_METHODS = ['GET', 'HEAD', 'OPTIONS', 'POST'];
 
 export const MAX_COMPRESS_SIZE = 50_000_000;
 
-/** @type {Omit<import('./types.d.ts').ServerOptions, 'root'>} */
-export const DEFAULT_OPTIONS = {
+export const DEFAULT_OPTIONS: Omit<ServerOptions, 'root'> = {
 	host: HOSTS_WILDCARD.v6,
 	ports: [8080, 8081, 8082, 8083, 8084, 8085, 8086, 8087, 8088, 8089],
 	gzip: true,
@@ -30,11 +29,7 @@ export const DEFAULT_OPTIONS = {
 	exclude: ['.*', '!.well-known'],
 };
 
-/**
-@typedef {'cors' | 'dirFile' | 'dirList' | 'exclude' | 'ext' | 'gzip' | 'header' | 'help' | 'host' | 'port' | 'version'} OptionName
-@type {Record<OptionName, import('./types.d.ts').OptionSpec>}
-*/
-export const CLI_OPTIONS = {
+export const CLI_OPTIONS: Record<OptionName, OptionSpec> = {
 	cors: {
 		help: 'Send CORS HTTP headers in responses',
 		names: ['--cors'],

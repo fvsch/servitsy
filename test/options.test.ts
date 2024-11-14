@@ -1,8 +1,7 @@
-import { deepStrictEqual, ok, strictEqual } from 'node:assert';
 import { cwd } from 'node:process';
-import { suite, test } from 'node:test';
+import { expect, suite, test } from 'vitest';
 
-import { DEFAULT_OPTIONS } from '../lib/constants.js';
+import { DEFAULT_OPTIONS } from '#src/constants.js';
 import {
 	isValidExt,
 	isValidHeader,
@@ -11,16 +10,12 @@ import {
 	isValidPattern,
 	isValidPort,
 	serverOptions,
-} from '../lib/options.js';
-import { errorList } from '../lib/utils.js';
+} from '#src/options.js';
+import { errorList } from '#src/utils.js';
+import type { ServerOptions } from '#types';
 
-/**
-@param {(input: any) => boolean} isValidFn
-@returns {{ valid: (input: any) => void, invalid: (input: any) => void }}
-*/
-function makeValidChecks(isValidFn) {
-	/** @type {(expected: boolean, input: any) => string} */
-	const msg = (expected, input) => {
+function makeValidChecks(isValidFn: (input: any) => boolean) {
+	const msg = (expected: boolean, input: any) => {
 		return [
 			`Expected to be ${expected ? 'valid' : 'invalid'}:`,
 			`${isValidFn.name}(${JSON.stringify(input, null, '\t')})`,
@@ -28,11 +23,11 @@ function makeValidChecks(isValidFn) {
 	};
 
 	return {
-		valid(input) {
-			strictEqual(isValidFn(input), true, msg(true, input));
+		valid(input: any) {
+			expect(isValidFn(input), msg(true, input)).toBe(true);
 		},
-		invalid(input) {
-			strictEqual(isValidFn(input), false, msg(false, input));
+		invalid(input: any) {
+			expect(isValidFn(input), msg(false, input)).toBe(false);
 		},
 	};
 }
@@ -197,30 +192,30 @@ suite('isValidPort', () => {
 });
 
 suite('serverOptions', () => {
+	type InputOptions = Partial<ServerOptions> & { root: string };
+
 	test('returns default options with empty input', () => {
 		const onError = errorList();
 		const { root, ...result } = serverOptions({ root: cwd() }, { onError });
-		deepStrictEqual(result, DEFAULT_OPTIONS);
-		deepStrictEqual(onError.list, []);
+		expect(result).toEqual(DEFAULT_OPTIONS);
+		expect(onError.list).toEqual([]);
 	});
 
 	test('preserves valid options', () => {
 		const onError = errorList();
 
-		/** @type {Parameters<serverOptions>[0]} */
-		const testOptions1 = {
+		const testOptions1: InputOptions = {
 			root: cwd(),
 			dirList: false,
 			gzip: false,
 			cors: true,
 		};
-		deepStrictEqual(serverOptions(testOptions1, { onError }), {
+		expect(serverOptions(testOptions1, { onError })).toEqual({
 			...DEFAULT_OPTIONS,
 			...testOptions1,
 		});
 
-		/** @type {Parameters<serverOptions>[0]} */
-		const testOptions2 = {
+		const testOptions2: InputOptions = {
 			root: cwd(),
 			ext: ['.htm', '.TXT'],
 			dirFile: ['page.md', 'Index Page.html'],
@@ -228,12 +223,12 @@ suite('serverOptions', () => {
 			headers: [{ include: ['*.md', '*.html'], headers: { dnt: 1 } }],
 			host: '192.168.1.199',
 		};
-		deepStrictEqual(serverOptions(testOptions2, { onError }), {
+		expect(serverOptions(testOptions2, { onError })).toEqual({
 			...DEFAULT_OPTIONS,
 			...testOptions2,
 		});
 
-		deepStrictEqual(onError.list, []);
+		expect(onError.list).toEqual([]);
 	});
 
 	test('rejects invalid values', () => {
@@ -255,8 +250,8 @@ suite('serverOptions', () => {
 			inputs,
 			{ onError },
 		);
-		ok(typeof root === 'string');
-		ok(Object.keys(result).length >= 9);
-		deepStrictEqual(result, DEFAULT_OPTIONS);
+		expect(typeof root).toBe('string');
+		expect(Object.keys(result).length).toBeGreaterThanOrEqual(9);
+		expect(result).toEqual(DEFAULT_OPTIONS);
 	});
 });

@@ -1,13 +1,13 @@
 {
-	"include": ["./bin", "./lib", "./globals.d.ts"],
+	"include": ["./*.ts"],
 	"compilerOptions": {
 		"module": "NodeNext",
 		"target": "ES2022",
-		"lib": ["ES2022"],
+		"lib": ["ES2022", "DOM", "DOM.Iterable"],
 		"types": ["node"],
+		"isolatedModules": true,
+		"skipLibCheck": true,
 		"strict": true,
-		"allowJs": true,
-		"checkJs": true,
 		"noEmit": true
 	}
 }

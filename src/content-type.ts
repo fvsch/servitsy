@@ -1,22 +1,17 @@
+import type { FileHandle } from 'node:fs/promises';
 import { basename, extname } from 'node:path';
 
-/**
-@typedef {import('node:fs/promises').FileHandle} FileHandle
-@typedef {{
+interface TypeMap {
 	default: string;
 	file: string[];
 	extension: string[];
 	extensionMap: Record<string, string>;
 	suffix: string[];
-}} TypeMap
-*/
+}
 
 const strarr = (s = '') => s.trim().split(/\s+/);
 
-const DEFAULT_CHARSET = 'UTF-8';
-
-/** @type {TypeMap} */
-export const TEXT_TYPES = {
+export const TEXT_TYPES: TypeMap = {
 	default: 'text/plain',
 	extensionMap: {
 		atom: 'application/atom+xml',
@@ -74,8 +69,7 @@ export const TEXT_TYPES = {
 	suffix: strarr(`config file html ignore rc`),
 };
 
-/** @type {TypeMap} */
-const BIN_TYPES = {
+const BIN_TYPES: TypeMap = {
 	default: 'application/octet-stream',
 	extensionMap: {
 		'7z': 'application/x-7z-compressed',
@@ -141,15 +135,12 @@ const BIN_TYPES = {
 };
 
 export class TypeResult {
-	/** @type {'text' | 'bin' | 'unknown'} */
-	group = 'unknown';
+	group: 'text' | 'bin' | 'unknown' = 'unknown';
+	type: string = BIN_TYPES.default;
+	charset: string = '';
 
-	/** @type {string} */
-	type = BIN_TYPES.default;
-
-	/** @param {string | null} [charset] */
-	constructor(charset = DEFAULT_CHARSET) {
-		this.charset = charset;
+	constructor(charset: string = 'UTF-8') {
+		if (typeof charset === 'string') this.charset = charset;
 	}
 
 	bin(type = BIN_TYPES.default) {
@@ -179,8 +170,7 @@ export class TypeResult {
 	}
 }
 
-/** @type {(filePath: string, charset?: string | null) => TypeResult} */
-export function typeForFilePath(filePath, charset) {
+export function typeForFilePath(filePath: string, charset?: string): TypeResult {
 	const result = new TypeResult(charset);
 
 	const name = filePath ? basename(filePath).toLowerCase() : '';
@@ -205,12 +195,7 @@ export function typeForFilePath(filePath, charset) {
 	return result.unknown();
 }
 
-/**
-@param {FileHandle} handle
-@param {string | null} [charset]
-@returns {Promise<TypeResult>}
-*/
-export async function typeForFile(handle, charset) {
+export async function typeForFile(handle: FileHandle, charset?: string): Promise<TypeResult> {
 	const result = new TypeResult(charset);
 	try {
 		const { buffer, bytesRead } = await handle.read({
@@ -227,11 +212,13 @@ export async function typeForFile(handle, charset) {
 	}
 }
 
-/**
-@param {{ path?: string; handle?: FileHandle }} file
-@returns {Promise<TypeResult>}
-*/
-export async function getContentType({ path, handle }) {
+export async function getContentType({
+	path,
+	handle,
+}: {
+	path?: string;
+	handle?: FileHandle;
+}): Promise<TypeResult> {
 	if (path) {
 		const result = typeForFilePath(path);
 		if (result.group !== 'unknown') {
@@ -247,9 +234,8 @@ export async function getContentType({ path, handle }) {
 
 /**
 https://mimesniff.spec.whatwg.org/#sniffing-a-mislabeled-binary-resource
-@type {(bytes: Uint8Array) => boolean}
 */
-export function isBinHeader(bytes) {
+export function isBinHeader(bytes: Uint8Array): boolean {
 	const limit = Math.min(bytes.length, 2000);
 
 	const [b0, b1, b2] = bytes;
@@ -275,9 +261,8 @@ export function isBinHeader(bytes) {
 
 /**
 https://mimesniff.spec.whatwg.org/#binary-data-byte
-@type {(int: number) => boolean}
 */
-export function isBinDataByte(int) {
+export function isBinDataByte(int: number): boolean {
 	if (int >= 0 && int <= 0x1f) {
 		return (
 			(int >= 0 && int <= 0x08) ||

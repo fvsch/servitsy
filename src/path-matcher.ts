@@ -1,20 +1,11 @@
 import { fwdSlash } from './utils.js';
 
 export class PathMatcher {
-	/** @type {Array<string | RegExp>} */
-	#positive = [];
-
-	/** @type {Array<string | RegExp>} */
-	#negative = [];
-
-	/** @type {boolean} */
+	#positive: Array<string | RegExp> = [];
+	#negative: Array<string | RegExp> = [];
 	#caseSensitive = true;
 
-	/**
-	@param {string[]} patterns
-	@param {Partial<{ caseSensitive: boolean }>} [options]
-	*/
-	constructor(patterns, options) {
+	constructor(patterns: string[], options?: { caseSensitive: boolean }) {
 		if (typeof options?.caseSensitive === 'boolean') {
 			this.#caseSensitive = options.caseSensitive;
 		}
@@ -29,8 +20,7 @@ export class PathMatcher {
 		}
 	}
 
-	/** @type {(filePath: string) => boolean} */
-	test(filePath) {
+	test(filePath: string): boolean {
 		if (this.#positive.length === 0) {
 			return false;
 		}
@@ -39,8 +29,7 @@ export class PathMatcher {
 		return matched.length > 0;
 	}
 
-	/** @type {(input: string) => string | RegExp | null} */
-	#parse(input) {
+	#parse(input: string): string | RegExp | null {
 		if (this.#caseSensitive === false) {
 			input = input.toLowerCase();
 		}
@@ -54,8 +43,7 @@ export class PathMatcher {
 		return input;
 	}
 
-	/** @type {(pattern: string | RegExp, value: string) => boolean} */
-	#matchPattern(pattern, value) {
+	#matchPattern(pattern: string | RegExp, value: string): boolean {
 		if (this.#caseSensitive === false) {
 			value = value.toLowerCase();
 		}
@@ -68,8 +56,7 @@ export class PathMatcher {
 		return false;
 	}
 
-	/** @type {(segments: string[]) => string[]} */
-	#matchSegments(segments) {
+	#matchSegments(segments: string[]): string[] {
 		return segments.filter((segment) => {
 			const positive = this.#positive.some((pattern) => this.#matchPattern(pattern, segment));
 			if (!positive) return false;
@@ -79,6 +66,9 @@ export class PathMatcher {
 	}
 
 	data() {
-		return { positive: this.#positive, negative: this.#negative };
+		return structuredClone({
+			positive: this.#positive,
+			negative: this.#negative,
+		});
 	}
 }

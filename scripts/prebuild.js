@@ -1,14 +1,20 @@
-import { readFile, writeFile } from 'node:fs/promises';
+import { readFile, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 
-bundleAssets();
+main();
+
+async function main() {
+	await bundleAssets();
+	await cleanLib();
+}
 
 /**
 Read text files from the assets folder and write
 */
 async function bundleAssets() {
-	const outPath = 'lib/page-assets.js';
+	const outPath = pkgFilePath('src/page-assets.ts');
+	console.log(`Updating assets bundle:\n  ${outPath}\n`);
+
 	const assets = {
 		FAVICON_ERROR: await readPkgFile('assets/favicon-error.svg'),
 		FAVICON_LIST: await readPkgFile('assets/favicon-list.svg'),
@@ -22,13 +28,17 @@ async function bundleAssets() {
 		return `export const ${key} = \`${escape(minify(contents))}\`;`;
 	});
 
-	await writeFile(pkgFilePath(outPath), out.join('\n\n') + '\n');
-	console.log('Updated ' + outPath);
+	await writeFile(outPath, out.join('\n\n') + '\n');
+}
+
+async function cleanLib() {
+	const libDir = pkgFilePath('lib');
+	console.log(`Deleting lib dir:\n  ${libDir}\n`);
+	await rm(libDir, { recursive: true, force: true });
 }
 
 export function pkgFilePath(localPath = '') {
-	const dirname = fileURLToPath(new URL('.', import.meta.url));
-	return join(dirname, '..', localPath);
+	return join(import.meta.dirname, '..', localPath);
 }
 
 export async function readPkgFile(localPath = '') {
