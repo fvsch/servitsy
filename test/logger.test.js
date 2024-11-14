@@ -1,7 +1,8 @@
 import { strictEqual } from 'node:assert';
 import { suite, test } from 'node:test';
+import { stripVTControlCharacters } from 'node:util';
 
-import { ColorUtils, requestLogLine, stripStyle } from '../lib/logger.js';
+import { ColorUtils, requestLogLine } from '../lib/logger.js';
 
 suite('ColorUtils', () => {
 	const color = new ColorUtils(true);
@@ -34,14 +35,6 @@ suite('ColorUtils', () => {
 		strictEqual(noColor.sequence(['TE', 'ST'], 'blue,red,green'), 'TEST');
 	});
 
-	test('.strip removes formatting', () => {
-		strictEqual(color.strip(color.style('TEST', 'magentaBright')), 'TEST');
-		strictEqual(
-			color.strip(color.sequence(['T', 'E', 'S', 'T'], 'inverse,blink,bold,red')),
-			'TEST',
-		);
-	});
-
 	test('.brackets adds characters around input', () => {
 		strictEqual(color.brackets('TEST', ''), '[TEST]');
 		strictEqual(color.brackets('TEST', '', ['<<<', '>>>']), '<<<TEST>>>');
@@ -62,7 +55,7 @@ suite('responseLogLine', () => {
 			url: `http://localhost:8080${data.urlPath}`,
 			...data,
 		});
-		const line = stripStyle(rawLine).replace(/^\d{2}:\d{2}:\d{2} /, '');
+		const line = stripVTControlCharacters(rawLine).replace(/^\d{2}:\d{2}:\d{2} /, '');
 		strictEqual(line, expected);
 	};
 
