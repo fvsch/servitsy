@@ -1,4 +1,4 @@
-name: Run tests
+name: CI
 
 on:
   push:
@@ -7,14 +7,26 @@ on:
     branches: [main]
 
 jobs:
-  test:
-    name: Run tests
+  check-types:
     runs-on: ubuntu-latest
+    name: Check types
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 'lts/*'
+          node-version: 22
+      - run: npm ci
+      - run: npm run typecheck
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [20, 22]
+    name: Run tests on Node ${{ matrix.node }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
       - run: npm ci
       - run: npm test
-      - run: npm run typecheck
