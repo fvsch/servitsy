@@ -1,5 +1,9 @@
 # servitsy changelog
 
+## v0.4.4 (2024-11-15)
+
+- Several refactoring changes changes (#34, #35, #36, #37), resulting in ~15% smaller package size.
+
 ## v0.4.3 (2024-11-08)
 
 - fix(deno): bundle assets to avoid permission prompt (#33)

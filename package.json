@@ -1,6 +1,6 @@
 {
 	"name": "servitsy",
-	"version": "0.4.3",
+	"version": "0.4.4",
 	"license": "MIT",
 	"description": "Small, local HTTP server for static files",
 	"keywords": [
@@ -21,13 +21,17 @@
 	},
 	"type": "module",
 	"main": "./lib/index.js",
+	"bin": {
+		"servitsy": "bin/servitsy.js"
+	},
 	"exports": {
 		".": {
 			"import": "./lib/index.js"
 		}
 	},
-	"bin": {
-		"servitsy": "bin/servitsy.js"
+	"imports": {
+		"#src/*.js": "./src/*.js",
+		"#types": "./src/types.d.ts"
 	},
 	"files": [
 		"./bin",
@@ -37,7 +41,7 @@
 	],
 	"scripts": {
 		"prepack": "npm run build && npm test",
-		"build": "node scripts/prebuild.js && tsc -p tsconfig.json --listEmittedFiles && prettier --write 'lib/*.{js,ts}'",
+		"build": "node scripts/prebuild.js && tsc -p tsconfig.json --listEmittedFiles && prettier --ignore-path='' --write 'lib/*.js'",
 		"format": "prettier --write '**/*.{css,js,ts}' '**/*config*.json'",
 		"test": "vitest --run test/*.test.ts",
 		"typecheck": "tsc -p tsconfig.json --noEmit && tsc -p test/tsconfig.json --noEmit"
@@ -49,9 +53,5 @@
 		"prettier": "^3.3.3",
 		"typescript": "~5.6.3",
 		"vitest": "^2.1.5"
-	},
-	"imports": {
-		"#src/*.js": "./src/*.js",
-		"#types": "./src/types.d.ts"
 	}
 }
