@@ -1,6 +1,6 @@
 import { Buffer } from 'node:buffer';
 import { createReadStream } from 'node:fs';
-import { open, stat } from 'node:fs/promises';
+import { open, stat, type FileHandle } from 'node:fs/promises';
 import { createGzip, gzipSync } from 'node:zlib';
 
 import { MAX_COMPRESS_SIZE, SUPPORTED_METHODS } from './constants.js';
@@ -8,46 +8,40 @@ import { getContentType, typeForFilePath } from './content-type.js';
 import { getLocalPath, isSubpath } from './fs-utils.js';
 import { dirListPage, errorPage } from './pages.js';
 import { PathMatcher } from './path-matcher.js';
+import type { FSLocation, ResMetaData, ServerOptions } from './types.d.ts';
 import { headerCase, trimSlash } from './utils.js';
+import { FileResolver } from './resolver.js';
 
-/**
-@typedef {import('node:http').IncomingMessage & {originalUrl?: string}} Request
-@typedef {import('node:http').ServerResponse<Request>} Response
-@typedef {import('./types.d.ts').FSLocation} FSLocation
-@typedef {import('./types.d.ts').ResMetaData} ResMetaData
-@typedef {import('./types.d.ts').ServerOptions} ServerOptions
-@typedef {{
+type Request = import('node:http').IncomingMessage & { originalUrl?: string };
+type Response = import('node:http').ServerResponse<Request>;
+
+interface Config {
+	req: Request;
+	res: Response;
+	resolver: FileResolver;
+	options: ServerOptions & { _noStream?: boolean };
+}
+
+/** @internal */
+type SendPayload = {
 	body?: string | Buffer | import('node:fs').ReadStream;
 	contentType?: string;
 	isText?: boolean;
 	statSize?: number;
-}} SendPayload
-*/
+};
 
 export class RequestHandler {
-	#req;
-	#res;
-	#resolver;
-	#options;
+	#req: Config['req'];
+	#res: Config['res'];
+	#resolver: Config['resolver'];
+	#options: Config['options'];
 
-	/** @type {ResMetaData['timing']} */
-	timing = { start: Date.now() };
-	/** @type {string | null} */
-	urlPath = null;
-	/** @type {FSLocation | null} */
-	file = null;
-	/** @type {Error | string | undefined} */
-	error;
+	timing: ResMetaData['timing'] = { start: Date.now() };
+	urlPath: string | null = null;
+	file: FSLocation | null = null;
+	error?: Error | string;
 
-	/**
-	@param {{
-		req: Request;
-		res: Response;
-		resolver: import('./resolver.js').FileResolver;
-		options: ServerOptions & {_noStream?: boolean};
-	}} config
-	*/
-	constructor({ req, res, resolver, options }) {
+	constructor({ req, res, resolver, options }: Config) {
 		this.#req = req;
 		this.#res = res;
 		this.#resolver = resolver;
@@ -55,7 +49,7 @@ export class RequestHandler {
 
 		try {
 			this.urlPath = extractUrlPath(req.url ?? '');
-		} catch (/** @type {any} */ err) {
+		} catch (err: any) {
 			this.error = err;
 		}
 
@@ -122,12 +116,9 @@ export class RequestHandler {
 		return this.#sendErrorPage();
 	}
 
-	/** @type {(filePath: string) => Promise<void>} */
-	async #sendFile(filePath) {
-		/** @type {import('node:fs/promises').FileHandle | undefined} */
-		let handle;
-		/** @type {SendPayload} */
-		let data = {};
+	async #sendFile(filePath: string) {
+		let handle: FileHandle | undefined;
+		let data: SendPayload = {};
 
 		try {
 			// already checked in resolver, but better safe than sorry
@@ -142,7 +133,7 @@ export class RequestHandler {
 				isText: type.group === 'text',
 				statSize: (await stat(filePath)).size,
 			};
-		} catch (/** @type {any} */ err) {
+		} catch (err: any) {
 			this.status = err?.code === 'EBUSY' ? 403 : 500;
 			if (err && (err.message || typeof err === 'object')) this.error = err;
 		} finally {
@@ -170,8 +161,7 @@ export class RequestHandler {
 		return this.#send(data);
 	}
 
-	/** @type {(filePath: string) => Promise<void>} */
-	async #sendListPage(filePath) {
+	async #sendListPage(filePath: string) {
 		this.#setHeaders('index.html', {
 			cors: false,
 			headers: [],
@@ -181,7 +171,7 @@ export class RequestHandler {
 			return this.#send();
 		}
 		const items = await this.#resolver.index(filePath);
-		const body = await dirListPage({
+		const body = dirListPage({
 			root: this.#options.root,
 			ext: this.#options.ext,
 			urlPath: this.urlPath ?? '',
@@ -191,8 +181,7 @@ export class RequestHandler {
 		return this.#send({ body, isText: true });
 	}
 
-	/** @type {() => Promise<void>} */
-	async #sendErrorPage() {
+	async #sendErrorPage(): Promise<void> {
 		this.#setHeaders('error.html', {
 			cors: this.#options.cors,
 			headers: [],
@@ -200,7 +189,7 @@ export class RequestHandler {
 		if (this.method === 'OPTIONS') {
 			return this.#send();
 		}
-		const body = await errorPage({
+		const body = errorPage({
 			status: this.status,
 			url: this.#req.url ?? '',
 			urlPath: this.urlPath,
@@ -208,8 +197,7 @@ export class RequestHandler {
 		return this.#send({ body, isText: true });
 	}
 
-	/** @type {(payload?: SendPayload) => void} */
-	#send({ body, isText = false, statSize } = {}) {
+	#send({ body, isText = false, statSize }: SendPayload = {}) {
 		this.timing.send = Date.now();
 
 		// stop early if possible
@@ -261,10 +249,7 @@ export class RequestHandler {
 		}
 	}
 
-	/**
-	@type {(name: string, value: null | number | string | string[], normalizeCase?: boolean) => void}
-	*/
-	#header(name, value, normalizeCase = true) {
+	#header(name: string, value: null | number | string | string[], normalizeCase = true) {
 		if (this.#res.headersSent) return;
 		if (normalizeCase) name = headerCase(name);
 		if (typeof value === 'number') value = String(value);
@@ -277,10 +262,13 @@ export class RequestHandler {
 
 	/**
 	Set all response headers, except for content-length
-	@type {(filePath: string, options: Partial<{ contentType: string, cors: boolean; headers: ServerOptions['headers'] }>) => void}
 	*/
-	#setHeaders(filePath, { contentType, cors, headers }) {
+	#setHeaders(
+		filePath: string,
+		options: Partial<{ contentType: string; cors: boolean; headers: ServerOptions['headers'] }>,
+	) {
 		if (this.#res.headersSent) return;
+		const { contentType, cors, headers } = options;
 
 		const isOptions = this.method === 'OPTIONS';
 		const headerRules = headers ?? this.#options.headers;
@@ -290,8 +278,8 @@ export class RequestHandler {
 		}
 
 		if (!isOptions) {
-			contentType ??= typeForFilePath(filePath).toString();
-			this.#header('content-type', contentType);
+			const value = contentType ?? typeForFilePath(filePath).toString();
+			this.#header('content-type', value);
 		}
 
 		if (cors ?? this.#options.cors) {
@@ -321,8 +309,7 @@ export class RequestHandler {
 		}
 	}
 
-	/** @type {() => ResMetaData} */
-	data() {
+	data(): ResMetaData {
 		return {
 			status: this.status,
 			method: this.method,
@@ -335,10 +322,15 @@ export class RequestHandler {
 	}
 }
 
-/**
-@type {(data: { accept?: string | string[]; isText?: boolean; statSize?: number }) => boolean}
-*/
-function canCompress({ accept = '', statSize = 0, isText = false }) {
+function canCompress({
+	accept = '',
+	statSize = 0,
+	isText = false,
+}: {
+	accept?: string | string[];
+	isText?: boolean;
+	statSize?: number;
+}): boolean {
 	accept = Array.isArray(accept) ? accept.join(',') : accept;
 	if (isText && statSize <= MAX_COMPRESS_SIZE && accept) {
 		return accept
@@ -349,12 +341,21 @@ function canCompress({ accept = '', statSize = 0, isText = false }) {
 	return false;
 }
 
-/**
-@type {(localPath: string, rules: ServerOptions['headers'], blockList?: string[]) => Array<{name: string; value: string}>}
-*/
-export function fileHeaders(localPath, rules, blockList = []) {
-	/** @type {ReturnType<fileHeaders>}  */
-	const result = [];
+export function extractUrlPath(url: string): string {
+	if (url === '*') return url;
+	const path = new URL(url, 'http://localhost/').pathname || '/';
+	if (!isValidUrlPath(path)) {
+		throw new Error(`Invalid URL path: '${path}'`);
+	}
+	return path;
+}
+
+export function fileHeaders(
+	localPath: string,
+	rules: ServerOptions['headers'],
+	blockList: string[] = [],
+) {
+	const result: Array<{ name: string; value: string }> = [];
 	for (const rule of rules) {
 		if (Array.isArray(rule.include)) {
 			const matcher = new PathMatcher(rule.include);
@@ -368,36 +369,15 @@ export function fileHeaders(localPath, rules, blockList = []) {
 	return result;
 }
 
-/** @type {(req: Pick<import('node:http').IncomingMessage, 'method' | 'headers'>) => boolean} */
-function isPreflight({ method, headers }) {
+function isPreflight(req: Pick<Request, 'method' | 'headers'>): boolean {
 	return (
-		method === 'OPTIONS' &&
-		typeof headers['origin'] === 'string' &&
-		typeof headers['access-control-request-method'] === 'string'
+		req.method === 'OPTIONS' &&
+		typeof req.headers['origin'] === 'string' &&
+		typeof req.headers['access-control-request-method'] === 'string'
 	);
 }
 
-/** @type {(input?: string) => string[]} */
-function parseHeaderNames(input = '') {
-	const isHeader = (h = '') => /^[A-Za-z\d-_]+$/.test(h);
-	return input
-		.split(',')
-		.map((h) => h.trim())
-		.filter(isHeader);
-}
-
-/** @type {(url: string) => string} */
-export function extractUrlPath(url) {
-	if (url === '*') return url;
-	const path = new URL(url, 'http://localhost/').pathname || '/';
-	if (!isValidUrlPath(path)) {
-		throw new Error(`Invalid URL path: '${path}'`);
-	}
-	return path;
-}
-
-/** @type {(urlPath: string) => boolean} */
-export function isValidUrlPath(urlPath) {
+export function isValidUrlPath(urlPath: string): boolean {
 	if (urlPath === '/') return true;
 	if (!urlPath.startsWith('/') || urlPath.includes('//')) return false;
 	for (const s of trimSlash(urlPath).split('/')) {
@@ -407,4 +387,12 @@ export function isValidUrlPath(urlPath) {
 		if (d.includes('/') || d.includes('\\')) return false;
 	}
 	return true;
+}
+
+function parseHeaderNames(input: string = ''): string[] {
+	const isHeader = (h = '') => /^[A-Za-z\d-_]+$/.test(h);
+	return input
+		.split(',')
+		.map((h) => h.trim())
+		.filter(isHeader);
 }

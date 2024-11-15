@@ -3,36 +3,31 @@ import { platform } from 'node:process';
 import { stderr, stdout } from 'node:process';
 import { inspect } from 'node:util';
 
-import { clamp, fwdSlash, getEnv, trimSlash, withResolvers } from './utils.js';
+import type { ResMetaData } from './types.d.ts';
+import { clamp, fwdSlash, getEnv, getRuntime, trimSlash, withResolvers } from './utils.js';
 
-/**
-@typedef {import('./types.d.ts').ResMetaData} ResMetaData
-@typedef {{
+interface LogItem {
 	group: 'header' | 'info' | 'request' | 'error';
 	text: string;
-	padding: {top: number; bottom: number};
-}} LogItem
-*/
+	padding: { top: number; bottom: number };
+}
 
 export class ColorUtils {
-	/** @param {boolean} [colorEnabled] */
-	constructor(colorEnabled) {
+	enabled: boolean;
+
+	constructor(colorEnabled?: boolean) {
 		this.enabled = typeof colorEnabled === 'boolean' ? colorEnabled : true;
 	}
 
-	/** @type {(text: string, format?: string) => string} */
-	style = (text, format = '') => {
-		if (!this.enabled) return text;
-		return styleText(format.trim().split(/\s+/g), text);
-	};
-
-	/** @type {(text: string, format?: string, chars?: [string, string]) => string} */
-	brackets = (text, format = 'dim,,dim', chars = ['[', ']']) => {
+	brackets = (
+		text: string,
+		format: string = 'dim,,dim',
+		chars: [string, string] = ['[', ']'],
+	): string => {
 		return this.sequence([chars[0], text, chars[1]], format);
 	};
 
-	/** @type {(parts: string[], format?: string) => string} */
-	sequence = (parts, format = '') => {
+	sequence = (parts: string[], format: string = ''): string => {
 		if (!format || !this.enabled) {
 			return parts.join('');
 		}
@@ -41,37 +36,22 @@ export class ColorUtils {
 			.map((part, index) => (formats[index] ? this.style(part, formats[index]) : part))
 			.join('');
 	};
+
+	style = (text: string, format: string = ''): string => {
+		if (!this.enabled) return text;
+		return styleText(format.trim().split(/\s+/g), text);
+	};
 }
 
 class Logger {
-	/** @type {LogItem | null} */
-	#lastout = null;
-	/** @type {LogItem | null} */
-	#lasterr = null;
+	#lastout?: LogItem;
+	#lasterr?: LogItem;
 
-	/**
-	@type {(prev: LogItem | null, next: LogItem) => string}
-	*/
-	#withPadding(prev, { group, text, padding }) {
-		const maxPad = 4;
-		let start = '';
-		let end = '';
-		if (padding.top) {
-			const count = padding.top - (prev?.padding.bottom ?? 0);
-			start = '\n'.repeat(clamp(count, 0, maxPad));
-		} else if (prev && !prev.padding.bottom && prev.group !== group) {
-			start = '\n';
-		}
-		if (padding.bottom) {
-			end = '\n'.repeat(clamp(padding.bottom, 0, maxPad));
-		}
-		return `${start}${text}\n${end}`;
-	}
-
-	/**
-	@type {(group: LogItem['group'], data: string | string[], padding?: LogItem['padding']) => Promise<void>}
-	*/
-	async write(group, data = '', padding = { top: 0, bottom: 0 }) {
+	async write(
+		group: LogItem['group'],
+		data: string | string[] = '',
+		padding: LogItem['padding'] = { top: 0, bottom: 0 },
+	) {
 		const item = {
 			group,
 			text: Array.isArray(data) ? data.join('\n') : data,
@@ -81,8 +61,8 @@ class Logger {
 			return;
 		}
 
-		const { promise, resolve, reject } = withResolvers();
-		const writeCallback = (/** @type {Error|undefined} */ err) => {
+		const { promise, resolve, reject } = withResolvers<void>();
+		const writeCallback = (err: Error | undefined) => {
 			if (err) reject(err);
 			else resolve();
 		};
@@ -98,11 +78,8 @@ class Logger {
 		return promise;
 	}
 
-	/**
-	@type {(...errors: Array<string | Error>) => void}
-	*/
-	error(...errors) {
-		this.write(
+	error(...errors: Array<string | Error>) {
+		return this.write(
 			'error',
 			errors.map((error) => {
 				if (typeof error === 'string') return `servitsy: ${error}`;
@@ -110,10 +87,33 @@ class Logger {
 			}),
 		);
 	}
+
+	#withPadding(prev: LogItem | undefined, item: LogItem): string {
+		const maxPad = 4;
+		let start = '';
+		let end = '';
+		if (item.padding.top) {
+			const count = item.padding.top - (prev?.padding.bottom ?? 0);
+			start = '\n'.repeat(clamp(count, 0, maxPad));
+		} else if (prev && !prev.padding.bottom && prev.group !== item.group) {
+			start = '\n';
+		}
+		if (item.padding.bottom) {
+			end = '\n'.repeat(clamp(item.padding.bottom, 0, maxPad));
+		}
+		return `${start}${item.text}\n${end}`;
+	}
 }
 
-/** @type {(data: import('./types.d.ts').ResMetaData) => string} */
-export function requestLogLine({ status, method, url, urlPath, localPath, timing, error }) {
+export function requestLogLine({
+	status,
+	method,
+	url,
+	urlPath,
+	localPath,
+	timing,
+	error,
+}: ResMetaData): string {
 	const { start, close } = timing;
 	const { style: _, brackets } = color;
 
@@ -148,8 +148,7 @@ export function requestLogLine({ status, method, url, urlPath, localPath, timing
 	return line;
 }
 
-/** @type {(basePath: string, fullPath: string) => string | undefined} */
-function pathSuffix(basePath, fullPath) {
+function pathSuffix(basePath: string, fullPath: string): string | undefined {
 	if (basePath === fullPath) {
 		return '';
 	} else if (fullPath.startsWith(basePath)) {
@@ -159,9 +158,8 @@ function pathSuffix(basePath, fullPath) {
 
 /**
 Basic implementation of 'node:util' styleText to support Node 18 + Deno.
-@type {(format: string | string[], text: string) => string}
 */
-export function styleText(format, text) {
+export function styleText(format: string | string[], text: string): string {
 	let before = '';
 	let after = '';
 	for (const style of Array.isArray(format) ? format : [format]) {
@@ -173,10 +171,11 @@ export function styleText(format, text) {
 	return `${before}${text}${after}`;
 }
 
-/** @type {() => boolean} */
-function supportsColor() {
-	if (typeof globalThis.Deno?.noColor === 'boolean') {
-		return !globalThis.Deno.noColor;
+function supportsColor(): boolean {
+	// Avoid reading env variables in Deno to limit prompts;
+	// instead rely on its built-in parsing of the NO_COLOR env variable
+	if (getRuntime() === 'deno') {
+		return (globalThis as any).Deno?.noColor !== true;
 	}
 
 	if (getEnv('NO_COLOR')) {

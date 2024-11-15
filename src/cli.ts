@@ -1,5 +1,4 @@
 import { createServer } from 'node:http';
-import { createRequire } from 'node:module';
 import { homedir, networkInterfaces } from 'node:os';
 import { sep as dirSep } from 'node:path';
 import process, { argv, exit, platform, stdin } from 'node:process';
@@ -12,12 +11,8 @@ import { RequestHandler } from './handler.js';
 import { color, logger, requestLogLine } from './logger.js';
 import { serverOptions } from './options.js';
 import { FileResolver } from './resolver.js';
+import type { OptionName, ServerOptions } from './types.d.ts';
 import { clamp, errorList, getRuntime, isPrivateIPv4 } from './utils.js';
-
-/**
-@typedef {import('./types.d.ts').OptionSpec} OptionSpec
-@typedef {import('./types.d.ts').ServerOptions} ServerOptions
-*/
 
 /**
 Start servitsy with configuration from command line arguments.
@@ -53,26 +48,15 @@ export async function run() {
 }
 
 export class CLIServer {
-	/** @type {ServerOptions} */
-	#options;
+	#options: ServerOptions;
+	#port: number | undefined;
+	#portIterator: IterableIterator<number>;
+	#localNetworkInfo: import('node:os').NetworkInterfaceInfo | undefined;
+	#server: import('node:http').Server;
+	#resolver: FileResolver;
+	#shuttingDown = false;
 
-	/** @type {number | undefined} */
-	#port;
-
-	/** @type {IterableIterator<number>} */
-	#portIterator;
-
-	/** @type {import('node:os').NetworkInterfaceInfo | undefined} */
-	#localNetworkInfo;
-
-	/** @type {import('node:http').Server} */
-	#server;
-
-	/** @type {FileResolver} */
-	#resolver;
-
-	/** @param {ServerOptions} options */
-	constructor(options) {
+	constructor(options: ServerOptions) {
 		this.#options = options;
 		this.#portIterator = new Set(options.ports).values();
 		this.#localNetworkInfo = Object.values(networkInterfaces())
@@ -117,8 +101,8 @@ export class CLIServer {
 		const address = this.#server.address();
 		if (address !== null && typeof address === 'object') {
 			const { local, network } = displayHosts({
-				configuredHost: host,
-				currentHost: address.address,
+				configured: host,
+				actual: address.address,
 				networkAddress: this.#localNetworkInfo?.address,
 			});
 			const data = [
@@ -164,7 +148,6 @@ export class CLIServer {
 		process.on('SIGTERM', this.shutdown);
 	}
 
-	#shuttingDown = false;
 	shutdown = async () => {
 		if (this.#shuttingDown) return;
 		this.#shuttingDown = true;
@@ -178,8 +161,7 @@ export class CLIServer {
 		exit();
 	};
 
-	/** @type {(error: NodeJS.ErrnoException & {hostname?: string}) => void} */
-	#onServerError(error) {
+	#onServerError(error: NodeJS.ErrnoException & { hostname?: string }) {
 		// Try restarting with the next port
 		if (error.code === 'EADDRINUSE') {
 			const { value: nextPort } = this.#portIterator.next();
@@ -214,9 +196,9 @@ export class CLIServer {
 export function helpPage() {
 	const spaces = (count = 0) => ' '.repeat(count);
 	const indent = spaces(2);
+	const colGap = spaces(4);
 
-	/** @type {Array<keyof CLI_OPTIONS>} */
-	const optionsOrder = [
+	const optionsOrder: OptionName[] = [
 		'help',
 		'version',
 		'host',
@@ -231,28 +213,29 @@ export function helpPage() {
 	];
 	const options = optionsOrder.map((key) => CLI_OPTIONS[key]);
 
-	/** @type {(heading?: string, lines?: string[]) => string} */
-	const section = (heading = '', lines = []) => {
+	const section = (heading: string = '', lines: string[] = []) => {
 		const result = [];
 		if (heading.length) result.push(indent + color.style(heading, 'bold'));
 		if (lines.length) result.push(lines.map((l) => indent.repeat(2) + l).join('\n'));
 		return result.join('\n\n');
 	};
 
-	/** @type {(options: OptionSpec[], config: {gap: string, firstWidth: number}) => string[]} */
-	const optionCols = (options, { gap, firstWidth }) =>
-		options.flatMap(({ help, names, default: argDefault = '' }) => {
+	const optionCols = () => {
+		const hMaxLength = Math.max(...options.map((opt) => opt.names.join(', ').length));
+		const firstWidth = clamp(hMaxLength, 14, 20);
+		return options.flatMap(({ help, names, default: argDefault = '' }) => {
 			const header = names.join(', ').padEnd(firstWidth);
-			const first = `${header}${gap}${help}`;
+			const first = `${header}${colGap}${help}`;
 			if (!argDefault) return [first];
 			const secondRaw = `(default: '${Array.isArray(argDefault) ? argDefault.join(', ') : argDefault}')`;
 			const second = color.style(secondRaw, 'gray');
 			if (first.length + secondRaw.length < 80) {
 				return [`${first} ${second}`];
 			} else {
-				return [first, spaces(header.length + gap.length) + second];
+				return [first, spaces(header.length + colGap.length) + second];
 			}
 		});
+	};
 
 	return [
 		section(
@@ -262,40 +245,36 @@ export function helpPage() {
 			`${color.style('$', 'bold dim')} ${color.style('servitsy', 'magentaBright')} --help`,
 			`${color.style('$', 'bold dim')} ${color.style('servitsy', 'magentaBright')} ${color.brackets('directory')} ${color.brackets('options')}`,
 		]),
-		section(
-			'OPTIONS',
-			optionCols(options, {
-				gap: spaces(4),
-				firstWidth: clamp(Math.max(...options.map((opt) => opt.names.join(', ').length)), 14, 20),
-			}),
-		),
+		section('OPTIONS', optionCols()),
 	].join('\n\n');
 }
 
-/**
-@param {{ configuredHost: string; currentHost: string; networkAddress?: string }} address
-@returns {{ local: string; network?: string }}
-*/
-function displayHosts({ configuredHost, currentHost, networkAddress }) {
+function displayHosts({
+	configured,
+	actual,
+	networkAddress,
+}: {
+	configured: string;
+	actual: string;
+	networkAddress?: string;
+}): { local: string; network?: string } {
 	const isLocalhost = (value = '') => HOSTS_LOCAL.includes(value);
 	const isWildcard = (value = '') => HOSTS_WILDCARD.v4 === value || HOSTS_WILDCARD.v6 === value;
 
-	if (!isWildcard(configuredHost) && !isLocalhost(configuredHost)) {
-		return { local: configuredHost };
+	if (!isWildcard(configured) && !isLocalhost(configured)) {
+		return { local: configured };
 	}
 
 	return {
-		local: isWildcard(currentHost) || isLocalhost(currentHost) ? 'localhost' : currentHost,
-		network:
-			isWildcard(configuredHost) && getRuntime() !== 'webcontainer' ? networkAddress : undefined,
+		local: isWildcard(actual) || isLocalhost(actual) ? 'localhost' : actual,
+		network: isWildcard(configured) && getRuntime() !== 'webcontainer' ? networkAddress : undefined,
 	};
 }
 
 /**
 Replace the home dir with '~' in path
-@type {(root: string) => string}
 */
-function displayRoot(root) {
+function displayRoot(root: string): string {
 	if (
 		// skip: not a common windows convention
 		platform !== 'win32' &&

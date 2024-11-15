@@ -1,26 +1,18 @@
 import { CLI_OPTIONS, PORTS_CONFIG } from './constants.js';
+import type { HttpHeaderRule, OptionSpec, ServerOptions } from './types.d.ts';
 import { intRange } from './utils.js';
 
-/**
-@typedef {import('./types.d.ts').HttpHeaderRule} HttpHeaderRule
-@typedef {import('./types.d.ts').OptionSpec} OptionSpec
-@typedef {import('./types.d.ts').ServerOptions} ServerOptions
-*/
-
 export class CLIArgs {
-	/** @type {Array<[string, string]>} */
-	#map = [];
+	#map: Array<[string, string]> = [];
 
-	/** @type {string[]} */
-	#list = [];
+	#list: string[] = [];
 
-	/** @type {(keys: string | string[]) => (entry: [string, string]) => boolean} */
-	#mapFilter(keys) {
-		return (entry) => (typeof keys === 'string' ? keys === entry[0] : keys.includes(entry[0]));
+	#mapFilter(keys: string | string[]) {
+		return (entry: [string, string]) =>
+			typeof keys === 'string' ? keys === entry[0] : keys.includes(entry[0]);
 	}
 
-	/** @param {string[]} args */
-	constructor(args) {
+	constructor(args: string[]) {
 		const optionPattern = /^-{1,2}[\w]/;
 		let pos = 0;
 		while (pos < args.length) {
@@ -43,8 +35,7 @@ export class CLIArgs {
 		}
 	}
 
-	/** @type {(key: string | null, value: string) => void} */
-	add(key, value) {
+	add(key: string | null, value: string) {
 		if (key == null) {
 			this.#list.push(value);
 		} else {
@@ -52,8 +43,7 @@ export class CLIArgs {
 		}
 	}
 
-	/** @type {(query: number | string | string[]) => boolean} */
-	has(query) {
+	has(query: number | string | string[]): boolean {
 		if (typeof query === 'number') {
 			return typeof this.#list.at(query) === 'string';
 		} else {
@@ -63,9 +53,8 @@ export class CLIArgs {
 
 	/**
 	Get the last value for one or several option names, or a specific positional index.
-	@type {(query: number | string | string[]) => string | undefined}
 	*/
-	get(query) {
+	get(query: number | string | string[]): string | undefined {
 		if (typeof query === 'number') {
 			return this.#list.at(query);
 		} else {
@@ -76,15 +65,13 @@ export class CLIArgs {
 	/**
 	Get mapped values for one or several option names.
 	Values are merged in order of appearance.
-	@type {(query: string | string[]) => string[]} query
 	*/
-	all(query) {
+	all(query: string | string[]): string[] {
 		return this.#map.filter(this.#mapFilter(query)).map((entry) => entry[1]);
 	}
 
 	keys() {
-		/** @type {string[]} */
-		const keys = [];
+		const keys: string[] = [];
 		for (const [key] of this.#map) {
 			if (!keys.includes(key)) keys.push(key);
 		}
@@ -99,46 +86,43 @@ export class CLIArgs {
 	}
 }
 
-/** @type {(include?: string, entries?: string[][]) => HttpHeaderRule} */
-function makeHeadersRule(include = '', entries = []) {
+function makeHeadersRule(include: string = '', entries: string[][] = []): HttpHeaderRule {
 	const headers = Object.fromEntries(entries);
 	return include.length > 0 && include !== '*'
 		? { headers, include: include.split(',').map((s) => s.trim()) }
 		: { headers };
 }
 
-/** @type {(value: string) => string} */
-function normalizeExt(value = '') {
+function normalizeExt(value: string = ''): string {
 	if (typeof value === 'string' && value.length && !value.startsWith('.')) {
 		return `.${value}`;
 	}
 	return value;
 }
 
-/** @type {(args: CLIArgs, context: { onError(msg: string): void }) => Partial<ServerOptions>} */
-export function parseArgs(args, { onError }) {
+export function parseArgs(
+	args: CLIArgs,
+	{ onError }: { onError(msg: string): void },
+): Partial<ServerOptions> {
 	const invalid = (optName = '', input = '') => {
 		const value =
 			typeof input === 'string' ? `'${input.replaceAll(`'`, `\'`)}'` : JSON.stringify(input);
 		onError(`invalid ${optName} value: ${value}`);
 	};
 
-	/** @type {(spec: OptionSpec) => string | undefined} */
-	const getStr = ({ names: argNames, negate: negativeArg }) => {
+	const getStr = ({ names: argNames, negate: negativeArg }: OptionSpec) => {
 		if (negativeArg && args.has(negativeArg)) return;
 		const input = args.get(argNames);
 		if (input != null) return input.trim();
 	};
 
-	/** @type {(spec: OptionSpec) => string[] | undefined} */
-	const getList = ({ names: argNames, negate: negativeArg }) => {
+	const getList = ({ names: argNames, negate: negativeArg }: OptionSpec) => {
 		if (negativeArg && args.has(negativeArg)) return [];
 		const input = args.all(argNames);
 		if (input.length) return splitOptionValue(input);
 	};
 
-	/** @type {(spec: OptionSpec, emptyValue?: boolean) => boolean | undefined} */
-	const getBool = ({ names: argNames, negate: negativeArg }, emptyValue) => {
+	const getBool = ({ names: argNames, negate: negativeArg }: OptionSpec, emptyValue?: boolean) => {
 		if (negativeArg && args.has(negativeArg)) return false;
 		const input = args.get(argNames);
 		if (input == null) return;
@@ -147,8 +131,7 @@ export function parseArgs(args, { onError }) {
 		else invalid(argNames.at(-1), input);
 	};
 
-	/** @type {Partial<ServerOptions>} */
-	const options = {
+	const options: Partial<ServerOptions> = {
 		root: args.get(0),
 		host: getStr(CLI_OPTIONS.host),
 		cors: getBool(CLI_OPTIONS.cors),
@@ -192,8 +175,7 @@ export function parseArgs(args, { onError }) {
 	return Object.fromEntries(Object.entries(options).filter((entry) => entry[1] != null));
 }
 
-/** @type {(input: string) => HttpHeaderRule | undefined} */
-export function parseHeaders(input) {
+export function parseHeaders(input: string): HttpHeaderRule | undefined {
 	input = input.trim();
 	const colonPos = input.indexOf(':');
 	const bracketPos = input.indexOf('{');
@@ -232,8 +214,7 @@ export function parseHeaders(input) {
 	}
 }
 
-/** @type {(input: string) => number[] | undefined} */
-export function parsePort(input) {
+export function parsePort(input: string): number[] | undefined {
 	const matches = input.match(/^(?<start>\d{1,})(?<end>\+|-\d{1,})?$/);
 	if (matches?.groups) {
 		const { start: rawStart = '', end: rawEnd = '' } = matches.groups;
@@ -249,10 +230,8 @@ export function parsePort(input) {
 	}
 }
 
-/** @type {(values: string[]) => string[]} */
-export function splitOptionValue(values) {
-	/** @type {string[]} */
-	const result = [];
+export function splitOptionValue(values: string[]): string[] {
+	const result: string[] = [];
 	for (let value of values.flatMap((s) => s.split(','))) {
 		value = value.trim();
 		if (value && !result.includes(value)) {
@@ -262,22 +241,18 @@ export function splitOptionValue(values) {
 	return result;
 }
 
-/** @type {(input?: string, emptyValue?: boolean) => boolean | undefined} */
-export function strToBool(input, emptyValue) {
-	if (typeof input === 'string') {
-		input = input.trim().toLowerCase();
-	}
-	if (input === 'true' || input === '1') {
+export function strToBool(input?: string, emptyValue?: boolean) {
+	const val = typeof input === 'string' ? input.trim().toLowerCase() : undefined;
+	if (val === 'true' || val === '1') {
 		return true;
-	} else if (input === 'false' || input === '0') {
+	} else if (val === 'false' || val === '0') {
 		return false;
-	} else if (input === '') {
+	} else if (val === '') {
 		return emptyValue;
 	}
 }
 
-/** @type {(args: CLIArgs) => string[]} */
-export function unknownArgs(args) {
+export function unknownArgs(args: CLIArgs): string[] {
 	const known = Object.values(CLI_OPTIONS).flatMap((spec) => {
 		return spec.negate ? [...spec.names, spec.negate] : spec.names;
 	});

@@ -11,6 +11,19 @@ export interface HttpHeaderRule {
 	headers: Record<string, string | number | boolean>;
 }
 
+export type OptionName =
+	| 'cors'
+	| 'dirFile'
+	| 'dirList'
+	| 'exclude'
+	| 'ext'
+	| 'gzip'
+	| 'header'
+	| 'help'
+	| 'host'
+	| 'port'
+	| 'version';
+
 export interface OptionSpec {
 	help: string;
 	names: string[];

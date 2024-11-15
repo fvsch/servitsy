@@ -1,48 +1,37 @@
 import { isAbsolute, resolve } from 'node:path';
 
 import { DEFAULT_OPTIONS, PORTS_CONFIG } from './constants.js';
-
-/**
-@typedef {import('./types.d.ts').HttpHeaderRule} HttpHeaderRule
-@typedef {import('./types.d.ts').ServerOptions} ServerOptions
-*/
+import type { HttpHeaderRule, ServerOptions } from './types.d.ts';
 
 export class OptionsValidator {
-	/** @param {(msg: string) => void} [onError] */
-	constructor(onError) {
+	onError?: (msg: string) => void;
+
+	constructor(onError?: (msg: string) => void) {
 		this.onError = onError;
 	}
 
-	/**
-	@type {<T = string>(input: T[] | undefined, filterFn: (item: T) => boolean) => T[] | undefined}
-	*/
-	#array(input, filterFn) {
+	#array<T = string>(input: T[] | undefined, filterFn: (item: T) => boolean): T[] | undefined {
 		if (!Array.isArray(input)) return;
 		if (input.length === 0) return input;
 		const value = input.filter(filterFn);
 		if (value.length) return value;
 	}
 
-	/**
-	@type {(optName: string, input?: boolean) => boolean | undefined}
-	*/
-	#bool(optName, input) {
+	#bool(optName: string, input?: boolean): boolean | undefined {
 		if (typeof input === 'undefined') return;
 		if (typeof input === 'boolean') return input;
 		else this.#error(`invalid ${optName} value: '${input}'`);
 	}
 
-	#error(msg = '') {
+	#error(msg: string) {
 		this.onError?.(msg);
 	}
 
-	/** @type {(input?: boolean) => boolean | undefined} */
-	cors(input) {
+	cors(input?: boolean): boolean | undefined {
 		return this.#bool('cors', input);
 	}
 
-	/** @type {(input?: string[]) => string[] | undefined} */
-	dirFile(input) {
+	dirFile(input?: string[]): string[] | undefined {
 		return this.#array(input, (item) => {
 			const ok = isValidPattern(item);
 			if (!ok) this.#error(`invalid dirFile value: '${item}'`);
@@ -50,13 +39,11 @@ export class OptionsValidator {
 		});
 	}
 
-	/** @type {(input?: boolean) => boolean | undefined} */
-	dirList(input) {
+	dirList(input?: boolean): boolean | undefined {
 		return this.#bool('dirList', input);
 	}
 
-	/** @type {(input?: string[]) => string[] | undefined} */
-	exclude(input) {
+	exclude(input?: string[]): string[] | undefined {
 		return this.#array(input, (item) => {
 			const ok = isValidPattern(item);
 			if (!ok) this.#error(`invalid exclude pattern: '${item}'`);
@@ -64,8 +51,7 @@ export class OptionsValidator {
 		});
 	}
 
-	/** @type {(input?: string[]) => string[] | undefined} */
-	ext(input) {
+	ext(input?: string[]): string[] | undefined {
 		return this.#array(input, (item) => {
 			const ok = isValidExt(item);
 			if (!ok) this.#error(`invalid ext value: '${item}'`);
@@ -73,13 +59,11 @@ export class OptionsValidator {
 		});
 	}
 
-	/** @type {(input?: boolean) => boolean | undefined} */
-	gzip(input) {
+	gzip(input?: boolean): boolean | undefined {
 		return this.#bool('gzip', input);
 	}
 
-	/** @type {(input?: HttpHeaderRule[]) => HttpHeaderRule[] | undefined} */
-	headers(input) {
+	headers(input?: HttpHeaderRule[]): HttpHeaderRule[] | undefined {
 		return this.#array(input, (rule) => {
 			const ok = isValidHeaderRule(rule);
 			if (!ok) this.#error(`invalid header value: ${JSON.stringify(rule)}`);
@@ -87,15 +71,13 @@ export class OptionsValidator {
 		});
 	}
 
-	/** @type {(input?: string) => string | undefined} */
-	host(input) {
+	host(input?: string): string | undefined {
 		if (typeof input !== 'string') return;
 		if (isValidHost(input)) return input;
 		else this.#error(`invalid host value: '${input}'`);
 	}
 
-	/** @type {(input?: number[]) => number[] | undefined} */
-	ports(input) {
+	ports(input?: number[]): number[] | undefined {
 		if (!Array.isArray(input) || input.length === 0) return;
 		const value = input.slice(0, PORTS_CONFIG.maxCount);
 		const invalid = value.find((num) => !isValidPort(num));
@@ -103,33 +85,29 @@ export class OptionsValidator {
 		else this.#error(`invalid port number: '${invalid}'`);
 	}
 
-	/** @type {(input?: string) => string} */
-	root(input) {
+	root(input?: string): string {
 		const value = typeof input === 'string' ? input : '';
 		return isAbsolute(value) ? value : resolve(value);
 	}
 }
 
-/** @type {(input: unknown) => input is string[]} */
-export function isStringArray(input) {
+export function isStringArray(input: unknown): input is string[] {
 	return Array.isArray(input) && input.every((item) => typeof item === 'string');
 }
 
-/** @type {(input: string) => boolean} */
-export function isValidExt(input) {
+export function isValidExt(input: string): boolean {
 	if (typeof input !== 'string' || !input) return false;
 	return /^\.[\w\-]+(\.[\w\-]+){0,4}$/.test(input);
 }
 
-/** @type {(name: string) => boolean} */
-export function isValidHeader(name) {
+export function isValidHeader(name: string): boolean {
 	return typeof name === 'string' && /^[a-z\d\-\_]+$/i.test(name);
 }
 
 /** @type {(value: any) => value is HttpHeaderRule} */
-export function isValidHeaderRule(value) {
-	const include = value?.include;
-	const headers = value?.headers;
+export function isValidHeaderRule(value: unknown): value is HttpHeaderRule {
+	if (!value || typeof value !== 'object') return false;
+	const { include, headers } = value as any;
 	if (typeof include !== 'undefined' && !isStringArray(include)) {
 		return false;
 	}
@@ -149,35 +127,29 @@ export function isValidHeaderRule(value) {
 /**
 Checking that all characters are valid for a domain or ip,
 as a usability nicety to catch obvious errors
-@type {(input: string) => boolean}
 */
-export function isValidHost(input) {
+export function isValidHost(input: string): boolean {
 	if (typeof input !== 'string' || !input.length) return false;
 	const domainLike = /^([a-z\d\-]+)(\.[a-z\d\-]+)*$/i;
 	const ipLike = /^([\d\.]+|[a-f\d\:]+)$/i;
 	return domainLike.test(input) || ipLike.test(input);
 }
 
-/** @type {(value: string) => boolean} */
-export function isValidPattern(value) {
+export function isValidPattern(value: string): boolean {
 	return typeof value === 'string' && value.length > 0 && !/[\\\/\:]/.test(value);
 }
 
-/** @type {(num: number) => boolean} */
-export function isValidPort(num) {
+export function isValidPort(num: number): boolean {
 	return Number.isSafeInteger(num) && num >= 1 && num <= 65_535;
 }
 
-/**
-@param {{ root: string } & Partial<ServerOptions>} options
-@param {{ onError(msg: string): void }} [context]
-@returns {ServerOptions}
-*/
-export function serverOptions(options, context) {
+export function serverOptions(
+	options: { root: string } & Partial<ServerOptions>,
+	context: { onError(msg: string): void },
+): ServerOptions {
 	const validator = new OptionsValidator(context?.onError);
 
-	/** @type {Partial<ServerOptions>} */
-	const checked = {
+	const checked: Partial<ServerOptions> = {
 		ports: validator.ports(options.ports),
 		gzip: validator.gzip(options.gzip),
 		host: validator.host(options.host),
@@ -189,13 +161,15 @@ export function serverOptions(options, context) {
 		exclude: validator.exclude(options.exclude),
 	};
 
-	const final = {
+	const final = structuredClone({
 		root: validator.root(options.root),
-		...structuredClone(DEFAULT_OPTIONS),
-	};
+		...DEFAULT_OPTIONS,
+	});
 	for (const [key, value] of Object.entries(checked)) {
-		// @ts-ignore
-		if (typeof value !== 'undefined') final[key] = value;
+		if (typeof value !== 'undefined') {
+			// @ts-ignore
+			final[key] = value;
+		}
 	}
 
 	return final;

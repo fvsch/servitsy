@@ -1,62 +1,57 @@
-import { strictEqual } from 'node:assert';
-import { suite, test } from 'node:test';
 import { stripVTControlCharacters } from 'node:util';
+import { expect, suite, test } from 'vitest';
 
-import { ColorUtils, requestLogLine } from '../lib/logger.js';
+import { ColorUtils, requestLogLine } from '#src/logger.js';
+import type { ResMetaData } from '#types';
 
 suite('ColorUtils', () => {
 	const color = new ColorUtils(true);
 	const noColor = new ColorUtils(false);
 
 	test('.style does nothing for empty format', () => {
-		strictEqual(color.style('TEST'), 'TEST');
-		strictEqual(color.style('TEST', ''), 'TEST');
-		strictEqual(noColor.style('TEST', ''), 'TEST');
+		expect(color.style('TEST')).toBe('TEST');
+		expect(color.style('TEST', '')).toBe('TEST');
+		expect(noColor.style('TEST', '')).toBe('TEST');
 	});
 
 	test('.style adds color codes to strings', () => {
-		strictEqual(color.style('TEST', 'reset'), '\x1B[0mTEST\x1B[0m');
-		strictEqual(color.style('TEST', 'red'), '\x1B[31mTEST\x1B[39m');
-		strictEqual(color.style('TEST', 'dim underline'), '\x1B[2m\x1B[4mTEST\x1B[24m\x1B[22m');
-		strictEqual(noColor.style('TEST', 'reset'), 'TEST');
-		strictEqual(noColor.style('TEST', 'red'), 'TEST');
-		strictEqual(noColor.style('TEST', 'dim underline'), 'TEST');
+		expect(color.style('TEST', 'reset')).toBe('\x1B[0mTEST\x1B[0m');
+		expect(color.style('TEST', 'red')).toBe('\x1B[31mTEST\x1B[39m');
+		expect(color.style('TEST', 'dim underline')).toBe('\x1B[2m\x1B[4mTEST\x1B[24m\x1B[22m');
+		expect(noColor.style('TEST', 'reset')).toBe('TEST');
+		expect(noColor.style('TEST', 'red')).toBe('TEST');
+		expect(noColor.style('TEST', 'dim underline')).toBe('TEST');
 	});
 
 	test('.sequence applies styles to sequence', () => {
-		strictEqual(color.sequence(['(', 'TEST', ')']), '(TEST)');
-		strictEqual(color.sequence(['TE', 'ST'], 'blue'), '\x1B[34mTE\x1B[39mST');
-		strictEqual(color.sequence(['TE', 'ST'], ',blue'), 'TE\x1B[34mST\x1B[39m');
-		strictEqual(
-			color.sequence(['TE', 'ST'], 'blue,red,green'),
+		expect(color.sequence(['(', 'TEST', ')'])).toBe('(TEST)');
+		expect(color.sequence(['TE', 'ST'], 'blue')).toBe('\x1B[34mTE\x1B[39mST');
+		expect(color.sequence(['TE', 'ST'], ',blue')).toBe('TE\x1B[34mST\x1B[39m');
+		expect(color.sequence(['TE', 'ST'], 'blue,red,green')).toBe(
 			'\x1B[34mTE\x1B[39m\x1B[31mST\x1B[39m',
 		);
-		strictEqual(noColor.sequence(['TE', 'ST'], 'blue'), 'TEST');
-		strictEqual(noColor.sequence(['TE', 'ST'], 'blue,red,green'), 'TEST');
+		expect(noColor.sequence(['TE', 'ST'], 'blue')).toBe('TEST');
+		expect(noColor.sequence(['TE', 'ST'], 'blue,red,green')).toBe('TEST');
 	});
 
 	test('.brackets adds characters around input', () => {
-		strictEqual(color.brackets('TEST', ''), '[TEST]');
-		strictEqual(color.brackets('TEST', '', ['<<<', '>>>']), '<<<TEST>>>');
-		strictEqual(color.brackets('TEST', 'blue,,red'), '\x1B[34m[\x1B[39mTEST\x1B[31m]\x1B[39m');
-		strictEqual(color.brackets('TEST'), '\x1B[2m[\x1B[22mTEST\x1B[2m]\x1B[22m');
-		strictEqual(color.brackets('TEST', ',underline,', ['<<<', '>>>']), '<<<\x1B[4mTEST\x1B[24m>>>');
+		expect(color.brackets('TEST', '')).toBe('[TEST]');
+		expect(color.brackets('TEST', '', ['<<<', '>>>'])).toBe('<<<TEST>>>');
+		expect(color.brackets('TEST', 'blue,,red')).toBe('\x1B[34m[\x1B[39mTEST\x1B[31m]\x1B[39m');
+		expect(color.brackets('TEST')).toBe('\x1B[2m[\x1B[22mTEST\x1B[2m]\x1B[22m');
+		expect(color.brackets('TEST', ',underline,', ['<<<', '>>>'])).toBe('<<<\x1B[4mTEST\x1B[24m>>>');
 	});
 });
 
 suite('responseLogLine', () => {
-	/**
-	@param {Omit<import('../lib/types.d.ts').ResMetaData, 'url' | 'timing'>} data
-	@param {string} expected
-	*/
-	const matchLogLine = (data, expected) => {
+	const matchLogLine = (data: Omit<ResMetaData, 'url' | 'timing'>, expected: string) => {
 		const rawLine = requestLogLine({
 			timing: { start: Date.now() },
 			url: `http://localhost:8080${data.urlPath}`,
 			...data,
 		});
 		const line = stripVTControlCharacters(rawLine).replace(/^\d{2}:\d{2}:\d{2} /, '');
-		strictEqual(line, expected);
+		expect(line).toBe(expected);
 	};
 
 	test('basic formatting', () => {

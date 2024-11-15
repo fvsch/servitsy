@@ -1,17 +1,17 @@
 import { basename, dirname } from 'node:path';
 
 import { FAVICON_LIST, FAVICON_ERROR, ICONS, STYLES } from './page-assets.js';
+import type { FSLocation } from './types.d.ts';
 import { clamp, escapeHtml, trimSlash } from './utils.js';
 
-/**
-@typedef {import('./types.d.ts').FSLocation} FSLocation
-*/
-
-/**
-@param {{ base?: string; body: string; icon?: 'list' | 'error'; title?: string }} data
-*/
-async function htmlTemplate({ base, body, icon, title }) {
-	const svgIcon = { list: FAVICON_LIST, error: FAVICON_ERROR }[String(icon)];
+function htmlTemplate(data: {
+	base?: string;
+	body: string;
+	icon?: 'list' | 'error';
+	title?: string;
+}) {
+	const { base, body, title } = data;
+	const icon = { list: FAVICON_LIST, error: FAVICON_ERROR }[String(data.icon)];
 	return `<!doctype html>
 <html lang="en">
 <head>
@@ -19,7 +19,7 @@ async function htmlTemplate({ base, body, icon, title }) {
 ${title ? `<title>${html(title)}</title>` : ''}
 ${base ? `<base href="${attr(base)}">` : ''}
 <meta name="viewport" content="width=device-width">
-${svgIcon ? `<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,${btoa(svgIcon)}">` : ''}
+${icon ? `<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,${btoa(icon)}">` : ''}
 <style>${STYLES}</style>
 </head>
 <body>
@@ -30,11 +30,8 @@ ${body}
 `;
 }
 
-/**
-@param {{ status: number; url: string; urlPath: string | null }} data
-*/
-export function errorPage({ status, url, urlPath }) {
-	const displayPath = decodeURIPathSegments(urlPath ?? url);
+export function errorPage(data: { status: number; url: string; urlPath: string | null }) {
+	const displayPath = decodeURIPathSegments(data.urlPath ?? data.url);
 	const pathHtml = `<code class="filepath">${html(nl2sp(displayPath))}</code>`;
 
 	const page = (title = '', desc = '') => {
@@ -42,7 +39,7 @@ export function errorPage({ status, url, urlPath }) {
 		return htmlTemplate({ icon: 'error', title, body });
 	};
 
-	switch (status) {
+	switch (data.status) {
 		case 400:
 			return page('400: Bad request', `Invalid request for ${pathHtml}`);
 		case 403:
@@ -58,10 +55,14 @@ export function errorPage({ status, url, urlPath }) {
 	}
 }
 
-/**
-@param {{ root: string; urlPath: string; filePath: string; items: FSLocation[]; ext: string[] }} data
-*/
-export function dirListPage({ root, urlPath, filePath, items, ext }) {
+export function dirListPage(data: {
+	root: string;
+	urlPath: string;
+	filePath: string;
+	items: FSLocation[];
+	ext: string[];
+}) {
+	const { root, urlPath, filePath, items, ext } = data;
 	const rootName = basename(root);
 	const trimmedUrl = trimSlash(urlPath);
 	const baseUrl = trimmedUrl ? `/${trimmedUrl}/` : '/';
@@ -87,17 +88,14 @@ export function dirListPage({ root, urlPath, filePath, items, ext }) {
 	Index of <span class="bc">${renderBreadcrumbs(displayPath)}</span>
 </h1>
 <ul class="files" style="--max-col-count:${maxCols}">
-${sorted.map((item) => renderListItem(item, { ext, parentPath })).join('\n')}
+${sorted.map((item) => renderListItem({ item, ext, parentPath })).join('\n')}
 </ul>
 `.trim(),
 	});
 }
 
-/**
-@param {FSLocation} item
-@param {{ ext: string[]; parentPath: string }} options
-*/
-function renderListItem(item, { ext, parentPath }) {
+function renderListItem(data: { item: FSLocation; ext: string[]; parentPath: string }) {
+	const { item, ext, parentPath } = data;
 	const isDir = isDirLike(item);
 	const isParent = isDir && item.filePath === parentPath;
 
@@ -131,8 +129,7 @@ function renderListItem(item, { ext, parentPath }) {
 	].join('');
 }
 
-/** @type {(path: string) => string} */
-function renderBreadcrumbs(path) {
+function renderBreadcrumbs(path: string): string {
 	const slash = '<span class="bc-sep">/</span>';
 	return path
 		.split('/')
@@ -148,32 +145,26 @@ function renderBreadcrumbs(path) {
 		.join(slash);
 }
 
-/** @type {(item: FSLocation) => boolean} */
-function isDirLike(item) {
+function isDirLike(item: FSLocation): boolean {
 	return item.kind === 'dir' || (item.kind === 'link' && item.target?.kind === 'dir');
 }
 
-/** @type {(s: string) => string} */
-function decodeURIPathSegment(s) {
+function decodeURIPathSegment(s: string): string {
 	return decodeURIComponent(s).replaceAll('\\', '\\\\').replaceAll('/', '\\/');
 }
 
-/** @type {(path: string) => string} */
-function decodeURIPathSegments(path) {
+function decodeURIPathSegments(path: string): string {
 	return path.split('/').map(decodeURIPathSegment).join('/');
 }
 
-/** @type {(input: string) => string} */
-function attr(str) {
-	return escapeHtml(str, 'attr');
+function attr(input: string) {
+	return escapeHtml(input, 'attr');
 }
 
-/** @type {(input: string) => string} */
-function html(str) {
-	return escapeHtml(str, 'text');
+function html(input: string) {
+	return escapeHtml(input, 'text');
 }
 
-/** @type {(input: string) => string} */
-function nl2sp(input) {
+function nl2sp(input: string) {
 	return input.replace(/[\u{000A}-\u{000D}\u{2028}]/gu, ' ');
 }

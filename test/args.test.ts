@@ -1,5 +1,4 @@
-import { deepStrictEqual, strictEqual } from 'node:assert';
-import { suite, test } from 'node:test';
+import { expect, suite, test } from 'vitest';
 
 import {
 	CLIArgs,
@@ -9,18 +8,16 @@ import {
 	splitOptionValue,
 	strToBool,
 	unknownArgs,
-} from '../lib/args.js';
-import { errorList, intRange } from '../lib/utils.js';
-import { argify } from './shared.js';
+} from '#src/args.js';
+import { errorList, intRange } from '#src/utils.js';
+import type { HttpHeaderRule } from '#types';
 
-/**
-@typedef {import('../lib/types.d.ts').HttpHeaderRule} HttpHeaderRule
-*/
+import { argify } from './shared.js';
 
 suite('CLIArgs', () => {
 	test('returns empty values', () => {
 		const args = new CLIArgs([]);
-		deepStrictEqual(args.data(), {
+		expect(args.data()).toEqual({
 			map: [],
 			list: [],
 		});
@@ -37,33 +34,33 @@ suite('CLIArgs', () => {
 		//   'foo',
 		//   '  '
 		// ]
-		deepStrictEqual(new CLIArgs(['']).data(), {
+		expect(new CLIArgs(['']).data()).toEqual({
 			map: [],
 			list: [''],
 		});
-		deepStrictEqual(new CLIArgs(['', ' ', '']).data(), {
+		expect(new CLIArgs(['', ' ', '']).data()).toEqual({
 			map: [],
 			list: ['', ' ', ''],
 		});
 	});
 
 	test('treats names starting with 1-2 hyphens as key-value options', () => {
-		strictEqual(argify`zero`.has('zero'), false);
-		strictEqual(argify`-one`.has('-one'), true);
-		strictEqual(argify`--two hello`.has('--two'), true);
-		strictEqual(argify`---three hello`.has('---three'), false);
+		expect(argify`zero`.has('zero')).toBe(false);
+		expect(argify`-one`.has('-one')).toBe(true);
+		expect(argify`--two hello`.has('--two')).toBe(true);
+		expect(argify`---three hello`.has('---three')).toBe(false);
 	});
 
 	test('maps option to its value when separated by equal sign', () => {
-		strictEqual(argify`-one=value1`.get('-one'), 'value1');
-		strictEqual(argify`--two=value2`.get('--two'), 'value2');
+		expect(argify`-one=value1`.get('-one')).toBe('value1');
+		expect(argify`--two=value2`.get('--two')).toBe('value2');
 	});
 
 	test('maps option to its value when separated by whitespace', () => {
 		const args = argify`-one value1 --two value2`;
-		strictEqual(args.get('-one'), 'value1');
-		strictEqual(args.get('--two'), 'value2');
-		deepStrictEqual(args.data().map, [
+		expect(args.get('-one')).toBe('value1');
+		expect(args.get('--two')).toBe('value2');
+		expect(args.data().map).toEqual([
 			['-one', 'value1'],
 			['--two', 'value2'],
 		]);
@@ -71,59 +68,59 @@ suite('CLIArgs', () => {
 
 	test('can retrieve args with number indexes', () => {
 		const args = argify`. --foo --bar baz hello`;
-		strictEqual(args.get(0), '.');
-		strictEqual(args.get(1), 'hello');
-		strictEqual(args.get(2), undefined);
-		deepStrictEqual(args.data().list, ['.', 'hello']);
+		expect(args.get(0)).toBe('.');
+		expect(args.get(1)).toBe('hello');
+		expect(args.get(2)).toBe(undefined);
+		expect(args.data().list).toEqual(['.', 'hello']);
 	});
 
 	test('can retrieve mapped args', () => {
 		const args = argify`. --foo --bar baz hello -x -test=okay`;
-		strictEqual(args.get('--foo'), '');
-		strictEqual(args.get('--bar'), 'baz');
-		strictEqual(args.get('-x'), '');
-		strictEqual(args.get('-test'), 'okay');
+		expect(args.get('--foo')).toBe('');
+		expect(args.get('--bar')).toBe('baz');
+		expect(args.get('-x')).toBe('');
+		expect(args.get('-test')).toBe('okay');
 	});
 
 	test('last instance of option wins', () => {
 		const args = argify`-t=1 -t=2 --test 3 -t 4 --test 5`;
-		strictEqual(args.get('-t'), '4');
-		strictEqual(args.get('--test'), '5');
-		strictEqual(args.get(['--test', '-t']), '5');
-		deepStrictEqual(args.all(['-t', '--test']), ['1', '2', '3', '4', '5']);
+		expect(args.get('-t')).toBe('4');
+		expect(args.get('--test')).toBe('5');
+		expect(args.get(['--test', '-t'])).toBe('5');
+		expect(args.all(['-t', '--test'])).toEqual(['1', '2', '3', '4', '5']);
 	});
 
 	test('merges all values for searched options', () => {
 		const args = argify`-c config.js -f one.txt --file two.txt -f=three.txt`;
-		deepStrictEqual(args.all(['--config', '-c']), ['config.js']);
-		deepStrictEqual(args.all(['--file', '-f']), ['one.txt', 'two.txt', 'three.txt']);
+		expect(args.all(['--config', '-c'])).toEqual(['config.js']);
+		expect(args.all(['--file', '-f'])).toEqual(['one.txt', 'two.txt', 'three.txt']);
 	});
 });
 
 suite('parseArgs', () => {
 	test('no errors for empty args', () => {
 		const onError = errorList();
-		parseArgs(argify``, { onError });
-		deepStrictEqual(onError.list, []);
+		parseArgs(new CLIArgs([]), { onError });
+		expect(onError.list).toEqual([]);
 	});
 
 	test('does not validate host and root strings', () => {
 		const onError = errorList();
 		const args = new CLIArgs(['--host', ' not a hostname!\n', 'https://not-a-valid-root']);
 		const options = parseArgs(args, { onError });
-		strictEqual(options.host, 'not a hostname!');
-		strictEqual(options.root, 'https://not-a-valid-root');
-		deepStrictEqual(onError.list, []);
+		expect(options.host).toBe('not a hostname!');
+		expect(options.root).toBe('https://not-a-valid-root');
+		expect(onError.list).toEqual([]);
 	});
 
 	test('validates --port syntax', () => {
 		const onError = errorList();
 		const parse = (str = '') => parseArgs(argify(str), { onError });
-		deepStrictEqual(parse(`--port 1000+`), { ports: intRange(1000, 1009) });
-		deepStrictEqual(parse(`--port +1000`), {});
-		deepStrictEqual(parse(`--port whatever`), {});
-		deepStrictEqual(parse(`--port {"some":"json"}`), {});
-		deepStrictEqual(onError.list, [
+		expect(parse(`--port 1000+`)).toEqual({ ports: intRange(1000, 1009) });
+		expect(parse(`--port +1000`)).toEqual({});
+		expect(parse(`--port whatever`)).toEqual({});
+		expect(parse(`--port {"some":"json"}`)).toEqual({});
+		expect(onError.list).toEqual([
 			`invalid --port value: '+1000'`,
 			`invalid --port value: 'whatever'`,
 			`invalid --port value: '{"some":"json"}'`,
@@ -134,14 +131,14 @@ suite('parseArgs', () => {
 		const onError = errorList();
 		const getRule = (value = '') =>
 			parseArgs(new CLIArgs(['--header', value]), { onError }).headers?.at(0);
-		deepStrictEqual(getRule('x-header-1: true'), {
+		expect(getRule('x-header-1: true')).toEqual({
 			headers: { 'x-header-1': 'true' },
 		});
-		deepStrictEqual(getRule('*.md,*.mdown content-type: text/markdown; charset=UTF-8'), {
+		expect(getRule('*.md,*.mdown content-type: text/markdown; charset=UTF-8')).toEqual({
 			include: ['*.md', '*.mdown'],
 			headers: { 'content-type': 'text/markdown; charset=UTF-8' },
 		});
-		deepStrictEqual(getRule('{"good": "json"}'), {
+		expect(getRule('{"good": "json"}')).toEqual({
 			headers: { good: 'json' },
 		});
 	});
@@ -153,9 +150,9 @@ suite('parseArgs', () => {
 			return parseArgs(args, { onError }).headers?.at(0);
 		};
 
-		strictEqual(getRule('basic string'), undefined);
-		strictEqual(getRule('*.md {"bad": [json]}'), undefined);
-		deepStrictEqual(onError.list, [
+		expect(getRule('basic string')).toBe(undefined);
+		expect(getRule('*.md {"bad": [json]}')).toBe(undefined);
+		expect(onError.list).toEqual([
 			`invalid --header value: 'basic string'`,
 			`invalid --header value: '*.md {"bad": [json]}'`,
 		]);
@@ -165,15 +162,13 @@ suite('parseArgs', () => {
 		const onError = errorList();
 		const args = argify`--help --port=9999 --never gonna -GiveYouUp`;
 		parseArgs(args, { onError });
-		deepStrictEqual(onError.list, [`unknown option '--never'`, `unknown option '-GiveYouUp'`]);
+		expect(onError.list).toEqual([`unknown option '--never'`, `unknown option '-GiveYouUp'`]);
 	});
 });
 
 suite('parseHeaders', () => {
-	/** @type {(input: string, expected: HttpHeaderRule | undefined) => void} */
-	const checkHeaders = (input, expected) => {
-		const result = parseHeaders(input);
-		deepStrictEqual(result, expected);
+	const checkHeaders = (input: string, expected?: HttpHeaderRule) => {
+		expect(parseHeaders(input)).toEqual(expected);
 	};
 
 	test('no header rules for empty inputs', () => {
@@ -244,92 +239,106 @@ suite('parseHeaders', () => {
 });
 
 suite('parsePort', () => {
+	const checkPort = (input: string, expected?: number[]) => {
+		expect(parsePort(input)).toEqual(expected);
+	};
+
 	test('invalid values return undefined', () => {
-		strictEqual(parsePort(''), undefined);
-		strictEqual(parsePort('--'), undefined);
-		strictEqual(parsePort('hello'), undefined);
-		strictEqual(parsePort('9000!'), undefined);
-		strictEqual(parsePort('3.1415'), undefined);
-		strictEqual(parsePort('3141+5'), undefined);
-		strictEqual(parsePort('31415-'), undefined);
+		checkPort('', undefined);
+		checkPort('--', undefined);
+		checkPort('hello', undefined);
+		checkPort('9000!', undefined);
+		checkPort('3.1415', undefined);
+		checkPort('3141+5', undefined);
+		checkPort('31415-', undefined);
 	});
 
 	test('accepts a single integer number', () => {
-		deepStrictEqual(parsePort('0'), [0]);
-		deepStrictEqual(parsePort('10'), [10]);
-		deepStrictEqual(parsePort('1337'), [1337]);
-		deepStrictEqual(parsePort('65535'), [65_535]);
-		deepStrictEqual(parsePort('999999'), [999_999]);
+		checkPort('0', [0]);
+		checkPort('10', [10]);
+		checkPort('1337', [1337]);
+		checkPort('65535', [65_535]);
+		checkPort('999999', [999_999]);
 	});
 
 	test(`with format: 'int+'`, () => {
-		deepStrictEqual(parsePort('1+'), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+		checkPort('1+', [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+
 		const res1 = parsePort('80+');
-		strictEqual(res1?.length, 10);
-		strictEqual(res1?.at(0), 80);
-		strictEqual(res1?.at(-1), 89);
+		expect(res1?.length).toBe(10);
+		expect(res1?.at(0)).toBe(80);
+		expect(res1?.at(-1)).toBe(89);
+
 		const res2 = parsePort('1337+');
-		strictEqual(res2?.length, 10);
-		strictEqual(res2?.at(0), 1337);
-		strictEqual(res2?.at(-1), 1346);
+		expect(res2?.length).toBe(10);
+		expect(res2?.at(0)).toBe(1337);
+		expect(res2?.at(-1)).toBe(1346);
 	});
 
 	test(`with format: 'int-int'`, () => {
-		deepStrictEqual(parsePort('0-5'), [0, 1, 2, 3, 4, 5]);
-		deepStrictEqual(parsePort('1000000-1000000'), [1_000_000]);
-		deepStrictEqual(parsePort('1337-1333'), [1337, 1336, 1335, 1334, 1333]);
+		checkPort('0-5', [0, 1, 2, 3, 4, 5]);
+		checkPort('1000000-1000000', [1_000_000]);
+		checkPort('1337-1333', [1337, 1336, 1335, 1334, 1333]);
 	});
 
 	test('result is limited to 100 numbers', () => {
-		const res1 = parsePort('1000-9999');
-		strictEqual(res1?.length, 100);
-		strictEqual(res1?.at(0), 1000);
-		strictEqual(res1?.at(-1), 1099);
-		strictEqual(res1?.at(200), undefined);
+		const res1 = parsePort('1000-9999') ?? [];
+		expect(res1.length).toBe(100);
+		expect(res1.at(0)).toBe(1000);
+		expect(res1.at(-1)).toBe(1099);
+		expect(res1.at(200)).toBe(undefined);
 	});
 });
 
 suite('splitOptionValue', () => {
+	const checkSplit = (input: string[], expected: string[]) => {
+		expect(splitOptionValue(input)).toEqual(expected);
+	};
+
 	test('splits string on commas', () => {
-		deepStrictEqual(splitOptionValue([]), []);
-		deepStrictEqual(splitOptionValue(['hello world']), ['hello world']);
-		deepStrictEqual(splitOptionValue([' hello , world ']), ['hello', 'world']);
-		deepStrictEqual(splitOptionValue([',,,aaa,,,bbb,,,ccc,,,']), ['aaa', 'bbb', 'ccc']);
+		checkSplit([], []);
+		checkSplit(['hello world'], ['hello world']);
+		checkSplit([' hello , world '], ['hello', 'world']);
+		checkSplit([',,,aaa,,,bbb,,,ccc,,,'], ['aaa', 'bbb', 'ccc']);
 	});
 
 	test('flattens split values', () => {
-		deepStrictEqual(splitOptionValue(['aaa', 'bbb', 'ccc']), ['aaa', 'bbb', 'ccc']);
-		deepStrictEqual(splitOptionValue(['a,b,c', 'd,e,f', '1,2,3']), 'abcdef123'.split(''));
+		checkSplit(['aaa', 'bbb', 'ccc'], ['aaa', 'bbb', 'ccc']);
+		checkSplit(['a,b,c', 'd,e,f', '1,2,3'], 'abcdef123'.split(''));
 	});
 
 	test('drops empty values', () => {
-		deepStrictEqual(splitOptionValue(['', '']), []);
-		deepStrictEqual(splitOptionValue(['', ',,,', '']), []);
-		deepStrictEqual(splitOptionValue([',,,test,,,']), ['test']);
+		checkSplit(['', ''], []);
+		checkSplit(['', ',,,', ''], []);
+		checkSplit([',,,test,,,'], ['test']);
 	});
 });
 
 suite('strToBool', () => {
 	test('ignores invalid values', () => {
-		strictEqual(strToBool(), undefined);
-		// @ts-expect-error
-		strictEqual(strToBool(true), undefined);
-		// @ts-expect-error
-		strictEqual(strToBool({}, true), undefined);
+		expect(strToBool()).toBe(undefined);
+		expect(
+			// @ts-expect-error
+			strToBool(true),
+		).toBe(undefined);
+		expect(
+			// @ts-expect-error
+			strToBool({}, true),
+		).toBe(undefined);
 	});
 
 	test('matches non-empty strings', () => {
-		strictEqual(strToBool('True'), true);
-		strictEqual(strToBool(' FALSE '), false);
-		strictEqual(strToBool('1'), true);
-		strictEqual(strToBool('0'), false);
+		expect(strToBool('True')).toBe(true);
+		expect(strToBool(' FALSE ')).toBe(false);
+		expect(strToBool('1')).toBe(true);
+		expect(strToBool('0')).toBe(false);
 	});
 
 	test('empty string returns emptyValue', () => {
-		strictEqual(strToBool('', true), true);
-		strictEqual(strToBool('\t  \t', true), true);
-		strictEqual(strToBool('', false), false);
-		strictEqual(strToBool('\t  \t', false), false);
+		expect(strToBool('', true)).toBe(true);
+		expect(strToBool('\t  \t', true)).toBe(true);
+		expect(strToBool('', false)).toBe(false);
+		expect(strToBool('\t  \t', false)).toBe(false);
 	});
 });
 
@@ -348,13 +357,13 @@ suite('unknownArgs', () => {
 			--dir-list --no-dir-list
 			--exclude --no-exclude
 		`);
-		deepStrictEqual(unknownArgs(args), []);
+		expect(unknownArgs(args)).toEqual([]);
 	});
 
 	test('rejects unknown args', () => {
 		const someKnown = ['--version', '--host', '--header', '--ext'];
 		const unknown = ['-v', '--Host', '--ports', '--headers', '--foobar'];
 		const args = new CLIArgs([...unknown, ...someKnown]);
-		deepStrictEqual(unknownArgs(args), unknown);
+		expect(unknownArgs(args)).toEqual(unknown);
 	});
 });

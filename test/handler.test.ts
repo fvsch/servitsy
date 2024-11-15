@@ -1,45 +1,30 @@
-import { deepStrictEqual, match, strictEqual } from 'node:assert';
 import { IncomingMessage, ServerResponse } from 'node:http';
 import { Duplex } from 'node:stream';
-import { after, suite, test } from 'node:test';
+import { afterAll, expect, suite, test } from 'vitest';
 
-import { extractUrlPath, fileHeaders, isValidUrlPath, RequestHandler } from '../lib/handler.js';
-import { FileResolver } from '../lib/resolver.js';
+import { extractUrlPath, fileHeaders, isValidUrlPath, RequestHandler } from '#src/handler.js';
+import { FileResolver } from '#src/resolver.js';
+import type { HttpHeaderRule, ServerOptions } from '#types';
+
 import { fsFixture, getBlankOptions, getDefaultOptions, platformSlash } from './shared.js';
 
-/**
-@typedef {import('../lib/types.d.ts').HttpHeaderRule} HttpHeaderRule
-@typedef {import('../lib/types.d.ts').ServerOptions} ServerOptions
-@typedef {Record<string, undefined | number | string | string[]>} ResponseHeaders
-*/
+type ResponseHeaders = Record<string, undefined | number | string | string[]>;
 
 const allowMethods = 'GET, HEAD, OPTIONS, POST';
 
-/**
-@type {(actual: ResponseHeaders, expected: ResponseHeaders) => void}
-*/
-function checkHeaders(actual, expected) {
-	deepStrictEqual(actual, headersObj(expected));
+function checkHeaders(actual: ResponseHeaders, expected: ResponseHeaders) {
+	expect(actual).toEqual(expected);
 }
 
-/**
-@type {(data: ResponseHeaders) => ResponseHeaders}
-*/
-function headersObj(data) {
-	/** @type {ResponseHeaders} */
-	const result = Object.create(null);
+function headersObj(data: ResponseHeaders) {
+	const result: ResponseHeaders = Object.create(null);
 	for (const [key, value] of Object.entries(data)) {
 		result[key.toLowerCase()] = value;
 	}
 	return result;
 }
 
-/**
-@param {string} method
-@param {string} url
-@param {Record<string,  string | string[]>} [headers]
-*/
-function mockReqRes(method, url, headers = {}) {
+function mockReqRes(method: string, url: string, headers: Record<string, string | string[]> = {}) {
 	const req = new IncomingMessage(
 		// @ts-expect-error (we don't have a socket, hoping this is enough for testing)
 		new Duplex(),
@@ -53,11 +38,9 @@ function mockReqRes(method, url, headers = {}) {
 	return { req, res };
 }
 
-/**
-@param {ServerOptions} options
-@returns {(method: string, url: string, headers?: Record<string, string | string[]>) => RequestHandler}
-*/
-function handlerContext(options) {
+function handlerContext(
+	options: ServerOptions,
+): (method: string, url: string, headers?: Record<string, string | string[]>) => RequestHandler {
 	const resolver = new FileResolver(options);
 	const handlerOptions = { ...options, gzip: false, _noStream: true };
 
@@ -67,18 +50,17 @@ function handlerContext(options) {
 	};
 }
 
-/**
-@param {HttpHeaderRule[]} rules
-@param {string[]} [blockList]
-@returns {(filePath: string) => ReturnType<typeof fileHeaders>}
-*/
-function withHeaderRules(rules, blockList) {
+function withHeaderRules(
+	rules: HttpHeaderRule[],
+	blockList?: string[],
+): (filePath: string) => ReturnType<typeof fileHeaders> {
 	return (filePath) => fileHeaders(filePath, rules, blockList);
 }
 
 suite('isValidUrlPath', () => {
-	/** @type {(urlPath: string, expected: boolean) => void} */
-	const check = (urlPath, expected = true) => strictEqual(isValidUrlPath(urlPath), expected);
+	const check = (urlPath: string, expected = true) => {
+		expect(isValidUrlPath(urlPath)).toBe(expected);
+	};
 
 	test('rejects invalid paths', () => {
 		check('', false);
@@ -110,8 +92,9 @@ suite('isValidUrlPath', () => {
 });
 
 suite('extractUrlPath', () => {
-	/** @type {(url: string, expected: string | null) => void} */
-	const checkUrl = (url, expected) => strictEqual(extractUrlPath(url), expected);
+	const checkUrl = (url: string, expected: string | null) => {
+		expect(extractUrlPath(url)).toBe(expected);
+	};
 
 	test('extracts URL pathname', () => {
 		checkUrl('https://example.com/hello/world', '/hello/world');
@@ -149,9 +132,9 @@ suite('fileHeaders', () => {
 			{ name: 'x-header1', value: 'three' },
 			{ name: 'X-Header2', value: 'four' },
 		];
-		deepStrictEqual(headers(''), expected);
-		deepStrictEqual(headers('file.ext'), expected);
-		deepStrictEqual(headers('any/thing.ext'), expected);
+		expect(headers('')).toEqual(expected);
+		expect(headers('file.ext')).toEqual(expected);
+		expect(headers('any/thing.ext')).toEqual(expected);
 	});
 
 	test('headers matching blocklist are rejected', () => {
@@ -162,8 +145,8 @@ suite('fileHeaders', () => {
 			],
 			['content-length', 'content-encoding'],
 		);
-		deepStrictEqual(headers(''), [{ name: 'X-Header1', value: 'one' }]);
-		deepStrictEqual(headers('readme.md'), [
+		expect(headers('')).toEqual([{ name: 'X-Header1', value: 'one' }]);
+		expect(headers('readme.md')).toEqual([
 			{ name: 'X-Header1', value: 'one' },
 			{ name: 'X-Header2', value: 'two' },
 		]);
@@ -174,11 +157,11 @@ suite('fileHeaders', () => {
 			{ include: ['path'], headers: { 'x-header1': 'true' } },
 			{ include: ['*.test'], headers: { 'Content-Type': 'test/custom-type' } },
 		]);
-		deepStrictEqual(headers(''), []);
-		deepStrictEqual(headers('wrong-path/file.test.txt'), []);
-		deepStrictEqual(headers('path/to/README.md'), [{ name: 'x-header1', value: 'true' }]);
-		deepStrictEqual(headers('README.test'), [{ name: 'Content-Type', value: 'test/custom-type' }]);
-		deepStrictEqual(headers('other/path/cool.test/index.html'), [
+		expect(headers('')).toEqual([]);
+		expect(headers('wrong-path/file.test.txt')).toEqual([]);
+		expect(headers('path/to/README.md')).toEqual([{ name: 'x-header1', value: 'true' }]);
+		expect(headers('README.test')).toEqual([{ name: 'Content-Type', value: 'test/custom-type' }]);
+		expect(headers('other/path/cool.test/index.html')).toEqual([
 			{ name: 'x-header1', value: 'true' },
 			{ name: 'Content-Type', value: 'test/custom-type' },
 		]);
@@ -206,30 +189,30 @@ suite('RequestHandler', async () => {
 	const defaultOptions = getDefaultOptions(path());
 	const request = handlerContext(defaultOptions);
 
-	after(() => fixture.rm());
+	afterAll(() => fixture.rm());
 
 	test('starts with a 200 status', async () => {
 		const request = handlerContext(blankOptions);
 		const handler = request('GET', '/');
-		strictEqual(handler.method, 'GET');
-		strictEqual(handler.urlPath, '/');
-		strictEqual(handler.status, 200);
-		strictEqual(handler.file, null);
+		expect(handler.method).toBe('GET');
+		expect(handler.urlPath).toBe('/');
+		expect(handler.status).toBe(200);
+		expect(handler.file).toBe(null);
 	});
 
 	for (const method of ['PUT', 'DELETE']) {
 		test(`${method} method is unsupported`, async () => {
 			const handler = request(method, '/README.md');
-			strictEqual(handler.method, method);
-			strictEqual(handler.status, 200);
-			strictEqual(handler.urlPath, '/README.md');
-			strictEqual(handler.file, null);
+			expect(handler.method).toBe(method);
+			expect(handler.status).toBe(200);
+			expect(handler.urlPath).toBe('/README.md');
+			expect(handler.file).toBe(null);
 
 			await handler.process();
-			strictEqual(handler.status, 405);
-			strictEqual(handler.headers['allow'], allowMethods);
-			strictEqual(handler.headers['content-type'], 'text/html; charset=UTF-8');
-			match(`${handler.headers['content-length']}`, /^\d+$/);
+			expect(handler.status).toBe(405);
+			expect(handler.headers['allow']).toBe(allowMethods);
+			expect(handler.headers['content-type']).toBe('text/html; charset=UTF-8');
+			expect(`${handler.headers['content-length']}`).toMatch(/^\d+$/);
 		});
 	}
 
@@ -237,10 +220,10 @@ suite('RequestHandler', async () => {
 		const handler = request('GET', '/');
 		await handler.process();
 
-		strictEqual(handler.status, 200);
-		strictEqual(handler.file?.kind, 'file');
-		strictEqual(handler.localPath, 'index.html');
-		strictEqual(handler.error, undefined);
+		expect(handler.status).toBe(200);
+		expect(handler.file?.kind).toBe('file');
+		expect(handler.localPath).toBe('index.html');
+		expect(handler.error).toBe(undefined);
 	});
 
 	test('GET returns a directory listing', async () => {
@@ -257,48 +240,46 @@ suite('RequestHandler', async () => {
 			const request = handlerContext({ ...blankOptions, dirList });
 			const handler = request('GET', url);
 			await handler.process();
-			strictEqual(handler.status, status);
+			expect(handler.status).toBe(status);
 			// both error and list pages are HTML
-			strictEqual(handler.headers['content-type'], 'text/html; charset=UTF-8');
+			expect(handler.headers['content-type']).toBe('text/html; charset=UTF-8');
 			// folder is still resolved when status is 404, just not used
-			deepStrictEqual(handler.file, file);
+			expect(handler.file).toEqual(file);
 		}
 	});
 
 	test('GET returns a 404 for an unknown path', async () => {
 		const control = request('GET', '/index.html');
 		await control.process();
-		strictEqual(control.status, 200);
-		strictEqual(control.localPath, 'index.html');
+		expect(control.status).toBe(200);
+		expect(control.localPath).toBe('index.html');
 
 		const noFile = request('GET', '/does/not/exist');
 		await noFile.process();
-		strictEqual(noFile.status, 404);
-		strictEqual(noFile.file, null);
-		strictEqual(noFile.localPath, null);
+		expect(noFile.status).toBe(404);
+		expect(noFile.file).toBe(null);
+		expect(noFile.localPath).toBe(null);
 	});
 
 	test('GET finds .html files without extension', async () => {
 		const page1 = request('GET', '/section/page');
 		await page1.process();
-		strictEqual(page1.status, 200);
-		strictEqual(page1.localPath, platformSlash`section/page.html`);
+		expect(page1.status).toBe(200);
+		expect(page1.localPath).toBe(platformSlash`section/page.html`);
 
 		const page2 = request('GET', '/section/other-page');
 		await page2.process();
-		strictEqual(page2.status, 200);
-		strictEqual(page2.localPath, platformSlash`section/other-page.html`);
+		expect(page2.status).toBe(200);
+		expect(page2.localPath).toBe(platformSlash`section/other-page.html`);
 	});
 
 	test('GET shows correct content-type', async () => {
 		const checkType = async (url = '', contentType = '') => {
 			const handler = request('GET', url);
 			await handler.process();
-			strictEqual(handler.status, 200, `Correct status for GET ${url}`);
-			strictEqual(
-				handler.headers['content-type'],
+			expect(handler.status, `Correct status for GET ${url}`).toBe(200);
+			expect(handler.headers['content-type'], `Correct content-type for GET ${url}`).toBe(
 				contentType,
-				`Correct content-type for GET ${url}`,
 			);
 		};
 
@@ -319,47 +300,47 @@ suite('RequestHandler', async () => {
 		for (const { url, localPath, status } of cases) {
 			const getReq = request('GET', url);
 			await getReq.process();
-			strictEqual(getReq.method, 'GET');
-			strictEqual(getReq.status, status);
-			strictEqual(getReq.localPath, localPath);
+			expect(getReq.method).toBe('GET');
+			expect(getReq.status).toBe(status);
+			expect(getReq.localPath).toBe(localPath);
 
 			const postReq = request('POST', url);
 			await postReq.process();
-			strictEqual(postReq.method, 'POST');
-			strictEqual(postReq.status, status);
-			strictEqual(postReq.localPath, localPath);
+			expect(postReq.method).toBe('POST');
+			expect(postReq.status).toBe(status);
+			expect(postReq.localPath).toBe(localPath);
 
 			// other than method, results are identical
-			strictEqual(getReq.status, postReq.status);
-			deepStrictEqual(getReq.file, postReq.file);
+			expect(getReq.status).toBe(postReq.status);
+			expect(getReq.file).toEqual(postReq.file);
 		}
 	});
 
 	test('HEAD with a 200 response', async () => {
 		const handler = request('HEAD', '/');
 		await handler.process();
-		strictEqual(handler.method, 'HEAD');
-		strictEqual(handler.status, 200);
-		strictEqual(handler.localPath, 'index.html');
-		strictEqual(handler.headers['content-type'], 'text/html; charset=UTF-8');
-		match(`${handler.headers['content-length']}`, /^\d+$/);
+		expect(handler.method).toBe('HEAD');
+		expect(handler.status).toBe(200);
+		expect(handler.localPath).toBe('index.html');
+		expect(handler.headers['content-type']).toBe('text/html; charset=UTF-8');
+		expect(`${handler.headers['content-length']}`).toMatch(/^\d+$/);
 	});
 
 	test('HEAD with a 404 response', async () => {
 		const handler = request('HEAD', '/doesnt/exist');
 		await handler.process();
-		strictEqual(handler.method, 'HEAD');
-		strictEqual(handler.status, 404);
-		strictEqual(handler.file, null);
-		strictEqual(handler.headers['content-type'], 'text/html; charset=UTF-8');
-		match(`${handler.headers['content-length']}`, /^\d+$/);
+		expect(handler.method).toBe('HEAD');
+		expect(handler.status).toBe(404);
+		expect(handler.file).toBe(null);
+		expect(handler.headers['content-type']).toBe('text/html; charset=UTF-8');
+		expect(`${handler.headers['content-length']}`).toMatch(/^\d+$/);
 	});
 
 	test('OPTIONS *', async () => {
 		const handler = request('OPTIONS', '*');
 		await handler.process();
-		strictEqual(handler.method, 'OPTIONS');
-		strictEqual(handler.status, 204);
+		expect(handler.method).toBe('OPTIONS');
+		expect(handler.status).toBe(204);
 		checkHeaders(handler.headers, {
 			allow: allowMethods,
 			'content-length': '0',
@@ -369,8 +350,8 @@ suite('RequestHandler', async () => {
 	test('OPTIONS for existing file', async () => {
 		const handler = request('OPTIONS', '/section/page');
 		await handler.process();
-		strictEqual(handler.method, 'OPTIONS');
-		strictEqual(handler.status, 204);
+		expect(handler.method).toBe('OPTIONS');
+		expect(handler.status).toBe(204);
 		checkHeaders(handler.headers, {
 			allow: allowMethods,
 			'content-length': '0',
@@ -380,7 +361,7 @@ suite('RequestHandler', async () => {
 	test('OPTIONS for missing file', async () => {
 		const handler = request('OPTIONS', '/doesnt/exist');
 		await handler.process();
-		strictEqual(handler.status, 404);
+		expect(handler.status).toBe(404);
 		checkHeaders(handler.headers, {
 			allow: allowMethods,
 			'content-length': '0',
@@ -395,7 +376,7 @@ suite('RequestHandler', async () => {
 			'Access-Control-Request-Method': 'GET',
 		});
 		await getReq.process();
-		strictEqual(getReq.status, 200);
+		expect(getReq.status).toBe(200);
 		checkHeaders(getReq.headers, {
 			'content-type': 'application/json; charset=UTF-8',
 			'content-length': '18',
@@ -407,7 +388,7 @@ suite('RequestHandler', async () => {
 			'Access-Control-Request-Headers': 'X-Header1',
 		});
 		await preflightReq.process();
-		strictEqual(preflightReq.status, 204);
+		expect(preflightReq.status).toBe(204);
 		checkHeaders(preflightReq.headers, {
 			allow: allowMethods,
 			'content-length': '0',
@@ -422,7 +403,7 @@ suite('RequestHandler', async () => {
 			'Access-Control-Request-Method': 'GET',
 		});
 		await getReq.process();
-		strictEqual(getReq.status, 200);
+		expect(getReq.status).toBe(200);
 		checkHeaders(getReq.headers, {
 			'access-control-allow-origin': 'https://example.com',
 			'content-type': 'application/json; charset=UTF-8',
@@ -435,7 +416,7 @@ suite('RequestHandler', async () => {
 			'Access-Control-Request-Headers': 'X-Header1',
 		});
 		await preflightReq.process();
-		strictEqual(preflightReq.status, 204);
+		expect(preflightReq.status).toBe(204);
 		checkHeaders(preflightReq.headers, {
 			allow: allowMethods,
 			'access-control-allow-headers': 'X-Header1',
