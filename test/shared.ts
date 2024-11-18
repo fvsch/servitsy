@@ -22,7 +22,7 @@ export async function fsFixture(fileTree: import('fs-fixture').FileTree) {
 	return { fileTree, fixture, ...testPathUtils(fixture.path) };
 }
 
-export function getBlankOptions(root?: string): ServerOptions {
+export function getBlankOptions(root?: string): Required<ServerOptions> {
 	return {
 		root: root ?? loc.path(),
 		host: '::',
@@ -37,7 +37,7 @@ export function getBlankOptions(root?: string): ServerOptions {
 	};
 }
 
-export function getDefaultOptions(root?: string): ServerOptions {
+export function getDefaultOptions(root?: string): Required<ServerOptions> {
 	return {
 		root: root ?? loc.path(),
 		...DEFAULT_OPTIONS,
