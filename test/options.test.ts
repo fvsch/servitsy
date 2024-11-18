@@ -9,10 +9,13 @@ import {
 	isValidHost,
 	isValidPattern,
 	isValidPort,
+	OptionsValidator,
 	serverOptions,
 } from '#src/options.js';
 import { errorList } from '#src/utils.js';
 import type { ServerOptions } from '#types';
+
+type InputOptions = Partial<ServerOptions> & { root: string };
 
 function makeValidChecks(isValidFn: (input: any) => boolean) {
 	const msg = (expected: boolean, input: any) => {
@@ -30,6 +33,10 @@ function makeValidChecks(isValidFn: (input: any) => boolean) {
 			expect(isValidFn(input), msg(false, input)).toBe(false);
 		},
 	};
+}
+
+function throwError(msg: string) {
+	throw new Error(msg);
 }
 
 suite('isValidExt', () => {
@@ -159,10 +166,16 @@ suite('isValidPattern', () => {
 		valid('Piña Colada! Forever');
 	});
 
+	test('accepts patterns prefixed with !', () => {
+		valid('!README.md');
+		valid('!!!!!!!!!!');
+	});
+
 	test('rejects invalid type or empty string', () => {
 		invalid(null);
 		invalid(1);
 		invalid('');
+		invalid('!');
 	});
 
 	test('rejects reserved characters', () => {
@@ -191,9 +204,105 @@ suite('isValidPort', () => {
 	});
 });
 
-suite('serverOptions', () => {
-	type InputOptions = Partial<ServerOptions> & { root: string };
+suite('OptionsValidator', () => {
+	test('returns valid values as-is', () => {
+		const onError = errorList();
+		const val = new OptionsValidator(onError);
+		const valid = <T = any>(fn: (input: T) => T, input: T) => {
+			const msg = `OptionsValidator.${fn.name}(${JSON.stringify(input)})`;
+			expect(fn.call(val, input), msg).toEqual(input);
+		};
 
+		valid(val.cors, undefined);
+		valid(val.cors, true);
+		valid(val.cors, false);
+
+		valid(val.dirList, undefined);
+		valid(val.dirList, true);
+		valid(val.dirList, false);
+
+		valid(val.gzip, undefined);
+		valid(val.gzip, true);
+		valid(val.gzip, false);
+
+		valid(val.dirFile, undefined);
+		valid(val.dirFile, []);
+		valid(val.dirFile, ['a b c', 'Indéx.html']);
+
+		valid(val.exclude, undefined);
+		valid(val.exclude, []);
+		valid(val.exclude, ['.*', '!.well-known']);
+		valid(val.exclude, ['.DS_Store', '_*_**', '!.okay']);
+
+		valid(val.ext, undefined);
+		valid(val.ext, []);
+		valid(val.ext, ['.html', '.HTM']);
+		valid(val.ext, ['.a.b.c.d.e', '.CoolExtension']);
+
+		valid(val.headers, undefined);
+		valid(val.headers, []);
+		valid(val.headers, [{ include: ['*.html'], headers: { DNT: 1 } }]);
+		valid(val.headers, [
+			{ headers: { 'x-my-header': 'hello world!!!', 'content-type': 'TEXT/HTML;CHARSET=utf8' } },
+		]);
+
+		valid(val.host, undefined);
+		valid(val.host, '::1');
+		valid(val.host, '127.0.0.1');
+		valid(val.host, 'cool-site');
+		valid(val.host, 'hello-world.localhost');
+		valid(val.host, '01.02.03.04.05.dev');
+
+		valid(val.ports, undefined);
+		valid(val.ports, [1]);
+		valid(val.ports, [5000, 5001, 5002, 5003, 5004, 5005]);
+		valid(val.ports, [10000, 1000, 100, 10, 1]);
+
+		// root validator is a bit stranger: requires a string, and may
+		// modify it by calling path.resolve.
+		valid(val.root, cwd());
+
+		expect(onError.list).toEqual([]);
+	});
+
+	test('sends errors for inputs of incorrect type', () => {
+		const val = new OptionsValidator(throwError);
+
+		expect(() => val.cors(null as any)).toThrow(`invalid cors value: null`);
+		expect(() => val.dirFile({ hello: 'world' } as any)).toThrow(
+			`invalid dirFile value: {"hello":"world"}`,
+		);
+		expect(() => val.dirList('yes' as any)).toThrow(`invalid dirList value: 'yes'`);
+		expect(() => val.exclude(new Set(['index']) as any)).toThrow(`invalid exclude pattern: {}`);
+		expect(() => val.ext('.html' as any)).toThrow(`invalid ext value: '.html'`);
+		expect(() => val.gzip(1 as any)).toThrow(`invalid gzip value: 1`);
+		expect(() => val.headers({ dnt: '1' } as any)).toThrow(`invalid header value: {"dnt":"1"}`);
+		expect(() => val.host(true as any)).toThrow(`invalid host value: true`);
+		expect(() => val.ports(8000 as any)).toThrow(`invalid port value: 8000`);
+	});
+
+	test('sends errors for invalid inputs', () => {
+		const val = new OptionsValidator(throwError);
+
+		expect(() => val.dirFile(['./index.html'])).toThrow(`invalid dirFile value: './index.html'`);
+		expect(() => val.exclude([null] as any)).toThrow(`invalid exclude pattern: null`);
+		expect(() => val.exclude(['.*', 'a:b:c'])).toThrow(`invalid exclude pattern: 'a:b:c'`);
+		expect(() => val.ext(['.html', 'htm'])).toThrow(`invalid ext value: 'htm'`);
+		expect(() => val.headers([{ 'Content-Type': 'text/html' } as any])).toThrow(
+			`invalid header value: {"Content-Type":"text/html"}`,
+		);
+		expect(() => val.headers([{ include: ['*'], headers: {} }])).toThrow(
+			`invalid header value: {"include":["*"],"headers":{}}`,
+		);
+		expect(() => val.headers([{ headers: { 'Bad Header:': 'Whoops' } }])).toThrow(
+			`invalid header value: {"headers":{"Bad Header:":"Whoops"}}`,
+		);
+		expect(() => val.host('Bad Host!')).toThrow(`invalid host value: 'Bad Host!'`);
+		expect(() => val.ports([1, 80, 3000, 99_999])).toThrow(`invalid port number: 99999`);
+	});
+});
+
+suite('serverOptions', () => {
 	test('returns default options with empty input', () => {
 		const onError = errorList();
 		const { root, ...result } = serverOptions({ root: cwd() }, { onError });

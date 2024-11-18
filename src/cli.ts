@@ -1,5 +1,5 @@
-import { createServer } from 'node:http';
-import { homedir, networkInterfaces } from 'node:os';
+import { createServer, type Server } from 'node:http';
+import { homedir, networkInterfaces, type NetworkInterfaceInfo } from 'node:os';
 import { sep as dirSep } from 'node:path';
 import process, { argv, exit, platform, stdin } from 'node:process';
 import { emitKeypressEvents } from 'node:readline';
@@ -48,15 +48,13 @@ export async function run() {
 }
 
 export class CLIServer {
-	#options: ServerOptions;
-	#port: number | undefined;
+	#options: Required<ServerOptions>;
+	#port?: number;
 	#portIterator: IterableIterator<number>;
-	#localNetworkInfo: import('node:os').NetworkInterfaceInfo | undefined;
-	#server: import('node:http').Server;
-	#resolver: FileResolver;
-	#shuttingDown = false;
+	#localNetworkInfo?: NetworkInterfaceInfo;
+	#server: Server;
 
-	constructor(options: ServerOptions) {
+	constructor(options: Required<ServerOptions>) {
 		this.#options = options;
 		this.#portIterator = new Set(options.ports).values();
 		this.#localNetworkInfo = Object.values(networkInterfaces())
@@ -71,23 +69,27 @@ export class CLIServer {
 			});
 			await handler.process();
 		});
-		server.on('error', (error) => this.#onServerError(error));
+		server.on('error', (error) => this.onError(error));
 		server.on('listening', () => {
 			const info = this.headerInfo();
 			if (info) logger.write('header', info, { top: 1, bottom: 1 });
 		});
 
-		this.#resolver = resolver;
 		this.#server = server;
 	}
 
+	nextPort() {
+		this.#port = this.#portIterator.next().value;
+		return this.#port;
+	}
+
 	start() {
+		const port = this.nextPort();
+		if (!port) throw new Error('Port not specified');
+
 		this.handleSignals();
 		this.#server.listen(
-			{
-				host: this.#options.host,
-				port: this.#portIterator.next().value,
-			},
+			{ host: this.#options.host, port },
 			// Wait until the server started listening — and hopefully all Deno
 			// permission requests are done — before we can take over stdin inputs.
 			() => {
@@ -142,12 +144,16 @@ export class CLIServer {
 		stdin.setRawMode(true);
 	}
 
+	#attached = false;
 	handleSignals() {
+		if (this.#attached) return;
 		process.on('SIGBREAK', this.shutdown);
 		process.on('SIGINT', this.shutdown);
 		process.on('SIGTERM', this.shutdown);
+		this.#attached = true;
 	}
 
+	#shuttingDown = false;
 	shutdown = async () => {
 		if (this.#shuttingDown) return;
 		this.#shuttingDown = true;
@@ -161,20 +167,16 @@ export class CLIServer {
 		exit();
 	};
 
-	#onServerError(error: NodeJS.ErrnoException & { hostname?: string }) {
+	onError(error: NodeJS.ErrnoException & { hostname?: string }) {
 		// Try restarting with the next port
 		if (error.code === 'EADDRINUSE') {
-			const { value: nextPort } = this.#portIterator.next();
-			const { ports } = this.#options;
 			this.#server.closeAllConnections();
 			this.#server.close(() => {
-				if (nextPort) {
-					this.#port = nextPort;
-					this.#server.listen({
-						host: this.#options.host,
-						port: this.#port,
-					});
+				const port = this.nextPort();
+				if (port) {
+					this.#server.listen({ host: this.#options.host, port });
 				} else {
+					const { ports } = this.#options;
 					const msg = `${ports.length > 1 ? 'ports' : 'port'} already in use: ${ports.join(', ')}`;
 					logger.error(msg);
 					exit(1);

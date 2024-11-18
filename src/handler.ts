@@ -8,7 +8,14 @@ import { getContentType, typeForFilePath } from './content-type.js';
 import { getLocalPath, isSubpath } from './fs-utils.js';
 import { dirListPage, errorPage } from './pages.js';
 import { PathMatcher } from './path-matcher.js';
-import type { FSLocation, Request, Response, ResMetaData, ServerOptions } from './types.d.ts';
+import type {
+	FSLocation,
+	HttpHeaderRule,
+	Request,
+	Response,
+	ResMetaData,
+	ServerOptions,
+} from './types.d.ts';
 import { headerCase, trimSlash } from './utils.js';
 import { FileResolver } from './resolver.js';
 
@@ -16,7 +23,7 @@ interface Config {
 	req: Request;
 	res: Response;
 	resolver: FileResolver;
-	options: ServerOptions & { _noStream?: boolean };
+	options: Required<ServerOptions> & { _noStream?: boolean };
 }
 
 interface Payload {
@@ -346,11 +353,7 @@ export function extractUrlPath(url: string): string {
 	return path;
 }
 
-export function fileHeaders(
-	localPath: string,
-	rules: ServerOptions['headers'],
-	blockList: string[] = [],
-) {
+export function fileHeaders(localPath: string, rules: HttpHeaderRule[], blockList: string[] = []) {
 	const result: Array<{ name: string; value: string }> = [];
 	for (const rule of rules) {
 		if (Array.isArray(rule.include)) {

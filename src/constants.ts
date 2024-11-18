@@ -17,7 +17,7 @@ export const SUPPORTED_METHODS = ['GET', 'HEAD', 'OPTIONS', 'POST'];
 
 export const MAX_COMPRESS_SIZE = 50_000_000;
 
-export const DEFAULT_OPTIONS: Omit<ServerOptions, 'root'> = {
+export const DEFAULT_OPTIONS: Omit<Required<ServerOptions>, 'root'> = {
 	host: HOSTS_WILDCARD.v6,
 	ports: [8080, 8081, 8082, 8083, 8084, 8085, 8086, 8087, 8088, 8089],
 	gzip: true,

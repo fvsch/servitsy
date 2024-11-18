@@ -44,20 +44,15 @@ export interface ResMetaData {
 	error?: Error | string;
 }
 
-export interface HttpOptions {
-	host: string;
-	ports: number[];
-	headers: HttpHeaderRule[];
-	cors: boolean;
-	gzip: boolean;
-}
-
-export interface ResolveOptions {
+export interface ServerOptions {
 	root: string;
-	ext: string[];
-	dirFile: string[];
-	dirList: boolean;
-	exclude: string[];
+	ext?: string[];
+	dirFile?: string[];
+	dirList?: boolean;
+	exclude?: string[];
+	host?: string;
+	ports?: number[];
+	headers?: HttpHeaderRule[];
+	cors?: boolean;
+	gzip?: boolean;
 }
-
-export type ServerOptions = HttpOptions & ResolveOptions;

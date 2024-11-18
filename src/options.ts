@@ -3,86 +3,133 @@ import { isAbsolute, resolve } from 'node:path';
 import { DEFAULT_OPTIONS, PORTS_CONFIG } from './constants.js';
 import type { HttpHeaderRule, ServerOptions } from './types.d.ts';
 
+export function serverOptions(
+	options: ServerOptions,
+	context: { onError(msg: string): void },
+): Required<ServerOptions> {
+	const validator = new OptionsValidator(context.onError);
+
+	const checked: Omit<ServerOptions, 'root'> = {
+		ports: validator.ports(options.ports),
+		gzip: validator.gzip(options.gzip),
+		host: validator.host(options.host),
+		cors: validator.cors(options.cors),
+		headers: validator.headers(options.headers),
+		dirFile: validator.dirFile(options.dirFile),
+		dirList: validator.dirList(options.dirList),
+		ext: validator.ext(options.ext),
+		exclude: validator.exclude(options.exclude),
+	};
+
+	const final = structuredClone({
+		root: validator.root(options.root),
+		...DEFAULT_OPTIONS,
+	});
+	for (const [key, value] of Object.entries(checked)) {
+		const valid = typeof value !== 'undefined';
+		if (typeof value !== 'undefined') {
+			(final as Record<string, any>)[key] = value;
+		}
+	}
+
+	return final;
+}
+
 export class OptionsValidator {
-	onError?: (msg: string) => void;
+	#errorCb;
 
-	constructor(onError?: (msg: string) => void) {
-		this.onError = onError;
+	constructor(onError: (msg: string) => void) {
+		this.#errorCb = onError;
 	}
 
-	#array<T = string>(input: T[] | undefined, filterFn: (item: T) => boolean): T[] | undefined {
-		if (!Array.isArray(input)) return;
-		if (input.length === 0) return input;
-		const value = input.filter(filterFn);
-		if (value.length) return value;
+	#error(msg: string, input: any) {
+		let dbg = input;
+		if (typeof input === 'object') {
+			dbg = JSON.stringify(input);
+		} else if (typeof input === 'string') {
+			dbg = `'${dbg.replaceAll("'", "\\'")}'`;
+		}
+		this.#errorCb(`${msg}: ${dbg}`);
 	}
 
-	#bool(optName: string, input?: boolean): boolean | undefined {
+	#arr<T>(input: T[] | undefined, msg: string, validFn: (item: T) => boolean): T[] | undefined {
+		if (typeof input === 'undefined') return;
+		if (Array.isArray(input)) {
+			if (input.length === 0) return input;
+			const valid = input.filter((item) => {
+				if (validFn(item)) return true;
+				this.#error(msg, item);
+			});
+			if (valid.length) {
+				return valid;
+			}
+		} else {
+			this.#error(msg, input);
+		}
+	}
+
+	#bool(input: boolean | undefined, msg: string): boolean | undefined {
 		if (typeof input === 'undefined') return;
 		if (typeof input === 'boolean') return input;
-		else this.#error(`invalid ${optName} value: '${input}'`);
+		else this.#error(msg, input);
 	}
 
-	#error(msg: string) {
-		this.onError?.(msg);
+	#str(
+		input: string | undefined,
+		msg: string,
+		isValid: (input: string) => boolean,
+	): string | undefined {
+		if (typeof input === 'undefined') return;
+		if (typeof input === 'string' && isValid(input)) return input;
+		else this.#error(msg, input);
 	}
 
 	cors(input?: boolean): boolean | undefined {
-		return this.#bool('cors', input);
+		return this.#bool(input, 'invalid cors value');
 	}
 
 	dirFile(input?: string[]): string[] | undefined {
-		return this.#array(input, (item) => {
-			const ok = isValidPattern(item);
-			if (!ok) this.#error(`invalid dirFile value: '${item}'`);
-			return ok;
-		});
+		return this.#arr(input, 'invalid dirFile value', isValidPattern);
 	}
 
 	dirList(input?: boolean): boolean | undefined {
-		return this.#bool('dirList', input);
+		return this.#bool(input, 'invalid dirList value');
 	}
 
 	exclude(input?: string[]): string[] | undefined {
-		return this.#array(input, (item) => {
-			const ok = isValidPattern(item);
-			if (!ok) this.#error(`invalid exclude pattern: '${item}'`);
-			return ok;
-		});
+		return this.#arr(input, 'invalid exclude pattern', isValidPattern);
 	}
 
 	ext(input?: string[]): string[] | undefined {
-		return this.#array(input, (item) => {
-			const ok = isValidExt(item);
-			if (!ok) this.#error(`invalid ext value: '${item}'`);
-			return ok;
-		});
+		return this.#arr(input, 'invalid ext value', isValidExt);
 	}
 
 	gzip(input?: boolean): boolean | undefined {
-		return this.#bool('gzip', input);
+		return this.#bool(input, 'invalid gzip value');
 	}
 
 	headers(input?: HttpHeaderRule[]): HttpHeaderRule[] | undefined {
-		return this.#array(input, (rule) => {
-			const ok = isValidHeaderRule(rule);
-			if (!ok) this.#error(`invalid header value: ${JSON.stringify(rule)}`);
-			return ok;
-		});
+		return this.#arr(input, 'invalid header value', isValidHeaderRule);
 	}
 
 	host(input?: string): string | undefined {
-		if (typeof input !== 'string') return;
-		if (isValidHost(input)) return input;
-		else this.#error(`invalid host value: '${input}'`);
+		return this.#str(input, 'invalid host value', isValidHost);
 	}
 
 	ports(input?: number[]): number[] | undefined {
-		if (!Array.isArray(input) || input.length === 0) return;
+		if (typeof input === 'undefined') return;
+		if (!Array.isArray(input)) {
+			this.#error('invalid port value', input);
+			return;
+		}
+		if (input.length === 0) return;
 		const value = input.slice(0, PORTS_CONFIG.maxCount);
 		const invalid = value.find((num) => !isValidPort(num));
-		if (typeof invalid === 'undefined') return value;
-		else this.#error(`invalid port number: '${invalid}'`);
+		if (typeof invalid === 'undefined') {
+			return value;
+		} else {
+			this.#error('invalid port number', invalid);
+		}
 	}
 
 	root(input?: string): string {
@@ -124,10 +171,8 @@ export function isValidHeaderRule(value: unknown): value is HttpHeaderRule {
 	);
 }
 
-/**
-Checking that all characters are valid for a domain or ip,
-as a usability nicety to catch obvious errors
-*/
+// Checking that all characters are valid for a domain or ip,
+// as a usability nicety to catch obvious errors
 export function isValidHost(input: string): boolean {
 	if (typeof input !== 'string' || !input.length) return false;
 	const domainLike = /^([a-z\d\-]+)(\.[a-z\d\-]+)*$/i;
@@ -136,41 +181,11 @@ export function isValidHost(input: string): boolean {
 }
 
 export function isValidPattern(value: string): boolean {
-	return typeof value === 'string' && value.length > 0 && !/[\\\/\:]/.test(value);
+	if (typeof value !== 'string') return false;
+	if (value.length < (value.startsWith('!') ? 2 : 1)) return false;
+	return !/[\\\/\:]/.test(value);
 }
 
 export function isValidPort(num: number): boolean {
 	return Number.isSafeInteger(num) && num >= 1 && num <= 65_535;
-}
-
-export function serverOptions(
-	options: { root: string } & Partial<ServerOptions>,
-	context: { onError(msg: string): void },
-): ServerOptions {
-	const validator = new OptionsValidator(context?.onError);
-
-	const checked: Partial<ServerOptions> = {
-		ports: validator.ports(options.ports),
-		gzip: validator.gzip(options.gzip),
-		host: validator.host(options.host),
-		cors: validator.cors(options.cors),
-		headers: validator.headers(options.headers),
-		dirFile: validator.dirFile(options.dirFile),
-		dirList: validator.dirList(options.dirList),
-		ext: validator.ext(options.ext),
-		exclude: validator.exclude(options.exclude),
-	};
-
-	const final = structuredClone({
-		root: validator.root(options.root),
-		...DEFAULT_OPTIONS,
-	});
-	for (const [key, value] of Object.entries(checked)) {
-		if (typeof value !== 'undefined') {
-			// @ts-ignore
-			final[key] = value;
-		}
-	}
-
-	return final;
 }

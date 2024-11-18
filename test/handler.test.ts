@@ -16,14 +16,6 @@ function checkHeaders(actual: ResponseHeaders, expected: ResponseHeaders) {
 	expect(actual).toEqual(expected);
 }
 
-function headersObj(data: ResponseHeaders) {
-	const result: ResponseHeaders = Object.create(null);
-	for (const [key, value] of Object.entries(data)) {
-		result[key.toLowerCase()] = value;
-	}
-	return result;
-}
-
 function mockReqRes(method: string, url: string, headers: Record<string, string | string[]> = {}) {
 	const req = new IncomingMessage(
 		// @ts-expect-error (we don't have a socket, hoping this is enough for testing)
@@ -39,7 +31,7 @@ function mockReqRes(method: string, url: string, headers: Record<string, string 
 }
 
 function handlerContext(
-	options: ServerOptions,
+	options: Required<ServerOptions>,
 ): (method: string, url: string, headers?: Record<string, string | string[]>) => RequestHandler {
 	const resolver = new FileResolver(options);
 	const handlerOptions = { ...options, gzip: false, _noStream: true };
