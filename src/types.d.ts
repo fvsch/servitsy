@@ -1,3 +1,6 @@
+export type Request = import('node:http').IncomingMessage & { originalUrl?: string };
+export type Response = import('node:http').ServerResponse<Request>;
+
 export type FSKind = 'dir' | 'file' | 'link' | null;
 
 export interface FSLocation {
