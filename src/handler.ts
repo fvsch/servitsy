@@ -8,12 +8,9 @@ import { getContentType, typeForFilePath } from './content-type.js';
 import { getLocalPath, isSubpath } from './fs-utils.js';
 import { dirListPage, errorPage } from './pages.js';
 import { PathMatcher } from './path-matcher.js';
-import type { FSLocation, ResMetaData, ServerOptions } from './types.d.ts';
+import type { FSLocation, Request, Response, ResMetaData, ServerOptions } from './types.d.ts';
 import { headerCase, trimSlash } from './utils.js';
 import { FileResolver } from './resolver.js';
-
-type Request = import('node:http').IncomingMessage & { originalUrl?: string };
-type Response = import('node:http').ServerResponse<Request>;
 
 interface Config {
 	req: Request;
@@ -22,13 +19,12 @@ interface Config {
 	options: ServerOptions & { _noStream?: boolean };
 }
 
-/** @internal */
-type SendPayload = {
+interface Payload {
 	body?: string | Buffer | import('node:fs').ReadStream;
 	contentType?: string;
 	isText?: boolean;
 	statSize?: number;
-};
+}
 
 export class RequestHandler {
 	#req: Config['req'];
@@ -118,7 +114,7 @@ export class RequestHandler {
 
 	async #sendFile(filePath: string) {
 		let handle: FileHandle | undefined;
-		let data: SendPayload = {};
+		let data: Payload = {};
 
 		try {
 			// already checked in resolver, but better safe than sorry
@@ -197,7 +193,7 @@ export class RequestHandler {
 		return this.#send({ body, isText: true });
 	}
 
-	#send({ body, isText = false, statSize }: SendPayload = {}) {
+	#send({ body, isText = false, statSize }: Payload = {}) {
 		this.timing.send = Date.now();
 
 		// stop early if possible
