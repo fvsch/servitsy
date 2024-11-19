@@ -1,5 +1,9 @@
 # servitsy changelog
 
+## v0.4.5 (2024-11-19)
+
+- fix: improved validation for some options (#39)
+
 ## v0.4.4 (2024-11-15)
 
 - Several refactoring changes changes (#34, #35, #36, #37), resulting in ~15% smaller package size.
