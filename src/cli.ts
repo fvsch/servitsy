@@ -222,7 +222,7 @@ export function helpPage() {
 	const options = optionsOrder.map((key) => CLI_OPTIONS[key]);
 
 	const section = (heading: string = '', lines: string[] = []) => {
-		const result = [];
+		const result: string[] = [];
 		if (heading.length) result.push(indent + color.style(heading, 'bold'));
 		if (lines.length) result.push(lines.map((l) => indent.repeat(2) + l).join('\n'));
 		return result.join('\n\n');

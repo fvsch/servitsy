@@ -2,7 +2,13 @@ import { IncomingMessage, ServerResponse } from 'node:http';
 import { Duplex } from 'node:stream';
 import { afterAll, expect, suite, test } from 'vitest';
 
-import { extractUrlPath, fileHeaders, isValidUrlPath, RequestHandler } from '../src/handler.ts';
+import {
+	extractUrlPath,
+	fileHeaders,
+	isValidUrlPath,
+	RequestHandler,
+	urlMountPath,
+} from '../src/handler.ts';
 import { FileResolver } from '../src/resolver.ts';
 import type { HttpHeaderRule, ServerOptions } from '../src/types.d.ts';
 import { fsFixture, getBlankOptions, getDefaultOptions, platformSlash } from './shared.ts';
@@ -416,5 +422,23 @@ suite('RequestHandler', async () => {
 			'access-control-max-age': '60',
 			'content-length': '0',
 		});
+	});
+});
+
+suite('urlMountPath', () => {
+	test('is undefined when baseUrl and originalUrl are undefined', () => {
+		expect(urlMountPath({})).toBe(undefined);
+		expect(urlMountPath({ url: '/hello/world' })).toBe(undefined);
+	});
+
+	test('returns the baseUrl when present (express 4+)', () => {
+		expect(urlMountPath({ baseUrl: '/' })).toBe('/');
+		expect(urlMountPath({ baseUrl: '/hello' })).toBe('/hello');
+		expect(urlMountPath({ baseUrl: '/hello/' })).toBe('/hello');
+	});
+
+	test('infers the baseUrl from url and originalUrl (express 3)', () => {
+		expect(urlMountPath({ originalUrl: '/', url: '/' })).toBe('/');
+		expect(urlMountPath({ originalUrl: '/static/index.html', url: '/index.html' })).toBe('/static');
 	});
 });
