@@ -1,7 +1,9 @@
+import { type Buffer } from 'node:buffer';
+import { Writable } from 'node:stream';
 import { stripVTControlCharacters } from 'node:util';
 import { expect, suite, test } from 'vitest';
 
-import { ColorUtils, requestLogLine } from '#src/logger.js';
+import { ColorUtils, Logger, requestLogLine } from '#src/logger.js';
 import type { ResMetaData } from '#types';
 
 suite('ColorUtils', () => {
@@ -40,6 +42,92 @@ suite('ColorUtils', () => {
 		expect(color.brackets('TEST', 'blue,,red')).toBe('\x1B[34m[\x1B[39mTEST\x1B[31m]\x1B[39m');
 		expect(color.brackets('TEST')).toBe('\x1B[2m[\x1B[22mTEST\x1B[2m]\x1B[22m');
 		expect(color.brackets('TEST', ',underline,', ['<<<', '>>>'])).toBe('<<<\x1B[4mTEST\x1B[24m>>>');
+	});
+});
+
+suite('Logger', () => {
+	class TestWritable extends Writable {
+		rawContents = '';
+		contents = '';
+		_write(chunk: string | Buffer, encoding: string, cb?: (error?: Error | null) => void) {
+			const str = chunk.toString();
+			this.rawContents += str;
+			this.contents += stripVTControlCharacters(str);
+			if (typeof cb === 'function') cb();
+		}
+	}
+
+	const getLogger = () => {
+		const out = new TestWritable();
+		const err = new TestWritable();
+		const logger = new Logger(out, err);
+		return { out, err, logger };
+	};
+
+	test('Writes logs to their respective out and err streams', async () => {
+		const { out, err, logger } = getLogger();
+		await logger.write('info', 'Info 1');
+		await logger.write('error', 'Error 1');
+		await logger.write('info', 'Info 2');
+		await logger.write('error', 'Error 2');
+		expect(out.contents).toBe(`Info 1\nInfo 2\n`);
+		expect(err.contents).toBe(`Error 1\nError 2\n`);
+	});
+
+	test('Adds blank lines between logs of different groups', async () => {
+		const { out, logger } = getLogger();
+		await logger.write('header', 'Header');
+		await logger.write('request', 'Request 1');
+		await logger.write('request', 'Request 2');
+		await logger.write('info', 'Info 1');
+		await logger.write('request', 'Request 3');
+		await logger.write('request', 'Request 4');
+		await logger.write('request', 'Request 5');
+		await logger.write('info', 'Info 2');
+		expect(out.contents).toBe(`Header
+
+Request 1
+Request 2
+
+Info 1
+
+Request 3
+Request 4
+Request 5
+
+Info 2
+`);
+	});
+
+	test('accepts custom padding', async () => {
+		const { out, logger } = getLogger();
+		await logger.write('info', ['aaa', 'bbb', 'ccc'], {
+			// should yield two `\n`
+			top: 2,
+			// should yield three '\n' (return + two empty lines)
+			bottom: 2,
+		});
+		await logger.write('info', 'final', {
+			// merged with previous log's bottom padding
+			top: 2,
+			// capped at 4, resulting in 5 '\n'
+			bottom: 12,
+		});
+		expect(out.contents).toBe('\n\naaa\nbbb\nccc\n\n\nfinal\n\n\n\n\n');
+	});
+
+	test('error logs strings', async () => {
+		const { err, logger } = getLogger();
+		await logger.error('Error 1');
+		await logger.error('Error 2');
+		expect(err.contents).toBe(`servitsy: Error 1\nservitsy: Error 2\n`);
+	});
+
+	test('error logs Errors with stack trace', async () => {
+		const { err, logger } = getLogger();
+		await logger.error(new Error('Whoops'));
+		expect(err.contents).toMatch(`Error: Whoops`);
+		expect(err.contents).toMatch(/[\\\/]test[\\\/]logger\.test\.ts:\d+:\d+/);
 	});
 });
 

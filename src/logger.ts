@@ -1,6 +1,6 @@
 import { release } from 'node:os';
 import { platform } from 'node:process';
-import { stderr, stdout } from 'node:process';
+import { type Writable } from 'node:stream';
 import { inspect } from 'node:util';
 
 import type { ResMetaData } from './types.d.ts';
@@ -43,9 +43,14 @@ export class ColorUtils {
 	};
 }
 
-class Logger {
-	#lastout?: LogItem;
-	#lasterr?: LogItem;
+export class Logger {
+	#out: { stream: Writable; last?: LogItem };
+	#err: { stream: Writable; last?: LogItem };
+
+	constructor(out: Writable, err?: Writable) {
+		this.#out = { stream: out };
+		this.#err = { stream: err ?? out };
+	}
 
 	async write(
 		group: LogItem['group'],
@@ -62,18 +67,14 @@ class Logger {
 		}
 
 		const { promise, resolve, reject } = withResolvers<void>();
-		const writeCallback = (err: Error | undefined) => {
+
+		const dest = group === 'error' ? this.#err : this.#out;
+		const text = this.#withPadding(dest.last, item);
+		dest.last = item;
+		dest.stream.write(text, (err) => {
 			if (err) reject(err);
 			else resolve();
-		};
-
-		if (group === 'error') {
-			stderr.write(this.#withPadding(this.#lasterr, item), writeCallback);
-			this.#lasterr = item;
-		} else {
-			stdout.write(this.#withPadding(this.#lastout, item), writeCallback);
-			this.#lastout = item;
-		}
+		});
 
 		return promise;
 	}
@@ -202,4 +203,3 @@ function supportsColor(): boolean {
 }
 
 export const color = new ColorUtils(supportsColor());
-export const logger = new Logger();

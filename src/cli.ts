@@ -8,7 +8,7 @@ import { CLIArgs, parseArgs } from './args.js';
 import { CLI_OPTIONS, HOSTS_LOCAL, HOSTS_WILDCARD } from './constants.js';
 import { checkDirAccess, readPkgJson } from './fs-utils.js';
 import { RequestHandler } from './handler.js';
-import { color, logger, requestLogLine } from './logger.js';
+import { color, Logger, requestLogLine } from './logger.js';
 import { serverOptions } from './options.js';
 import { FileResolver } from './resolver.js';
 import type { OptionName, ServerOptions } from './types.d.ts';
@@ -18,6 +18,7 @@ import { clamp, errorList, getRuntime, isPrivateIPv4 } from './utils.js';
 Start servitsy with configuration from command line arguments.
 */
 export async function run() {
+	const logger = new Logger(process.stdout, process.stderr);
 	const args = new CLIArgs(argv.slice(2));
 
 	if (args.has('--version')) {
@@ -43,7 +44,7 @@ export async function run() {
 		return;
 	}
 
-	const cliServer = new CLIServer(options);
+	const cliServer = new CLIServer(options, logger);
 	cliServer.start();
 }
 
@@ -53,8 +54,10 @@ export class CLIServer {
 	#portIterator: IterableIterator<number>;
 	#localNetworkInfo?: NetworkInterfaceInfo;
 	#server: Server;
+	#logger: Logger;
 
-	constructor(options: Required<ServerOptions>) {
+	constructor(options: Required<ServerOptions>, logger: Logger) {
+		this.#logger = logger;
 		this.#options = options;
 		this.#portIterator = new Set(options.ports).values();
 		this.#localNetworkInfo = Object.values(networkInterfaces())
@@ -65,14 +68,16 @@ export class CLIServer {
 		const server = createServer(async (req, res) => {
 			const handler = new RequestHandler({ req, res, resolver, options });
 			res.on('close', () => {
-				logger.write('request', requestLogLine(handler.data()));
+				this.#logger.write('request', requestLogLine(handler.data()));
 			});
 			await handler.process();
 		});
 		server.on('error', (error) => this.onError(error));
 		server.on('listening', () => {
 			const info = this.headerInfo();
-			if (info) logger.write('header', info, { top: 1, bottom: 1 });
+			if (info) {
+				this.#logger.write('header', info, { top: 1, bottom: 1 });
+			}
 		});
 
 		this.#server = server;
@@ -138,7 +143,7 @@ export class CLIServer {
 				this.shutdown();
 			} else if (!helpShown) {
 				helpShown = true;
-				logger.write('info', 'Hit Control+C or Escape to stop the server.');
+				this.#logger.write('info', 'Hit Control+C or Escape to stop the server.');
 			}
 		});
 		stdin.setRawMode(true);
@@ -159,7 +164,7 @@ export class CLIServer {
 		this.#shuttingDown = true;
 
 		process.exitCode = 0;
-		const promise = logger.write('info', 'Gracefully shutting down...');
+		const promise = this.#logger.write('info', 'Gracefully shutting down...');
 		this.#server.closeAllConnections();
 		this.#server.close();
 		await promise;
@@ -178,7 +183,7 @@ export class CLIServer {
 				} else {
 					const { ports } = this.#options;
 					const msg = `${ports.length > 1 ? 'ports' : 'port'} already in use: ${ports.join(', ')}`;
-					logger.error(msg);
+					this.#logger.error(msg);
 					exit(1);
 				}
 			});
@@ -187,9 +192,9 @@ export class CLIServer {
 
 		// Handle other errors
 		if (error.code === 'ENOTFOUND') {
-			logger.error(`host not found: '${error.hostname}'`);
+			this.#logger.error(`host not found: '${error.hostname}'`);
 		} else {
-			logger.error(error);
+			this.#logger.error(error);
 		}
 		exit(1);
 	}
