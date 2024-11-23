@@ -29,12 +29,7 @@
 			"import": "./lib/index.js"
 		}
 	},
-	"imports": {
-		"#src/*.js": "./src/*.js",
-		"#types": "./src/types.d.ts"
-	},
 	"files": [
-		"./bin",
 		"./lib",
 		"./LICENSE",
 		"./README.md"
@@ -47,11 +42,11 @@
 		"typecheck": "tsc -p tsconfig.json --noEmit && tsc -p test/tsconfig.json --noEmit"
 	},
 	"devDependencies": {
-		"@types/node": "^20.17.6",
+		"@types/node": "^20.17.7",
 		"fs-fixture": "^2.6.0",
 		"linkedom": "^0.18.5",
 		"prettier": "^3.3.3",
-		"typescript": "~5.6.3",
+		"typescript": "~5.7.2",
 		"vitest": "^2.1.5"
 	}
 }

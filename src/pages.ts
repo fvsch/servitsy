@@ -1,8 +1,8 @@
 import { basename, dirname } from 'node:path';
 
-import { FAVICON_LIST, FAVICON_ERROR, ICONS, STYLES } from './page-assets.js';
+import { FAVICON_LIST, FAVICON_ERROR, ICONS, STYLES } from './assets.ts';
 import type { FSLocation } from './types.d.ts';
-import { clamp, escapeHtml, trimSlash } from './utils.js';
+import { clamp, escapeHtml, trimSlash } from './utils.ts';
 
 function htmlTemplate(data: {
 	base?: string;

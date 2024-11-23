@@ -8,6 +8,8 @@
 		"strict": true,
 		"isolatedModules": true,
 		"outDir": "./lib",
+		"allowImportingTsExtensions": true,
+		"rewriteRelativeImportExtensions": true,
 		"removeComments": true
 	}
 }

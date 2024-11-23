@@ -3,8 +3,8 @@ import { Writable } from 'node:stream';
 import { stripVTControlCharacters } from 'node:util';
 import { expect, suite, test } from 'vitest';
 
-import { ColorUtils, Logger, requestLogLine } from '#src/logger.js';
-import type { ResMetaData } from '#types';
+import { ColorUtils, Logger, requestLogLine } from '../src/logger.ts';
+import type { ResMetaData } from '../src/types.d.ts';
 
 suite('ColorUtils', () => {
 	const color = new ColorUtils(true);

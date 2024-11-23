@@ -1,6 +1,6 @@
-import { CLI_OPTIONS, PORTS_CONFIG } from './constants.js';
+import { CLI_OPTIONS, PORTS_CONFIG } from './constants.ts';
 import type { HttpHeaderRule, OptionSpec, ServerOptions } from './types.d.ts';
-import { intRange } from './utils.js';
+import { intRange } from './utils.ts';
 
 export class CLIArgs {
 	#map: Array<[string, string]> = [];

@@ -8,11 +8,10 @@ import {
 	splitOptionValue,
 	strToBool,
 	unknownArgs,
-} from '#src/args.js';
-import { errorList, intRange } from '#src/utils.js';
-import type { HttpHeaderRule } from '#types';
-
-import { argify } from './shared.js';
+} from '../src/args.ts';
+import type { HttpHeaderRule } from '../src/types.d.ts';
+import { errorList, intRange } from '../src/utils.ts';
+import { argify } from './shared.ts';
 
 suite('CLIArgs', () => {
 	test('returns empty values', () => {

@@ -1,18 +1,19 @@
 import { createServer, type Server } from 'node:http';
+import { createRequire } from 'node:module';
 import { homedir, networkInterfaces, type NetworkInterfaceInfo } from 'node:os';
 import { sep as dirSep } from 'node:path';
 import process, { argv, exit, platform, stdin } from 'node:process';
 import { emitKeypressEvents } from 'node:readline';
 
-import { CLIArgs, parseArgs } from './args.js';
-import { CLI_OPTIONS, HOSTS_LOCAL, HOSTS_WILDCARD } from './constants.js';
-import { checkDirAccess, readPkgJson } from './fs-utils.js';
-import { RequestHandler } from './handler.js';
-import { color, Logger, requestLogLine } from './logger.js';
-import { serverOptions } from './options.js';
-import { FileResolver } from './resolver.js';
+import { CLIArgs, parseArgs } from './args.ts';
+import { CLI_OPTIONS, HOSTS_LOCAL, HOSTS_WILDCARD } from './constants.ts';
+import { checkDirAccess } from './fs-utils.ts';
+import { RequestHandler } from './handler.ts';
+import { color, Logger, requestLogLine } from './logger.ts';
+import { serverOptions } from './options.ts';
+import { FileResolver } from './resolver.ts';
 import type { OptionName, ServerOptions } from './types.d.ts';
-import { clamp, errorList, getRuntime, isPrivateIPv4 } from './utils.js';
+import { clamp, errorList, getRuntime, isPrivateIPv4 } from './utils.ts';
 
 /**
 Start servitsy with configuration from command line arguments.
@@ -294,4 +295,8 @@ function displayRoot(root: string): string {
 		}
 	}
 	return root;
+}
+
+function readPkgJson(): Record<string, any> {
+	return createRequire(import.meta.url)('../package.json');
 }

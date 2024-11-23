@@ -1,9 +1,8 @@
+import { createRequire } from 'node:module';
 import { expect, suite, test } from 'vitest';
 
-import { readPkgJson } from '#src/fs-utils.js';
-
 suite('package.json', async () => {
-	const pkg = readPkgJson();
+	const pkg = createRequire(import.meta.url)('../package.json');
 
 	test('it has a version number', () => {
 		expect(pkg).toBeInstanceOf(Object);

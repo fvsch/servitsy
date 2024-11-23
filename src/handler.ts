@@ -3,11 +3,10 @@ import { createReadStream } from 'node:fs';
 import { open, stat, type FileHandle } from 'node:fs/promises';
 import { createGzip, gzipSync } from 'node:zlib';
 
-import { MAX_COMPRESS_SIZE, SUPPORTED_METHODS } from './constants.js';
-import { getContentType, typeForFilePath } from './content-type.js';
-import { getLocalPath, isSubpath } from './fs-utils.js';
-import { dirListPage, errorPage } from './pages.js';
-import { PathMatcher } from './path-matcher.js';
+import { MAX_COMPRESS_SIZE, SUPPORTED_METHODS } from './constants.ts';
+import { getContentType, typeForFilePath } from './content-type.ts';
+import { dirListPage, errorPage } from './pages.ts';
+import { FileResolver } from './resolver.ts';
 import type {
 	FSLocation,
 	HttpHeaderRule,
@@ -16,8 +15,7 @@ import type {
 	ResMetaData,
 	ServerOptions,
 } from './types.d.ts';
-import { headerCase, trimSlash } from './utils.js';
-import { FileResolver } from './resolver.js';
+import { getLocalPath, headerCase, isSubpath, PathMatcher, trimSlash } from './utils.ts';
 
 interface Config {
 	req: Request;
