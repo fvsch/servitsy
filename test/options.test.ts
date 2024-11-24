@@ -305,7 +305,7 @@ suite('OptionsValidator', () => {
 suite('serverOptions', () => {
 	test('returns default options with empty input', () => {
 		const onError = errorList();
-		const { root, ...result } = serverOptions({ root: cwd() }, { onError });
+		const { root, ...result } = serverOptions({ root: cwd() }, onError);
 		expect(result).toEqual(DEFAULT_OPTIONS);
 		expect(onError.list).toEqual([]);
 	});
@@ -319,7 +319,7 @@ suite('serverOptions', () => {
 			gzip: false,
 			cors: true,
 		};
-		expect(serverOptions(testOptions1, { onError })).toEqual({
+		expect(serverOptions(testOptions1, onError)).toEqual({
 			...DEFAULT_OPTIONS,
 			...testOptions1,
 		});
@@ -332,7 +332,7 @@ suite('serverOptions', () => {
 			headers: [{ include: ['*.md', '*.html'], headers: { dnt: 1 } }],
 			host: '192.168.1.199',
 		};
-		expect(serverOptions(testOptions2, { onError })).toEqual({
+		expect(serverOptions(testOptions2, onError)).toEqual({
 			...DEFAULT_OPTIONS,
 			...testOptions2,
 		});
@@ -357,9 +357,9 @@ suite('serverOptions', () => {
 		const { root, ...result } = serverOptions(
 			// @ts-expect-error
 			inputs,
-			{ onError },
+			onError,
 		);
-		expect(typeof root).toBe('string');
+		expect(root).toBeTypeOf('string');
 		expect(Object.keys(result).length).toBeGreaterThanOrEqual(9);
 		expect(result).toEqual(DEFAULT_OPTIONS);
 	});

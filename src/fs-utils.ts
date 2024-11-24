@@ -5,7 +5,7 @@ import type { FSKind, FSLocation } from './types.d.ts';
 
 export async function checkDirAccess(
 	dirPath: string,
-	context: { onError(msg: string): void },
+	onError?: (msg: string) => void,
 ): Promise<boolean> {
 	let msg = '';
 	try {
@@ -26,7 +26,9 @@ export async function checkDirAccess(
 			msg = err.toString();
 		}
 	}
-	if (msg) context.onError(msg);
+	if (msg && onError) {
+		onError(msg);
+	}
 	return false;
 }
 

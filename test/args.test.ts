@@ -99,14 +99,14 @@ suite('CLIArgs', () => {
 suite('parseArgs', () => {
 	test('no errors for empty args', () => {
 		const onError = errorList();
-		parseArgs(new CLIArgs([]), { onError });
+		parseArgs(new CLIArgs([]), onError);
 		expect(onError.list).toEqual([]);
 	});
 
 	test('does not validate host and root strings', () => {
 		const onError = errorList();
 		const args = new CLIArgs(['--host', ' not a hostname!\n', 'https://not-a-valid-root']);
-		const options = parseArgs(args, { onError });
+		const options = parseArgs(args, onError);
 		expect(options.host).toBe('not a hostname!');
 		expect(options.root).toBe('https://not-a-valid-root');
 		expect(onError.list).toEqual([]);
@@ -114,7 +114,7 @@ suite('parseArgs', () => {
 
 	test('validates --port syntax', () => {
 		const onError = errorList();
-		const parse = (str = '') => parseArgs(argify(str), { onError });
+		const parse = (str = '') => parseArgs(argify(str), onError);
 		expect(parse(`--port 1000+`)).toEqual({ ports: intRange(1000, 1009) });
 		expect(parse(`--port +1000`)).toEqual({});
 		expect(parse(`--port whatever`)).toEqual({});
@@ -129,7 +129,7 @@ suite('parseArgs', () => {
 	test('accepts valid --header syntax', () => {
 		const onError = errorList();
 		const getRule = (value = '') =>
-			parseArgs(new CLIArgs(['--header', value]), { onError }).headers?.at(0);
+			parseArgs(new CLIArgs(['--header', value]), onError).headers?.at(0);
 		expect(getRule('x-header-1: true')).toEqual({
 			headers: { 'x-header-1': 'true' },
 		});
@@ -146,7 +146,7 @@ suite('parseArgs', () => {
 		const onError = errorList();
 		const getRule = (value = '') => {
 			const args = new CLIArgs(['--header', value]);
-			return parseArgs(args, { onError }).headers?.at(0);
+			return parseArgs(args, onError).headers?.at(0);
 		};
 
 		expect(getRule('basic string')).toBe(undefined);
@@ -160,7 +160,7 @@ suite('parseArgs', () => {
 	test('sets warnings for unknown args', () => {
 		const onError = errorList();
 		const args = argify`--help --port=9999 --never gonna -GiveYouUp`;
-		parseArgs(args, { onError });
+		parseArgs(args, onError);
 		expect(onError.list).toEqual([`unknown option '--never'`, `unknown option '-GiveYouUp'`]);
 	});
 });

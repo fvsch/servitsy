@@ -34,9 +34,9 @@ export async function run() {
 	}
 
 	const onError = errorList();
-	const userOptions = parseArgs(args, { onError });
-	const options = serverOptions({ root: '', ...userOptions }, { onError });
-	await checkDirAccess(options.root, { onError });
+	const userOptions = parseArgs(args, onError);
+	const options = serverOptions({ root: '', ...userOptions }, onError);
+	await checkDirAccess(options.root, onError);
 
 	if (onError.list.length) {
 		logger.error(...onError.list);

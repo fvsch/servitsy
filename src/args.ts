@@ -100,10 +100,7 @@ function normalizeExt(value: string = ''): string {
 	return value;
 }
 
-export function parseArgs(
-	args: CLIArgs,
-	{ onError }: { onError(msg: string): void },
-): Partial<ServerOptions> {
+export function parseArgs(args: CLIArgs, onError: (msg: string) => void): Partial<ServerOptions> {
 	const invalid = (optName = '', input = '') => {
 		const value =
 			typeof input === 'string' ? `'${input.replaceAll(`'`, `\'`)}'` : JSON.stringify(input);
