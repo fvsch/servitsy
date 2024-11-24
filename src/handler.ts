@@ -175,6 +175,7 @@ export class RequestHandler {
 		const body = dirListPage({
 			root: this.#options.root,
 			ext: this.#options.ext,
+			urlMount: urlMountPath(this.#req),
 			urlPath: this.urlPath ?? '',
 			filePath,
 			items,
@@ -392,4 +393,19 @@ function parseHeaderNames(input: string = ''): string[] {
 		.split(',')
 		.map((h) => h.trim())
 		.filter(isHeader);
+}
+
+export function urlMountPath({
+	baseUrl,
+	originalUrl,
+	url,
+}: Pick<Request, 'baseUrl' | 'originalUrl' | 'url'>): string | undefined {
+	const trim = (p = '') => (p.length > 1 ? trimSlash(p, { end: true }) : p);
+	if (typeof baseUrl === 'string') {
+		return trim(baseUrl);
+	} else if (typeof url === 'string' && typeof originalUrl === 'string') {
+		if (url === '' || url === '/') return trim(originalUrl);
+		const lastIndex = originalUrl.lastIndexOf(url);
+		if (lastIndex > 0) return trim(originalUrl.slice(0, lastIndex));
+	}
 }

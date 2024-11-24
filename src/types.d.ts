@@ -1,5 +1,11 @@
-export type Request = import('node:http').IncomingMessage & { originalUrl?: string };
-export type Response = import('node:http').ServerResponse<Request>;
+import type { IncomingMessage, ServerResponse } from 'node:http';
+
+export type Request = IncomingMessage & {
+	baseUrl?: string;
+	originalUrl?: string;
+};
+
+export type Response = ServerResponse<Request>;
 
 export type FSKind = 'dir' | 'file' | 'link' | null;
 

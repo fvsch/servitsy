@@ -57,17 +57,26 @@ export function errorPage(data: { status: number; url: string; urlPath: string |
 
 export function dirListPage(data: {
 	root: string;
+	urlMount?: string;
 	urlPath: string;
 	filePath: string;
 	items: FSLocation[];
 	ext: string[];
 }) {
-	const { root, urlPath, filePath, items, ext } = data;
+	const { root, urlMount, urlPath, filePath, items, ext } = data;
+
 	const rootName = basename(root);
-	const trimmedUrl = trimSlash(urlPath);
+	const trimmedUrl = [urlMount, urlPath]
+		.map((s) => s && trimSlash(s))
+		.filter(Boolean)
+		.join('/');
 	const baseUrl = trimmedUrl ? `/${trimmedUrl}/` : '/';
 
-	const displayPath = decodeURIPathSegments(trimmedUrl ? `${rootName}/${trimmedUrl}` : rootName);
+	let displayPath = decodeURIPathSegments(trimmedUrl ? `${rootName}/${trimmedUrl}` : rootName);
+	if (urlMount && urlMount.length > 1) {
+		displayPath = decodeURIPathSegments(trimmedUrl);
+	}
+
 	const parentPath = dirname(filePath);
 	const showParent = trimmedUrl !== '';
 
