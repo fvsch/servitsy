@@ -27,10 +27,10 @@ suite('fs utils', async () => {
 
 	test('checkDirAccess', async () => {
 		const onError = errorList();
-		expect(await checkDirAccess(path``, { onError })).toBe(true);
-		expect(await checkDirAccess(path`section1`, { onError })).toBe(true);
+		expect(await checkDirAccess(path``, onError)).toBe(true);
+		expect(await checkDirAccess(path`section1`, onError)).toBe(true);
 		const notAFolder = path`doesnt/exist`;
-		expect(await checkDirAccess(notAFolder, { onError })).toBe(false);
+		expect(await checkDirAccess(notAFolder, onError)).toBe(false);
 		expect(onError.list).toEqual([`not a directory: ${notAFolder}`]);
 	});
 

@@ -5,9 +5,9 @@ import type { HttpHeaderRule, ServerOptions } from './types.d.ts';
 
 export function serverOptions(
 	options: ServerOptions,
-	context: { onError(msg: string): void },
+	onError: (msg: string) => void,
 ): Required<ServerOptions> {
-	const validator = new OptionsValidator(context.onError);
+	const validator = new OptionsValidator(onError);
 
 	const checked: Omit<ServerOptions, 'root'> = {
 		ports: validator.ports(options.ports),
@@ -26,7 +26,6 @@ export function serverOptions(
 		...DEFAULT_OPTIONS,
 	});
 	for (const [key, value] of Object.entries(checked)) {
-		const valid = typeof value !== 'undefined';
 		if (typeof value !== 'undefined') {
 			(final as Record<string, any>)[key] = value;
 		}
