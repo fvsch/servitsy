@@ -2,7 +2,12 @@ import { open } from 'node:fs/promises';
 import { join } from 'node:path';
 import { expect, suite, test } from 'vitest';
 
-import { getContentType, isBinHeader, isBinDataByte, typeForFilePath } from '#src/content-type.js';
+import {
+	getContentType,
+	isBinHeader,
+	isBinDataByte,
+	typeForFilePath,
+} from '../src/content-type.ts';
 
 suite('getContentType', () => {
 	const $path = async (path: string, expected: string) => {

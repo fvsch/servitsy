@@ -1,10 +1,9 @@
 import { afterAll, expect, suite, test } from 'vitest';
 
-import { getLocalPath } from '#src/fs-utils.js';
-import { FileResolver } from '#src/resolver.js';
-import type { FSLocation } from '#types';
-
-import { fsFixture, getDefaultOptions, loc, platformSlash } from './shared.js';
+import { FileResolver } from '../src/resolver.ts';
+import type { FSLocation } from '../src/types.d.ts';
+import { getLocalPath } from '../src/utils.ts';
+import { fsFixture, getDefaultOptions, loc, platformSlash } from './shared.ts';
 
 class TestFileResolver extends FileResolver {
 	$allowed = (filePath: string, expected: boolean) => {

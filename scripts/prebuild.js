@@ -12,7 +12,7 @@ async function main() {
 Read text files from the assets folder and write
 */
 async function bundleAssets() {
-	const outPath = pkgFilePath('src/page-assets.ts');
+	const outPath = pkgFilePath('src/assets.ts');
 	console.log(`Updating assets bundle:\n  ${outPath}\n`);
 
 	const assets = {

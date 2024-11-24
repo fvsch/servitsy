@@ -1,9 +1,8 @@
 import { isAbsolute, join } from 'node:path';
 
-import { getIndex, getKind, getLocalPath, getRealpath, isReadable, isSubpath } from './fs-utils.js';
-import { PathMatcher } from './path-matcher.js';
+import { getIndex, getKind, getRealpath, isReadable } from './fs-utils.ts';
 import type { FSLocation, ServerOptions } from './types.d.ts';
-import { trimSlash } from './utils.js';
+import { getLocalPath, isSubpath, PathMatcher, trimSlash } from './utils.ts';
 
 export class FileResolver {
 	#root: string;

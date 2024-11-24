@@ -2,12 +2,13 @@ import { platform } from 'node:os';
 import { chmod } from 'node:fs/promises';
 import { afterAll, expect, suite, test } from 'vitest';
 
-import { getIndex, getKind, getRealpath, isReadable } from '#src/fs-utils.js';
-import { fsFixture } from './shared.js';
+import { checkDirAccess, getIndex, getKind, getRealpath, isReadable } from '../src/fs-utils.ts';
+import { errorList } from '../src/utils.ts';
+import { fsFixture } from './shared.ts';
 
 const isWindows = platform() === 'win32';
 
-suite('fsUtils', async () => {
+suite('fs utils', async () => {
 	// creating symlinks throws on Windows when not running as admin,
 	// so we'll have to skip all symlink testing on Windows.
 	const { fixture, path } = await fsFixture({
@@ -23,6 +24,15 @@ suite('fsUtils', async () => {
 	});
 
 	afterAll(() => fixture.rm());
+
+	test('checkDirAccess', async () => {
+		const onError = errorList();
+		expect(await checkDirAccess(path``, { onError })).toBe(true);
+		expect(await checkDirAccess(path`section1`, { onError })).toBe(true);
+		const notAFolder = path`doesnt/exist`;
+		expect(await checkDirAccess(notAFolder, { onError })).toBe(false);
+		expect(onError.list).toEqual([`not a directory: ${notAFolder}`]);
+	});
 
 	test('getIndex', async () => {
 		const rootIndex = await getIndex(path());

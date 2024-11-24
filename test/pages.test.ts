@@ -1,9 +1,8 @@
 import { parseHTML } from 'linkedom';
 import { expect, suite, test } from 'vitest';
 
-import { dirListPage, errorPage } from '#src/pages.js';
-
-import { loc } from './shared.js';
+import { dirListPage, errorPage } from '../src/pages.ts';
+import { loc } from './shared.ts';
 
 function $template(doc: Document, content: { title: string; desc?: string; base?: string }) {
 	const text = (selector: string) => doc.querySelector(selector)?.textContent?.trim();

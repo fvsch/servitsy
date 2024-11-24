@@ -2,10 +2,10 @@ import { join, resolve, sep as dirSep } from 'node:path';
 import { cwd } from 'node:process';
 import { createFixture } from 'fs-fixture';
 
-import { CLIArgs } from '#src/args.js';
-import { DEFAULT_OPTIONS } from '#src/constants.js';
-import { trimSlash } from '#src/utils.js';
-import type { FSLocation, ServerOptions } from '#types';
+import { CLIArgs } from '../src/args.ts';
+import { DEFAULT_OPTIONS } from '../src/constants.ts';
+import type { FSLocation, ServerOptions } from '../src/types.d.ts';
+import { trimSlash } from '../src/utils.ts';
 
 export const loc = testPathUtils(join(cwd(), '_servitsy_test_'));
 

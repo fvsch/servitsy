@@ -1,6 +1,6 @@
 import { isAbsolute, resolve } from 'node:path';
 
-import { DEFAULT_OPTIONS, PORTS_CONFIG } from './constants.js';
+import { DEFAULT_OPTIONS, PORTS_CONFIG } from './constants.ts';
 import type { HttpHeaderRule, ServerOptions } from './types.d.ts';
 
 export function serverOptions(

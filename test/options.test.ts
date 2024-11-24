@@ -1,7 +1,7 @@
 import { cwd } from 'node:process';
 import { expect, suite, test } from 'vitest';
 
-import { DEFAULT_OPTIONS } from '#src/constants.js';
+import { DEFAULT_OPTIONS } from '../src/constants.ts';
 import {
 	isValidExt,
 	isValidHeader,
@@ -11,9 +11,9 @@ import {
 	isValidPort,
 	OptionsValidator,
 	serverOptions,
-} from '#src/options.js';
-import { errorList } from '#src/utils.js';
-import type { ServerOptions } from '#types';
+} from '../src/options.ts';
+import type { ServerOptions } from '../src/types.d.ts';
+import { errorList } from '../src/utils.ts';
 
 type InputOptions = Partial<ServerOptions> & { root: string };
 

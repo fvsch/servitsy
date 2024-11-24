@@ -2,11 +2,10 @@ import { IncomingMessage, ServerResponse } from 'node:http';
 import { Duplex } from 'node:stream';
 import { afterAll, expect, suite, test } from 'vitest';
 
-import { extractUrlPath, fileHeaders, isValidUrlPath, RequestHandler } from '#src/handler.js';
-import { FileResolver } from '#src/resolver.js';
-import type { HttpHeaderRule, ServerOptions } from '#types';
-
-import { fsFixture, getBlankOptions, getDefaultOptions, platformSlash } from './shared.js';
+import { extractUrlPath, fileHeaders, isValidUrlPath, RequestHandler } from '../src/handler.ts';
+import { FileResolver } from '../src/resolver.ts';
+import type { HttpHeaderRule, ServerOptions } from '../src/types.d.ts';
+import { fsFixture, getBlankOptions, getDefaultOptions, platformSlash } from './shared.ts';
 
 type ResponseHeaders = Record<string, undefined | number | string | string[]>;
 

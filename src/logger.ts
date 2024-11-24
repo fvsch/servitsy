@@ -4,7 +4,7 @@ import { type Writable } from 'node:stream';
 import { inspect } from 'node:util';
 
 import type { ResMetaData } from './types.d.ts';
-import { clamp, fwdSlash, getEnv, getRuntime, trimSlash, withResolvers } from './utils.js';
+import { clamp, fwdSlash, getEnv, getRuntime, trimSlash, withResolvers } from './utils.ts';
 
 interface LogItem {
 	group: 'header' | 'info' | 'request' | 'error';
@@ -160,7 +160,7 @@ function pathSuffix(basePath: string, fullPath: string): string | undefined {
 /**
 Basic implementation of 'node:util' styleText to support Node 18 + Deno.
 */
-export function styleText(format: string | string[], text: string): string {
+function styleText(format: string | string[], text: string): string {
 	let before = '';
 	let after = '';
 	for (const style of Array.isArray(format) ? format : [format]) {

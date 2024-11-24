@@ -1,9 +1,7 @@
 import { access, constants, lstat, readdir, realpath, stat } from 'node:fs/promises';
-import { createRequire } from 'node:module';
-import { isAbsolute, join, sep as dirSep } from 'node:path';
+import { join } from 'node:path';
 
 import type { FSKind, FSLocation } from './types.d.ts';
-import { trimSlash } from './utils.js';
 
 export async function checkDirAccess(
 	dirPath: string,
@@ -53,14 +51,6 @@ export async function getKind(filePath: string): Promise<FSKind> {
 	}
 }
 
-export function getLocalPath(root: string, filePath: string): string | null {
-	if (isSubpath(root, filePath)) {
-		return trimSlash(filePath.slice(root.length), { start: true, end: true });
-	}
-	return null;
-}
-
-/** @type {(filePath: string) => Promise<string | null>} */
 export async function getRealpath(filePath: string): Promise<string | null> {
 	try {
 		const real = await realpath(filePath);
@@ -84,23 +74,11 @@ export async function isReadable(filePath: string, kind?: FSKind): Promise<boole
 	return false;
 }
 
-export function isSubpath(parent: string, filePath: string): boolean {
-	if (filePath.includes('..') || !isAbsolute(filePath)) return false;
-	parent = trimSlash(parent, { end: true });
-	return filePath === parent || filePath.startsWith(parent + dirSep);
-}
-
-export function readPkgJson(): Record<string, any> {
-	return createRequire(import.meta.url)('../package.json');
-}
-
-interface StatsLike {
+function statsKind(stats: {
 	isSymbolicLink?(): boolean;
 	isDirectory?(): boolean;
 	isFile?(): boolean;
-}
-
-export function statsKind(stats: StatsLike): FSKind {
+}): FSKind {
 	if (stats.isSymbolicLink?.()) return 'link';
 	if (stats.isDirectory?.()) return 'dir';
 	else if (stats.isFile?.()) return 'file';

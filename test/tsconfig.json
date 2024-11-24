@@ -5,9 +5,10 @@
 		"target": "ES2022",
 		"lib": ["ES2022", "DOM", "DOM.Iterable"],
 		"types": ["node"],
-		"isolatedModules": true,
-		"skipLibCheck": true,
 		"strict": true,
+		"skipLibCheck": true,
+		"isolatedModules": true,
+		"allowImportingTsExtensions": true,
 		"noEmit": true
 	}
 }
