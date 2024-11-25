@@ -15,8 +15,6 @@ import {
 import type { ServerOptions } from '../src/types.d.ts';
 import { errorList } from '../src/utils.ts';
 
-type InputOptions = Partial<ServerOptions> & { root: string };
-
 function makeValidChecks(isValidFn: (input: any) => boolean) {
 	const msg = (expected: boolean, input: any) => {
 		return [
@@ -313,7 +311,7 @@ suite('serverOptions', () => {
 	test('preserves valid options', () => {
 		const onError = errorList();
 
-		const testOptions1: InputOptions = {
+		const testOptions1: ServerOptions = {
 			root: cwd(),
 			dirList: false,
 			gzip: false,
@@ -324,7 +322,7 @@ suite('serverOptions', () => {
 			...testOptions1,
 		});
 
-		const testOptions2: InputOptions = {
+		const testOptions2: ServerOptions = {
 			root: cwd(),
 			ext: ['.htm', '.TXT'],
 			dirFile: ['page.md', 'Index Page.html'],
