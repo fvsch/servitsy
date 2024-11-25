@@ -162,6 +162,15 @@ export function once<T = any>(fn: () => T): () => T {
 	};
 }
 
+export function printValue(input: any) {
+	if (typeof input === 'object') {
+		return JSON.stringify(input);
+	} else if (typeof input === 'string') {
+		return `'${input.replaceAll("'", "\\'")}'`;
+	}
+	return String(input);
+}
+
 export function trimSlash(
 	input: string = '',
 	config: { start?: boolean; end?: boolean } = { start: true, end: true },

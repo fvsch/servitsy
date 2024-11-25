@@ -11,7 +11,7 @@ export class FileResolver {
 	#dirList = false;
 	#excludeMatcher: PathMatcher;
 
-	constructor(options: { root: string } & Partial<ServerOptions>) {
+	constructor(options: ServerOptions) {
 		if (typeof options.root !== 'string') {
 			throw new Error('Missing root directory');
 		} else if (!isAbsolute(options.root)) {

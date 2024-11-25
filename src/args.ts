@@ -1,6 +1,6 @@
 import { CLI_OPTIONS, PORTS_CONFIG } from './constants.ts';
 import type { HttpHeaderRule, OptionSpec, ServerOptions } from './types.d.ts';
-import { intRange } from './utils.ts';
+import { intRange, printValue } from './utils.ts';
 
 export class CLIArgs {
 	#map: Array<[string, string]> = [];
@@ -101,31 +101,31 @@ function normalizeExt(value: string = ''): string {
 }
 
 export function parseArgs(args: CLIArgs, onError: (msg: string) => void): Partial<ServerOptions> {
-	const invalid = (optName = '', input = '') => {
-		const value =
-			typeof input === 'string' ? `'${input.replaceAll(`'`, `\'`)}'` : JSON.stringify(input);
-		onError(`invalid ${optName} value: ${value}`);
+	const invalid = (optName: string, input: any) => {
+		onError(`invalid ${optName} value: ${printValue(input)}`);
 	};
 
-	const getStr = ({ names: argNames, negate: negativeArg }: OptionSpec) => {
-		if (negativeArg && args.has(negativeArg)) return;
-		const input = args.get(argNames);
+	const getStr = ({ names, negate }: OptionSpec) => {
+		if (negate && args.has(negate)) return;
+		const input = args.get(names);
 		if (input != null) return input.trim();
 	};
 
-	const getList = ({ names: argNames, negate: negativeArg }: OptionSpec) => {
-		if (negativeArg && args.has(negativeArg)) return [];
-		const input = args.all(argNames);
+	const getList = ({ names, negate }: OptionSpec) => {
+		if (negate && args.has(negate)) return [];
+		const input = args.all(names);
 		if (input.length) return splitOptionValue(input);
 	};
 
-	const getBool = ({ names: argNames, negate: negativeArg }: OptionSpec, emptyValue?: boolean) => {
-		if (negativeArg && args.has(negativeArg)) return false;
-		const input = args.get(argNames);
-		if (input == null) return;
+	const getBool = ({ names, negate }: OptionSpec, emptyValue?: boolean) => {
+		if (negate && args.has(negate)) return false;
+		const input = args.get(names);
 		const value = strToBool(input, emptyValue);
-		if (value != null) return value;
-		else invalid(argNames.at(-1), input);
+		if (typeof value === 'boolean') {
+			return value;
+		} else if (typeof input === 'string' && input.length > 0) {
+			invalid(names.at(-1)!, input);
+		}
 	};
 
 	const options: Partial<ServerOptions> = {

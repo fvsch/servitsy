@@ -2,6 +2,7 @@ import { isAbsolute, resolve } from 'node:path';
 
 import { DEFAULT_OPTIONS, PORTS_CONFIG } from './constants.ts';
 import type { HttpHeaderRule, ServerOptions } from './types.d.ts';
+import { printValue } from './utils.ts';
 
 export function serverOptions(
 	options: ServerOptions,
@@ -36,19 +37,12 @@ export function serverOptions(
 
 export class OptionsValidator {
 	#errorCb;
-
 	constructor(onError: (msg: string) => void) {
 		this.#errorCb = onError;
 	}
 
 	#error(msg: string, input: any) {
-		let dbg = input;
-		if (typeof input === 'object') {
-			dbg = JSON.stringify(input);
-		} else if (typeof input === 'string') {
-			dbg = `'${dbg.replaceAll("'", "\\'")}'`;
-		}
-		this.#errorCb(`${msg}: ${dbg}`);
+		this.#errorCb(`${msg}: ${printValue(input)}`);
 	}
 
 	#arr<T>(input: T[] | undefined, msg: string, validFn: (item: T) => boolean): T[] | undefined {
