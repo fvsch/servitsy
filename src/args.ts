@@ -3,13 +3,13 @@ import type { HttpHeaderRule, OptionSpec, ServerOptions } from './types.d.ts';
 import { intRange, printValue } from './utils.ts';
 
 export class CLIArgs {
-	#map: Array<[string, string]> = [];
-
 	#list: string[] = [];
-
+	#map: [string, string][] = [];
 	#mapFilter(keys: string | string[]) {
-		return (entry: [string, string]) =>
-			typeof keys === 'string' ? keys === entry[0] : keys.includes(entry[0]);
+		if (typeof keys === 'string') {
+			return (entry: [string, string]) => keys === entry[0];
+		}
+		return (entry: [string, string]) => keys.includes(entry[0]);
 	}
 
 	constructor(args: string[]) {
@@ -84,6 +84,84 @@ export class CLIArgs {
 			list: this.#list,
 		});
 	}
+
+	options(onError?: (msg: string) => void): Partial<ServerOptions> {
+		const invalid = (optName: string, input: any) => {
+			onError?.(`invalid ${optName} value: ${printValue(input)}`);
+		};
+
+		const getStr = ({ names, negate }: OptionSpec) => {
+			if (negate && this.has(negate)) return;
+			const input = this.get(names);
+			if (input != null) return input.trim();
+		};
+
+		const getList = ({ names, negate }: OptionSpec) => {
+			if (negate && this.has(negate)) return [];
+			const input = this.all(names);
+			if (input.length) return splitOptionValue(input);
+		};
+
+		const getBool = ({ names, negate }: OptionSpec, emptyValue?: boolean) => {
+			if (negate && this.has(negate)) return false;
+			const input = this.get(names);
+			const value = strToBool(input, emptyValue);
+			if (typeof value === 'boolean') {
+				return value;
+			} else if (typeof input === 'string' && input.length > 0) {
+				invalid(names.at(-1)!, input);
+			}
+		};
+
+		const options: Partial<ServerOptions> = {
+			root: this.get(0),
+			host: getStr(CLI_OPTIONS.host),
+			cors: getBool(CLI_OPTIONS.cors),
+			gzip: getBool(CLI_OPTIONS.gzip),
+			dirFile: getList(CLI_OPTIONS.dirFile),
+			dirList: getBool(CLI_OPTIONS.dirList),
+			exclude: getList(CLI_OPTIONS.exclude),
+		};
+
+		// args that require extra parsing
+		const port = getStr(CLI_OPTIONS.port);
+		if (port != null) {
+			const value = parsePort(port);
+			if (value != null) options.ports = value;
+			else invalid('--port', port);
+		}
+
+		const headers = this.all(CLI_OPTIONS.header.names)
+			.map((value) => {
+				if (!value.trim()) return;
+				const rule = parseHeaders(value);
+				if (!rule) invalid('--header', value);
+				return rule;
+			})
+			.filter((rule) => rule != null);
+		if (headers.length) {
+			options.headers = headers;
+		}
+
+		const ext = getList(CLI_OPTIONS.ext);
+		if (ext != null) {
+			options.ext = ext.map((item) => normalizeExt(item));
+		}
+
+		for (const name of this.unknown()) {
+			onError?.(`unknown option '${name}'`);
+		}
+
+		// remove undefined values
+		return Object.fromEntries(Object.entries(options).filter((entry) => entry[1] != null));
+	}
+
+	unknown(): string[] {
+		const known = Object.values(CLI_OPTIONS).flatMap((spec) => {
+			return spec.negate ? [...spec.names, spec.negate] : spec.names;
+		});
+		return this.keys().filter((name) => !known.includes(name));
+	}
 }
 
 function makeHeadersRule(include: string = '', entries: string[][] = []): HttpHeaderRule {
@@ -98,78 +176,6 @@ function normalizeExt(value: string = ''): string {
 		return `.${value}`;
 	}
 	return value;
-}
-
-export function parseArgs(args: CLIArgs, onError: (msg: string) => void): Partial<ServerOptions> {
-	const invalid = (optName: string, input: any) => {
-		onError(`invalid ${optName} value: ${printValue(input)}`);
-	};
-
-	const getStr = ({ names, negate }: OptionSpec) => {
-		if (negate && args.has(negate)) return;
-		const input = args.get(names);
-		if (input != null) return input.trim();
-	};
-
-	const getList = ({ names, negate }: OptionSpec) => {
-		if (negate && args.has(negate)) return [];
-		const input = args.all(names);
-		if (input.length) return splitOptionValue(input);
-	};
-
-	const getBool = ({ names, negate }: OptionSpec, emptyValue?: boolean) => {
-		if (negate && args.has(negate)) return false;
-		const input = args.get(names);
-		const value = strToBool(input, emptyValue);
-		if (typeof value === 'boolean') {
-			return value;
-		} else if (typeof input === 'string' && input.length > 0) {
-			invalid(names.at(-1)!, input);
-		}
-	};
-
-	const options: Partial<ServerOptions> = {
-		root: args.get(0),
-		host: getStr(CLI_OPTIONS.host),
-		cors: getBool(CLI_OPTIONS.cors),
-		gzip: getBool(CLI_OPTIONS.gzip),
-		dirFile: getList(CLI_OPTIONS.dirFile),
-		dirList: getBool(CLI_OPTIONS.dirList),
-		exclude: getList(CLI_OPTIONS.exclude),
-	};
-
-	// args that require extra parsing
-	const port = getStr(CLI_OPTIONS.port);
-	if (port != null) {
-		const value = parsePort(port);
-		if (value != null) options.ports = value;
-		else invalid('--port', port);
-	}
-
-	const headers = args
-		.all(CLI_OPTIONS.header.names)
-		.map((value) => {
-			if (!value.trim()) return;
-			const rule = parseHeaders(value);
-			if (!rule) invalid('--header', value);
-			return rule;
-		})
-		.filter((rule) => rule != null);
-	if (headers.length) {
-		options.headers = headers;
-	}
-
-	const ext = getList(CLI_OPTIONS.ext);
-	if (ext != null) {
-		options.ext = ext.map((item) => normalizeExt(item));
-	}
-
-	for (const name of unknownArgs(args)) {
-		onError(`unknown option '${name}'`);
-	}
-
-	// remove undefined values
-	return Object.fromEntries(Object.entries(options).filter((entry) => entry[1] != null));
 }
 
 export function parseHeaders(input: string): HttpHeaderRule | undefined {
@@ -247,11 +253,4 @@ export function strToBool(input?: string, emptyValue?: boolean) {
 	} else if (val === '') {
 		return emptyValue;
 	}
-}
-
-export function unknownArgs(args: CLIArgs): string[] {
-	const known = Object.values(CLI_OPTIONS).flatMap((spec) => {
-		return spec.negate ? [...spec.names, spec.negate] : spec.names;
-	});
-	return args.keys().filter((name) => !known.includes(name));
 }

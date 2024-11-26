@@ -9,14 +9,6 @@ import { trimSlash } from '../src/utils.ts';
 
 export const loc = testPathUtils(join(cwd(), '_servitsy_test_'));
 
-export function argify(strings: string | TemplateStringsArray = '', ...values: string[]) {
-	return new CLIArgs(
-		String.raw({ raw: strings }, ...values)
-			.trim()
-			.split(/\s+/g),
-	);
-}
-
 export async function fsFixture(fileTree: import('fs-fixture').FileTree) {
 	const fixture = await createFixture(fileTree);
 	return { fileTree, fixture, ...testPathUtils(fixture.path) };

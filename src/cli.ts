@@ -5,7 +5,7 @@ import { sep as dirSep } from 'node:path';
 import process, { argv, exit, platform, stdin } from 'node:process';
 import { emitKeypressEvents } from 'node:readline';
 
-import { CLIArgs, parseArgs } from './args.ts';
+import { CLIArgs } from './args.ts';
 import { CLI_OPTIONS, HOSTS_LOCAL, HOSTS_WILDCARD } from './constants.ts';
 import { checkDirAccess } from './fs-utils.ts';
 import { RequestHandler } from './handler.ts';
@@ -19,6 +19,7 @@ import { clamp, errorList, getRuntime, isPrivateIPv4 } from './utils.ts';
 Start servitsy with configuration from command line arguments.
 */
 export async function run() {
+	const onError = errorList();
 	const logger = new Logger(process.stdout, process.stderr);
 	const args = new CLIArgs(argv.slice(2));
 
@@ -33,9 +34,11 @@ export async function run() {
 		return;
 	}
 
-	const onError = errorList();
-	const userOptions = parseArgs(args, onError);
-	const options = serverOptions({ root: '', ...userOptions }, onError);
+	const userOptions = {
+		root: '',
+		...args.options(onError),
+	};
+	const options = serverOptions(userOptions, onError);
 	await checkDirAccess(options.root, onError);
 
 	if (onError.list.length) {
