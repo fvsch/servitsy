@@ -77,12 +77,12 @@ export const CLI_OPTIONS: CLIOption[] = [
 		initial: DEFAULT_OPTIONS.ext,
 	},
 	{
-		name: 'dir-file',
+		name: 'dirfile',
 		help: 'Directory index file(s)',
 		initial: DEFAULT_OPTIONS.dirFile,
 	},
 	{
-		name: 'dir-list',
+		name: 'dirlist',
 		help: 'Allow listing directory contents',
 		initial: true,
 	},

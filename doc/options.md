@@ -3,8 +3,8 @@
 servitsy supports the following command-line options:
 
 - [`--cors`](#cors): send CORS HTTP headers in responses
-- [`--dir-file`](#dirfile): directory index file(s)
-- [`--dir-list`](#dirlist): allow listing directory contents
+- [`--dirfile`](#dirfile): directory index file(s)
+- [`--dirlist`](#dirlist): allow listing directory contents
 - [`--exclude`](#exclude)
 - [`--ext`](#ext): extensions which can be omitted in URLs
 - [`--gzip`](#gzip): use gzip compression for text files
@@ -35,8 +35,8 @@ servitsy --cors false
 File names to look up when a request matches a directory. Defaults to `index.html`.
 
 ```sh
-servitsy --dir-file 'index.html'
-servitsy --dir-file 'page.html,page.htm'
+servitsy --dirfile 'index.html'
+servitsy --dirfile 'page.html,page.htm'
 ```
 
 ## `dirList`
@@ -45,11 +45,11 @@ Whether to list directory contents when a request matches a directory and no `di
 
 ```sh
 # Enable (default)
-servitsy --dir-list
-servitsy --dir-list true
+servitsy --dirlist
+servitsy --dirlist true
 
 # Disable
-servitsy --dir-list false
+servitsy --dirlist false
 ```
 
 ## `exclude`

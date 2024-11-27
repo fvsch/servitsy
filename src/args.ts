@@ -20,10 +20,10 @@ const PARSE_ARGS_OPTIONS: ParseArgsConfig['options'] = {
 	'no-gzip': { type: 'boolean' },
 	ext: { type: 'string', multiple: true },
 	'no-ext': { type: 'boolean' },
-	'dir-file': { type: 'string', multiple: true },
-	'no-dir-file': { type: 'boolean' },
-	'dir-list': { type: 'boolean' },
-	'no-dir-list': { type: 'boolean' },
+	dirfile: { type: 'string', multiple: true },
+	'no-dirfile': { type: 'boolean' },
+	dirlist: { type: 'boolean' },
+	'no-dirlist': { type: 'boolean' },
 	exclude: { type: 'string', multiple: true },
 	'no-exclude': { type: 'boolean' },
 };
@@ -129,8 +129,8 @@ export class CLIArgs {
 			host: this.str('host'),
 			cors: this.bool('cors'),
 			gzip: this.bool('gzip'),
-			dirFile: this.splitList('dir-file'),
-			dirList: this.bool('dir-list'),
+			dirFile: this.splitList('dirfile'),
+			dirList: this.bool('dirlist'),
 			exclude: this.splitList('exclude'),
 		};
 
