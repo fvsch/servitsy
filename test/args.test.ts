@@ -211,6 +211,15 @@ suite('CLIArgs', () => {
 		]);
 		expect(args.splitList('ext')).toEqual(['.html', 'a', 'b', 'c', 'd']);
 	});
+
+	test('splitList returns empty array for empty string and --no- variant', () => {
+		expect(new CLIArgs([]).splitList('dirfile')).toBe(undefined);
+		expect(new CLIArgs(['--dirfile', '']).splitList('dirfile')).toEqual([]);
+		expect(new CLIArgs(['--no-dirfile']).splitList('dirfile')).toEqual([]);
+		expect(new CLIArgs([]).splitList('ext')).toBe(undefined);
+		expect(new CLIArgs(['--ext', '']).splitList('ext')).toEqual([]);
+		expect(new CLIArgs(['--no-ext']).splitList('ext')).toEqual([]);
+	});
 });
 
 suite('CLIArgs.options', () => {
