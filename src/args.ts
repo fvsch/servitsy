@@ -1,88 +1,122 @@
-import { CLI_OPTIONS, PORTS_CONFIG } from './constants.ts';
-import type { HttpHeaderRule, OptionSpec, ServerOptions } from './types.d.ts';
+import { parseArgs, type ParseArgsConfig } from 'node:util';
+
+import { PORTS_CONFIG } from './constants.ts';
+import type { HttpHeaderRule, ServerOptions } from './types.d.ts';
 import { intRange, printValue } from './utils.ts';
 
+const PARSE_ARGS_OPTIONS: ParseArgsConfig['options'] = {
+	help: { type: 'boolean' },
+	version: { type: 'boolean' },
+	host: { type: 'string', short: 'h' },
+	port: { type: 'string', short: 'p' },
+	// allow plural as alias to 'ports'
+	ports: { type: 'string' },
+	header: { type: 'string', multiple: true },
+	// allow plural as alias to 'header'
+	headers: { type: 'string', multiple: true },
+	cors: { type: 'boolean' },
+	'no-cors': { type: 'boolean' },
+	gzip: { type: 'boolean' },
+	'no-gzip': { type: 'boolean' },
+	ext: { type: 'string', multiple: true },
+	'no-ext': { type: 'boolean' },
+	'dir-file': { type: 'string', multiple: true },
+	'no-dir-file': { type: 'boolean' },
+	'dir-list': { type: 'boolean' },
+	'no-dir-list': { type: 'boolean' },
+	exclude: { type: 'string', multiple: true },
+	'no-exclude': { type: 'boolean' },
+};
+
 export class CLIArgs {
-	#list: string[] = [];
-	#map: [string, string][] = [];
-	#mapFilter(keys: string | string[]) {
-		if (typeof keys === 'string') {
-			return (entry: [string, string]) => keys === entry[0];
-		}
-		return (entry: [string, string]) => keys.includes(entry[0]);
-	}
+	#args: string[];
+	#pos: string[];
+	#val: Record<string, string[] | string | boolean | undefined>;
 
 	constructor(args: string[]) {
-		const optionPattern = /^-{1,2}[\w]/;
-		let pos = 0;
-		while (pos < args.length) {
-			const arg = args[pos];
-			pos += 1;
-			if (optionPattern.test(arg)) {
-				const nextArg = args[pos];
-				if (arg.includes('=')) {
-					const index = arg.indexOf('=');
-					this.add(arg.slice(0, index), arg.slice(index + 1));
-				} else if (nextArg && !nextArg.startsWith('-')) {
-					this.add(arg, nextArg);
-					pos += 1;
-				} else {
-					this.add(arg, '');
+		this.#args = args;
+		const { positionals, values } = parseArgs({
+			args: this.#cleanArgs(args),
+			options: PARSE_ARGS_OPTIONS,
+			strict: false,
+		});
+		this.#val = values;
+		this.#pos = positionals.filter((s) => !optionLike(s));
+	}
+
+	/**
+	parseArgs treats '-abc=xyz' by splitting all characters and returns
+	{a:true, b:true, c:true, '=': true, …}
+	since we don't support single-char boolean options, and such input
+	is likely a user mistake, let's drop those
+	*/
+	#cleanArgs(args: string[]): string[] {
+		const clean: string[] = [];
+		const shortEqual = /^\-[a-z]\=/i;
+		const shortCombo = /^\-[a-z0-9]{2,}/i;
+		for (const arg of args) {
+			if (arg.startsWith('-')) {
+				if (shortEqual.test(arg)) {
+					clean.push(...arg.split('='));
+					continue;
+				} else if (shortCombo.test(arg)) {
+					continue;
 				}
-			} else {
-				this.add(null, arg);
 			}
+			clean.push(arg);
 		}
+		return clean;
 	}
 
-	add(key: string | null, value: string) {
-		if (key == null) {
-			this.#list.push(value);
-		} else {
-			this.#map.push([key, value]);
-		}
+	#neg(name: string): boolean {
+		return this.get(`no-${name}`) === true;
 	}
 
-	has(query: number | string | string[]): boolean {
-		if (typeof query === 'number') {
-			return typeof this.#list.at(query) === 'string';
-		} else {
-			return this.#map.some(this.#mapFilter(query));
-		}
-	}
-
-	/**
-	Get the last value for one or several option names, or a specific positional index.
-	*/
-	get(query: number | string | string[]): string | undefined {
-		if (typeof query === 'number') {
-			return this.#list.at(query);
-		} else {
-			return this.all(query).at(-1);
-		}
-	}
-
-	/**
-	Get mapped values for one or several option names.
-	Values are merged in order of appearance.
-	*/
-	all(query: string | string[]): string[] {
-		return this.#map.filter(this.#mapFilter(query)).map((entry) => entry[1]);
-	}
-
-	keys() {
+	#rawKeys() {
 		const keys: string[] = [];
-		for (const [key] of this.#map) {
-			if (!keys.includes(key)) keys.push(key);
+		for (const arg of this.#args) {
+			if (!optionLike(arg)) continue;
+			const name = arg.includes('=') ? arg.slice(0, arg.indexOf('=')).trim() : arg.trim();
+			if (!keys.includes(name)) keys.push(name);
 		}
 		return keys;
 	}
 
+	pos(index: number): string | undefined {
+		return this.#pos.at(index);
+	}
+
+	get(name: string): string[] | string | boolean | undefined {
+		return this.#val[name];
+	}
+
+	bool(name: string): boolean | undefined {
+		if (this.#neg(name)) return false;
+		let value = this.get(name);
+		if (typeof value === 'boolean') return value;
+	}
+
+	str(name: string): string | undefined {
+		if (this.#neg(name)) return;
+		let value = this.get(name);
+		if (typeof value === 'string') return value.trim();
+	}
+
+	list(name: string): string[] | undefined {
+		if (this.#neg(name)) return [];
+		const value = this.#val[name];
+		if (Array.isArray(value)) return value;
+	}
+
+	splitList(name: string) {
+		const value = this.list(name);
+		if (Array.isArray(value)) {
+			return splitOptionValue(value);
+		}
+	}
+
 	data() {
-		return structuredClone({
-			map: this.#map,
-			list: this.#list,
-		});
+		return structuredClone({ pos: this.#pos, val: this.#val });
 	}
 
 	options(onError?: (msg: string) => void): Partial<ServerOptions> {
@@ -90,50 +124,28 @@ export class CLIArgs {
 			onError?.(`invalid ${optName} value: ${printValue(input)}`);
 		};
 
-		const getStr = ({ names, negate }: OptionSpec) => {
-			if (negate && this.has(negate)) return;
-			const input = this.get(names);
-			if (input != null) return input.trim();
-		};
-
-		const getList = ({ names, negate }: OptionSpec) => {
-			if (negate && this.has(negate)) return [];
-			const input = this.all(names);
-			if (input.length) return splitOptionValue(input);
-		};
-
-		const getBool = ({ names, negate }: OptionSpec, emptyValue?: boolean) => {
-			if (negate && this.has(negate)) return false;
-			const input = this.get(names);
-			const value = strToBool(input, emptyValue);
-			if (typeof value === 'boolean') {
-				return value;
-			} else if (typeof input === 'string' && input.length > 0) {
-				invalid(names.at(-1)!, input);
-			}
-		};
-
 		const options: Partial<ServerOptions> = {
-			root: this.get(0),
-			host: getStr(CLI_OPTIONS.host),
-			cors: getBool(CLI_OPTIONS.cors),
-			gzip: getBool(CLI_OPTIONS.gzip),
-			dirFile: getList(CLI_OPTIONS.dirFile),
-			dirList: getBool(CLI_OPTIONS.dirList),
-			exclude: getList(CLI_OPTIONS.exclude),
+			root: this.pos(0),
+			host: this.str('host'),
+			cors: this.bool('cors'),
+			gzip: this.bool('gzip'),
+			dirFile: this.splitList('dir-file'),
+			dirList: this.bool('dir-list'),
+			exclude: this.splitList('exclude'),
 		};
 
 		// args that require extra parsing
-		const port = getStr(CLI_OPTIONS.port);
+		const port = this.str('port') ?? this.str('ports');
 		if (port != null) {
 			const value = parsePort(port);
 			if (value != null) options.ports = value;
 			else invalid('--port', port);
 		}
 
-		const headers = this.all(CLI_OPTIONS.header.names)
+		const headers = [this.list('header'), this.list('headers')]
+			.flat()
 			.map((value) => {
-				if (!value.trim()) return;
+				if (typeof value !== 'string' || !value.trim()) return;
 				const rule = parseHeaders(value);
 				if (!rule) invalid('--header', value);
 				return rule;
@@ -143,7 +155,7 @@ export class CLIArgs {
 			options.headers = headers;
 		}
 
-		const ext = getList(CLI_OPTIONS.ext);
+		const ext = this.splitList('ext');
 		if (ext != null) {
 			options.ext = ext.map((item) => normalizeExt(item));
 		}
@@ -157,10 +169,12 @@ export class CLIArgs {
 	}
 
 	unknown(): string[] {
-		const known = Object.values(CLI_OPTIONS).flatMap((spec) => {
-			return spec.negate ? [...spec.names, spec.negate] : spec.names;
-		});
-		return this.keys().filter((name) => !known.includes(name));
+		const known: string[] = [];
+		for (const [key, opt] of Object.entries(PARSE_ARGS_OPTIONS || {})) {
+			known.push(`--${key}`);
+			if (opt.short) known.push(`-${opt.short}`);
+		}
+		return this.#rawKeys().filter((name) => !known.includes(name));
 	}
 }
 
@@ -176,6 +190,11 @@ function normalizeExt(value: string = ''): string {
 		return `.${value}`;
 	}
 	return value;
+}
+
+function optionLike(name: string) {
+	name = name.trim();
+	return name.startsWith('-') && /\s/.test(name) === false;
 }
 
 export function parseHeaders(input: string): HttpHeaderRule | undefined {

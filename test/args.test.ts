@@ -14,8 +14,8 @@ suite('CLIArgs', () => {
 	test('returns empty values', () => {
 		const args = new CLIArgs([]);
 		expect(args.data()).toEqual({
-			map: [],
-			list: [],
+			val: {},
+			pos: [],
 		});
 	});
 
@@ -31,95 +31,275 @@ suite('CLIArgs', () => {
 		//   '  '
 		// ]
 		expect(new CLIArgs(['']).data()).toEqual({
-			map: [],
-			list: [''],
+			pos: [''],
+			val: {},
 		});
 		expect(new CLIArgs(['', ' ', '']).data()).toEqual({
-			map: [],
-			list: ['', ' ', ''],
+			pos: ['', ' ', ''],
+			val: {},
 		});
 	});
 
-	test('treats names starting with 1-2 hyphens as key-value options', () => {
-		expect(new CLIArgs(arr`zero`).has('zero')).toBe(false);
-		expect(new CLIArgs(arr`-one`).has('-one')).toBe(true);
-		expect(new CLIArgs(arr`--two hello`).has('--two')).toBe(true);
-		expect(new CLIArgs(arr`---three hello`).has('---three')).toBe(false);
+	test('single hyphen long values are dropped', () => {
+		const args = new CLIArgs(arr`-a -b=okay -cd -ef=nope`);
+		expect(args.data()).toEqual({
+			val: { a: true, b: true },
+			pos: ['okay'],
+		});
 	});
 
-	test('maps option to its value when separated by equal sign', () => {
-		expect(new CLIArgs(arr`-one=value1`).get('-one')).toBe('value1');
-		expect(new CLIArgs(arr`--two=value2`).get('--two')).toBe('value2');
+	test('unspecified options are treated as boolean', () => {
+		const args = new CLIArgs(arr`--one value1 --two value2`);
+		expect(args.data()).toEqual({
+			val: { one: true, two: true },
+			pos: ['value1', 'value2'],
+		});
 	});
 
-	test('maps option to its value when separated by whitespace', () => {
-		const args = new CLIArgs(arr`-one value1 --two value2`);
-		expect(args.get('-one')).toBe('value1');
-		expect(args.get('--two')).toBe('value2');
-		expect(args.data().map).toEqual([
-			['-one', 'value1'],
-			['--two', 'value2'],
+	test('can retrieve positional args', () => {
+		const args = new CLIArgs(arr`. --one two --three four`);
+		expect(args.pos(0)).toBe('.');
+		expect(args.pos(1)).toBe('two');
+		expect(args.pos(2)).toBe('four');
+		expect(args.data()).toEqual({
+			val: { one: true, three: true },
+			pos: ['.', 'two', 'four'],
+		});
+	});
+
+	test('known options are mapped with expected type', () => {
+		const args = new CLIArgs(arr`
+			--help
+			--version
+			--host long-host.local
+			-h short-host.local
+			-p 80
+			--port 1337+
+			--header header1
+			--header header2
+			--cors
+			--gzip
+			--ext .html,.htm
+			--ext md,mdown
+			--dir-file index.html
+			--dir-file index.htmlx
+			--dir-list
+			--exclude .*,*config
+			--exclude *rc
+		`);
+		expect(args.get('unknown')).toBe(undefined);
+		expect(args.get('help')).toBe(true);
+		expect(args.get('version')).toBe(true);
+		expect(args.get('host')).toBe('short-host.local');
+		expect(args.get('port')).toBe('1337+');
+		expect(args.get('header')).toEqual(['header1', 'header2']);
+		expect(args.get('cors')).toBe(true);
+		expect(args.get('gzip')).toBe(true);
+		expect(args.get('ext')).toEqual(['.html,.htm', 'md,mdown']);
+		expect(args.get('dir-file')).toEqual(['index.html', 'index.htmlx']);
+		expect(args.get('dir-list')).toBe(true);
+		expect(args.get('exclude')).toEqual(['.*,*config', '*rc']);
+	});
+
+	test('bool accessor only returns booleans', () => {
+		const args = new CLIArgs(arr`
+			--cors
+			--dir-list
+			--ext html
+			--port true
+		`);
+		// specified and configured as boolean
+		expect(args.bool('cors')).toBe(true);
+		expect(args.bool('dir-list')).toBe(true);
+		// configured as boolean but not specified
+		expect(args.bool('gzip')).toBe(undefined);
+		// not configured as boolean
+		expect(args.bool('ext')).toBe(undefined);
+		expect(args.bool('port')).toBe(undefined);
+	});
+
+	test('bool accessor returns false for --no- prefix', () => {
+		const args = new CLIArgs(arr`
+			--no-cors
+			--no-dir-list
+			--no-gzip
+		`);
+		expect(args.bool('cors')).toBe(false);
+		expect(args.bool('dir-list')).toBe(false);
+		expect(args.bool('gzip')).toBe(false);
+	});
+
+	test('str accessor only returns strings', () => {
+		const args = new CLIArgs(arr`
+			--port 123456789
+			--host localhost --host localesthost
+			--dir-file index.html
+			--ext html
+			--random value1
+		`);
+		// specified and configured as string
+		expect(args.str('port')).toBe('123456789');
+		expect(args.str('host')).toBe('localesthost');
+		// configured as multiple strings
+		expect(args.str('dir-file')).toBe(undefined);
+		expect(args.str('ext')).toBe(undefined);
+		// not configured, defaults to boolean
+		expect(args.str('random')).toBe(undefined);
+	});
+
+	test('str accessor returns undefined for --no- prefix', () => {
+		const args = new CLIArgs(arr`
+			--no-host
+			--host local1 -h local2
+			--port 1234 --no-port
+			--ports 5678 --no-ports
+		`);
+		expect(args.str('host')).toBe(undefined);
+		expect(args.str('port')).toBe(undefined);
+		expect(args.str('ports')).toBe(undefined);
+	});
+
+	test('list accessor only returns arrays', () => {
+		const args = new CLIArgs(arr`
+			--dir-file 404.html
+			--ext red --ext green --ext blue
+			--header h1 --header h2
+			--headers h3 --headers h4
+			--host host1 --host host2
+			--random value1 --random value2
+		`);
+		expect(args.list('dir-file')).toEqual(['404.html']);
+		expect(args.list('ext')).toEqual(['red', 'green', 'blue']);
+		expect(args.list('header')).toEqual(['h1', 'h2']);
+		expect(args.list('headers')).toEqual(['h3', 'h4']);
+		expect(args.list('host')).toBe(undefined);
+		expect(args.list('random')).toBe(undefined);
+	});
+
+	test('list accessor returns empty array for --no- prefix', () => {
+		const args = new CLIArgs(arr`
+			--dir-file 404.html
+			--no-dir-file
+			--no-exclude
+			--exclude !*.md --exclude .DS_Store
+			--ext .html --ext .htm
+			--no-ext
+			--no-header
+			--no-headers
+			--header h1 --header h2
+			--headers h3 --headers h4
+		`);
+		expect(args.list('dir-file')).toEqual([]);
+		expect(args.list('exclude')).toEqual([]);
+		expect(args.list('ext')).toEqual([]);
+		expect(args.list('header')).toEqual([]);
+		expect(args.list('headers')).toEqual([]);
+	});
+
+	test('splitList accessor parses comma-separated lists', () => {
+		const args = new CLIArgs(arr`
+			--dir-file index.html,index.htmlx
+			--dir-file page.html,page.htmlx
+			--ext .html
+			--ext a,b,,,,c,,d
+		`);
+		expect(args.splitList('dir-file')).toEqual([
+			'index.html',
+			'index.htmlx',
+			'page.html',
+			'page.htmlx',
 		]);
-	});
-
-	test('can retrieve args with number indexes', () => {
-		const args = new CLIArgs(arr`. --foo --bar baz hello`);
-		expect(args.get(0)).toBe('.');
-		expect(args.get(1)).toBe('hello');
-		expect(args.get(2)).toBe(undefined);
-		expect(args.data().list).toEqual(['.', 'hello']);
-	});
-
-	test('can retrieve mapped args', () => {
-		const args = new CLIArgs(arr`. --foo --bar baz hello -x -test=okay`);
-		expect(args.get('--foo')).toBe('');
-		expect(args.get('--bar')).toBe('baz');
-		expect(args.get('-x')).toBe('');
-		expect(args.get('-test')).toBe('okay');
-	});
-
-	test('last instance of option wins', () => {
-		const args = new CLIArgs(arr`-t=1 -t=2 --test 3 -t 4 --test 5`);
-		expect(args.get('-t')).toBe('4');
-		expect(args.get('--test')).toBe('5');
-		expect(args.get(['--test', '-t'])).toBe('5');
-		expect(args.all(['-t', '--test'])).toEqual(['1', '2', '3', '4', '5']);
-	});
-
-	test('merges all values for searched options', () => {
-		const args = new CLIArgs(arr`-c config.js -f one.txt --file two.txt -f=three.txt`);
-		expect(args.all(['--config', '-c'])).toEqual(['config.js']);
-		expect(args.all(['--file', '-f'])).toEqual(['one.txt', 'two.txt', 'three.txt']);
+		expect(args.splitList('ext')).toEqual(['.html', 'a', 'b', 'c', 'd']);
 	});
 });
 
 suite('CLIArgs.options', () => {
 	test('no errors for empty args', () => {
-		const onError = errorList();
-		new CLIArgs([]).options(onError);
-		expect(onError.list).toEqual([]);
+		const error = errorList();
+		const options = new CLIArgs([]).options(error);
+		expect(options).toEqual({});
+		expect(error.list).toEqual([]);
+	});
+
+	test('parses boolean args', () => {
+		const error = errorList();
+		const noArgs = new CLIArgs([]);
+		expect(noArgs.options(error)).toEqual({});
+		const posArgs = new CLIArgs(arr`--cors --gzip --dir-list`);
+		expect(posArgs.options(error)).toEqual({ cors: true, gzip: true, dirList: true });
+		const negArgs = new CLIArgs(arr`--no-cors --no-gzip --no-dir-list`);
+		expect(negArgs.options(error)).toEqual({ cors: false, gzip: false, dirList: false });
+		expect(error.list).toEqual([]);
 	});
 
 	test('does not validate host and root strings', () => {
-		const onError = errorList();
+		const error = errorList();
 		const args = new CLIArgs(['--host', ' not a hostname!\n', 'https://not-a-valid-root']);
-		const options = args.options(onError);
+		const options = args.options(error);
 		expect(options.host).toBe('not a hostname!');
 		expect(options.root).toBe('https://not-a-valid-root');
-		expect(onError.list).toEqual([]);
+		expect(error.list).toEqual([]);
+	});
+
+	test('parses --dir-file as a string list', () => {
+		const error = errorList();
+		const single = new CLIArgs(arr`--dir-file index.html`);
+		expect(single.options(error)).toEqual({ dirFile: ['index.html'] });
+		const multiple = new CLIArgs(arr`
+			--dir-file index.html,index.htm
+			--dir-file page.html,page.htm
+		`);
+		expect(multiple.options(error)).toEqual({
+			dirFile: ['index.html', 'index.htm', 'page.html', 'page.htm'],
+		});
+		expect(error.list).toEqual([]);
+	});
+
+	test('parses --exclude as a string list', () => {
+		const error = errorList();
+		const single = new CLIArgs(arr`--exclude *.md`);
+		expect(single.options(error)).toEqual({ exclude: ['*.md'] });
+		const multiple = new CLIArgs(arr`
+			--exclude .*,!.well-known
+			--exclude _*
+			--exclude *.yml,*.yaml
+			--exclude package*.json
+		`);
+		expect(multiple.options(error)).toEqual({
+			exclude: ['.*', '!.well-known', '_*', '*.yml', '*.yaml', 'package*.json'],
+		});
+		expect(error.list).toEqual([]);
+	});
+
+	test('parses --ext as list', () => {
+		const error = errorList();
+		const extOption = new CLIArgs(arr`--ext .html --ext htm --ext json`).options(error);
+		expect(extOption).toEqual({ ext: ['.html', '.htm', '.json'] });
+		expect(error.list).toEqual([]);
+	});
+
+	test('lists accept negative option', () => {
+		const error = errorList();
+		const args = new CLIArgs(arr`
+			--no-exclude
+			--no-ext --ext html
+			--dir-file index.html --no-dir-file
+		`);
+		expect(args.options(error)).toEqual({ ext: [], dirFile: [], exclude: [] });
+		expect(error.list).toEqual([]);
 	});
 
 	test('validates --port syntax', () => {
-		const onError = errorList();
+		const error = errorList();
 		const options = (str = '') => {
 			const args = new CLIArgs(arr(str));
-			return args.options(onError);
+			return args.options(error);
 		};
 		expect(options(`--port 1000+`)).toEqual({ ports: intRange(1000, 1009) });
 		expect(options(`--port +1000`)).toEqual({});
 		expect(options(`--port whatever`)).toEqual({});
 		expect(options(`--port {"some":"json"}`)).toEqual({});
-		expect(onError.list).toEqual([
+		expect(error.list).toEqual([
 			`invalid --port value: '+1000'`,
 			`invalid --port value: 'whatever'`,
 			`invalid --port value: '{"some":"json"}'`,
@@ -127,9 +307,9 @@ suite('CLIArgs.options', () => {
 	});
 
 	test('accepts valid --header syntax', () => {
-		const onError = errorList();
+		const error = errorList();
 		const rule = (value: string) => {
-			return new CLIArgs(['--header', value]).options(onError).headers?.at(0);
+			return new CLIArgs(['--header', value]).options(error).headers?.at(0);
 		};
 		expect(rule('x-header-1: true')).toEqual({
 			headers: { 'x-header-1': 'true' },
@@ -141,51 +321,51 @@ suite('CLIArgs.options', () => {
 		expect(rule('{"good": "json"}')).toEqual({
 			headers: { good: 'json' },
 		});
-		expect(onError.list).toEqual([]);
+		expect(error.list).toEqual([]);
 	});
 
 	test('rejects invalid --header syntax', () => {
-		const onError = errorList();
+		const error = errorList();
 		const rule = (value: string) => {
-			return new CLIArgs(['--header', value]).options(onError).headers?.at(0);
+			return new CLIArgs(['--header', value]).options(error).headers?.at(0);
 		};
 
 		expect(rule('basic string')).toBe(undefined);
 		expect(rule('*.md {"bad": [json]}')).toBe(undefined);
-		expect(onError.list).toEqual([
+		expect(error.list).toEqual([
 			`invalid --header value: 'basic string'`,
 			`invalid --header value: '*.md {"bad": [json]}'`,
 		]);
 	});
 
 	test('sets warnings for unknown args', () => {
-		const onError = errorList();
-		new CLIArgs(`--help --port=9999 --never gonna -GiveYouUp`.split(' ')).options(onError);
-		expect(onError.list).toEqual([`unknown option '--never'`, `unknown option '-GiveYouUp'`]);
+		const error = errorList();
+		new CLIArgs(`--help --port=9999 --never gonna -GiveYouUp`.split(' ')).options(error);
+		expect(error.list).toEqual([`unknown option '--never'`, `unknown option '-GiveYouUp'`]);
 	});
 });
 
 suite('CLIArgs.unknown', () => {
 	test('accepts known args', () => {
-		const args = arr`
+		const args = new CLIArgs(arr`
 			--help
 			--version
 			-h --host
-			-p --port
-			--header
+			-p --port --ports
+			--header --headers
 			--cors --no-cors
 			--gzip --no-gzip
 			--ext --no-ext
 			--dir-file --no-dir-file
 			--dir-list --no-dir-list
 			--exclude --no-exclude
-		`;
-		expect(new CLIArgs(args).unknown()).toEqual([]);
+		`);
+		expect(args.unknown()).toEqual([]);
 	});
 
 	test('rejects unknown args', () => {
-		const known = ['--version', '--host', '--header', '--ext'];
-		const unknown = ['-v', '--Host', '--ports', '--headers', '--foobar'];
+		const known = ['--version', '--host', '--ports', '--header', '--ext'];
+		const unknown = ['-v', '--Host', '--hosts', '--foobar', '--gz', '-gzip'];
 		expect(new CLIArgs([...known, ...unknown]).unknown()).toEqual(unknown);
 	});
 });
