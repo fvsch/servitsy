@@ -11,7 +11,7 @@ interface TypeMap {
 
 const strarr = (s = '') => s.trim().split(/\s+/);
 
-export const TEXT_TYPES: TypeMap = {
+const TEXT_TYPES: TypeMap = {
 	default: 'text/plain',
 	extensionMap: {
 		atom: 'application/atom+xml',
@@ -195,7 +195,7 @@ export function typeForFilePath(filePath: string, charset?: string): TypeResult 
 	return result.unknown();
 }
 
-export async function typeForFile(handle: FileHandle, charset?: string): Promise<TypeResult> {
+async function typeForFile(handle: FileHandle, charset?: string): Promise<TypeResult> {
 	const result = new TypeResult(charset);
 	try {
 		const { buffer, bytesRead } = await handle.read({

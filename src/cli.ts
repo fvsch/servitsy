@@ -5,14 +5,14 @@ import { sep as dirSep } from 'node:path';
 import process, { argv, exit, platform, stdin } from 'node:process';
 import { emitKeypressEvents } from 'node:readline';
 
-import { CLIArgs, parseArgs } from './args.ts';
+import { CLIArgs } from './args.ts';
 import { CLI_OPTIONS, HOSTS_LOCAL, HOSTS_WILDCARD } from './constants.ts';
 import { checkDirAccess } from './fs-utils.ts';
 import { RequestHandler } from './handler.ts';
 import { color, Logger, requestLogLine } from './logger.ts';
 import { serverOptions } from './options.ts';
 import { FileResolver } from './resolver.ts';
-import type { OptionName, ServerOptions } from './types.d.ts';
+import type { ServerOptions } from './types.d.ts';
 import { clamp, errorList, getRuntime, isPrivateIPv4 } from './utils.ts';
 
 /**
@@ -22,20 +22,20 @@ export async function run() {
 	const logger = new Logger(process.stdout, process.stderr);
 	const args = new CLIArgs(argv.slice(2));
 
-	if (args.has('--version')) {
+	if (args.bool('version')) {
 		const pkg = readPkgJson();
 		logger.write('info', pkg.version);
 		process.exitCode = 0;
 		return;
-	} else if (args.has('--help')) {
+	} else if (args.bool('help')) {
 		logger.write('info', `\n${helpPage()}\n`);
 		process.exitCode = 0;
 		return;
 	}
 
 	const onError = errorList();
-	const userOptions = parseArgs(args, onError);
-	const options = serverOptions({ root: '', ...userOptions }, onError);
+	const userOptions = { root: '', ...args.options(onError) };
+	const options = serverOptions(userOptions, onError);
 	await checkDirAccess(options.root, onError);
 
 	if (onError.list.length) {
@@ -206,21 +206,6 @@ export function helpPage() {
 	const indent = spaces(2);
 	const colGap = spaces(4);
 
-	const optionsOrder: OptionName[] = [
-		'help',
-		'version',
-		'host',
-		'port',
-		'header',
-		'cors',
-		'gzip',
-		'ext',
-		'dirFile',
-		'dirList',
-		'exclude',
-	];
-	const options = optionsOrder.map((key) => CLI_OPTIONS[key]);
-
 	const section = (heading: string = '', lines: string[] = []) => {
 		const result = [];
 		if (heading.length) result.push(indent + color.style(heading, 'bold'));
@@ -229,19 +214,31 @@ export function helpPage() {
 	};
 
 	const optionCols = () => {
-		const hMaxLength = Math.max(...options.map((opt) => opt.names.join(', ').length));
-		const firstWidth = clamp(hMaxLength, 14, 20);
-		return options.flatMap(({ help, names, default: argDefault = '' }) => {
-			const header = names.join(', ').padEnd(firstWidth);
-			const first = `${header}${colGap}${help}`;
-			if (!argDefault) return [first];
-			const secondRaw = `(default: '${Array.isArray(argDefault) ? argDefault.join(', ') : argDefault}')`;
-			const second = color.style(secondRaw, 'gray');
-			if (first.length + secondRaw.length < 80) {
-				return [`${first} ${second}`];
-			} else {
-				return [first, spaces(header.length + colGap.length) + second];
+		const options = CLI_OPTIONS.map((opt) => {
+			let initial = '';
+			if (Array.isArray(opt.initial)) {
+				initial = `(default: '${opt.initial.join(', ')}')`;
+			} else if (typeof opt.initial === 'string') {
+				initial = `(default: '${opt.initial}')`;
+			} else if (typeof opt.initial === 'boolean') {
+				initial = `(default: ${opt.initial})`;
 			}
+			return {
+				title: opt.short ? `-${opt.short}, --${opt.name}` : `--${opt.name}`,
+				help: opt.help,
+				initial,
+			};
+		});
+
+		const col1Width = clamp(Math.max(...options.map((opt) => opt.title.length)), 14, 20);
+
+		return options.flatMap(({ title, help, initial }) => {
+			const col1 = title.padEnd(col1Width) + colGap;
+			const line1 = `${col1}${help}`;
+			if (!initial) return [line1];
+			return line1.length + initial.length < 80
+				? [`${line1} ${color.style(initial, 'gray')}`]
+				: [line1, spaces(col1.length) + color.style(initial, 'gray')];
 		});
 	};
 

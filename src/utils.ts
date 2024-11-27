@@ -154,7 +154,7 @@ export function isSubpath(parent: string, filePath: string): boolean {
 }
 
 /** Cache a function's result after the first call */
-export function once<T = any>(fn: () => T): () => T {
+function once<T = any>(fn: () => T): () => T {
 	let value: T;
 	return () => {
 		if (typeof value === 'undefined') value = fn();

@@ -131,7 +131,7 @@ export class OptionsValidator {
 	}
 }
 
-export function isStringArray(input: unknown): input is string[] {
+function isStringArray(input: unknown): input is string[] {
 	return Array.isArray(input) && input.every((item) => typeof item === 'string');
 }
 
