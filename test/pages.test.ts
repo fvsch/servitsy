@@ -42,7 +42,7 @@ suite('dirListPage', () => {
 		if (shouldExist) {
 			expect(link).toBeTruthy();
 			expect(link?.getAttribute('aria-label')).toBe('Parent directory');
-			expect(link?.getAttribute('href')).toBe('..');
+			expect(link?.getAttribute('href')).toBe('../');
 			expect(link?.textContent).toBe('../');
 		} else {
 			expect(link).toBe(null);
@@ -99,9 +99,9 @@ suite('dirListPage', () => {
 
 		// Items should be sorted by type: directories first, files second
 		expect(links).toEqual([
-			{ href: '..', text: '../' },
-			{ href: 'Library', text: 'Library/' },
-			{ href: 'public', text: 'public/' },
+			{ href: '../', text: '../' },
+			{ href: 'Library/', text: 'Library/' },
+			{ href: 'public/', text: 'public/' },
 			{ href: '%20%20I%20have%20spaces%20%20', text: '  I have spaces  ' },
 			{ href: '.gitignore', text: '.gitignore' },
 			{ href: 'CHANGELOG', text: 'CHANGELOG' },

@@ -124,12 +124,8 @@ export function requestLogLine({
 
 	let displayPath = _(urlPath ?? url, 'cyan');
 	if (isSuccess && urlPath != null && localPath != null) {
-		const basePath = urlPath.length > 1 ? trimSlash(urlPath, { end: true }) : urlPath;
-		const suffix = pathSuffix(basePath, `/${fwdSlash(localPath)}`);
-		if (suffix) {
-			displayPath = _(basePath, 'cyan') + brackets(suffix, 'dim,gray,dim');
-			if (urlPath.length > 1 && urlPath.endsWith('/')) displayPath += _('/', 'cyan');
-		}
+		const parts = pathSuffix(urlPath, localPath);
+		if (parts) displayPath = _(parts[0], 'cyan') + brackets(parts[1], 'dim,gray,dim');
 	}
 
 	const line = [
@@ -149,11 +145,13 @@ export function requestLogLine({
 	return line;
 }
 
-function pathSuffix(basePath: string, fullPath: string): string | undefined {
-	if (basePath === fullPath) {
-		return '';
-	} else if (fullPath.startsWith(basePath)) {
-		return fullPath.slice(basePath.length);
+function pathSuffix(urlPath: string, localPath: string): [string, string] | undefined {
+	const filePath = trimSlash(`/${fwdSlash(localPath)}`, { end: true });
+	for (const path of [urlPath, trimSlash(urlPath, { end: true })]) {
+		if (filePath !== path && filePath.startsWith(path)) {
+			const index = path.length;
+			return [filePath.slice(0, index), filePath.slice(index)];
+		}
 	}
 }
 

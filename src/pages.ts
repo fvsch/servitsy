@@ -97,28 +97,39 @@ ${sorted.map((item) => renderListItem({ item, ext, parentPath })).join('\n')}
 function renderListItem(data: { item: FSLocation; ext: string[]; parentPath: string }) {
 	const { item, ext, parentPath } = data;
 	const isDir = isDirLike(item);
-	const isParent = isDir && item.filePath === parentPath;
-
-	let icon = isDir ? 'icon-dir' : 'icon-file';
-	if (item.kind === 'link') icon += '-link';
-	let name = basename(item.filePath);
-	let suffix = '';
-	let label = '';
+	const icon = `icon-${isDir ? 'dir' : 'file'}${item.kind === 'link' ? '-link' : ''}`;
+	const name = basename(item.filePath);
 	let href = encodeURIComponent(name);
 
-	if (isParent) {
-		name = '..';
-		href = '..';
-		label = 'Parent directory';
-	}
-	if (isDir) {
-		suffix = '/';
-	} else {
-		// clean url: remove extension if possible
-		const match = ext.find((e) => item.filePath.endsWith(e));
-		if (match) href = href.slice(0, href.length - match.length);
+	if (isDir && item.filePath === parentPath) {
+		const label = 'Parent directory';
+		return listItem({ icon, href: '../', name: '..', suffix: '/', label });
+	} else if (isDir) {
+		return listItem({ icon, href: href + '/', name, suffix: '/' });
 	}
 
+	// clean url: remove extension if possible
+	const knownExt = ext.find((e) => item.filePath.endsWith(e));
+	if (knownExt) {
+		href = href.slice(0, href.length - knownExt.length);
+	}
+
+	return listItem({ icon, href, name });
+}
+
+function listItem({
+	href,
+	icon,
+	name,
+	suffix = '',
+	label = '',
+}: {
+	href: string;
+	icon: string;
+	name: string;
+	suffix?: string;
+	label?: string;
+}) {
 	return [
 		`<li class="files-item">\n`,
 		`<a class="files-link" href="${attr(href)}"${label && ` aria-label="${attr(label)}" title="${attr(label)}"`}>`,
