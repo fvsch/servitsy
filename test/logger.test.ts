@@ -195,10 +195,19 @@ suite('responseLogLine', () => {
 			{
 				method: 'GET',
 				status: 200,
+				urlPath: '/some/page/',
+				localPath: 'some/page/index.html',
+			},
+			`200 — GET /some/page/[index.html]`,
+		);
+		matchLogLine(
+			{
+				method: 'GET',
+				status: 200,
 				urlPath: '/other/page/',
 				localPath: 'other\\page.html',
 			},
-			`200 — GET /other/page[.html]/`,
+			`200 — GET /other/page[.html]`,
 		);
 		matchLogLine(
 			{
