@@ -6,13 +6,13 @@ import process, { argv, exit, platform, stdin } from 'node:process';
 import { emitKeypressEvents } from 'node:readline';
 
 import { CLIArgs } from './args.ts';
-import { CLI_OPTIONS, HOSTS_LOCAL, HOSTS_WILDCARD } from './constants.ts';
+import { CLI_OPTIONS, HOSTS } from './constants.ts';
 import { checkDirAccess } from './fs-utils.ts';
 import { RequestHandler } from './handler.ts';
 import { color, Logger, requestLogLine } from './logger.ts';
 import { serverOptions } from './options.ts';
 import { FileResolver } from './resolver.ts';
-import type { ServerOptions } from './types.d.ts';
+import type { RuntimeOptions } from './types.d.ts';
 import { clamp, errorList, getRuntime, isPrivateIPv4 } from './utils.ts';
 
 /**
@@ -50,14 +50,14 @@ export async function run() {
 }
 
 export class CLIServer {
-	#options: Required<ServerOptions>;
+	#options: RuntimeOptions;
 	#port?: number;
 	#portIterator: IterableIterator<number>;
 	#localNetworkInfo?: NetworkInterfaceInfo;
 	#server: Server;
 	#logger: Logger;
 
-	constructor(options: Required<ServerOptions>, logger: Logger) {
+	constructor(options: RuntimeOptions, logger: Logger) {
 		this.#logger = logger;
 		this.#options = options;
 		this.#portIterator = new Set(options.ports).values();
@@ -215,30 +215,20 @@ export function helpPage() {
 
 	const optionCols = () => {
 		const options = CLI_OPTIONS.map((opt) => {
-			let initial = '';
-			if (Array.isArray(opt.initial)) {
-				initial = `(default: '${opt.initial.join(', ')}')`;
-			} else if (typeof opt.initial === 'string') {
-				initial = `(default: '${opt.initial}')`;
-			} else if (typeof opt.initial === 'boolean') {
-				initial = `(default: ${opt.initial})`;
-			}
-			return {
-				title: opt.short ? `-${opt.short}, --${opt.name}` : `--${opt.name}`,
-				help: opt.help,
-				initial,
-			};
+			const title = opt.short ? `-${opt.short}, --${opt.name}` : `--${opt.name}`;
+			const [help1, help2] = opt.help.split('\n');
+			return { title, help1, help2 };
 		});
 
 		const col1Width = clamp(Math.max(...options.map((opt) => opt.title.length)), 14, 20);
 
-		return options.flatMap(({ title, help, initial }) => {
+		return options.flatMap(({ title, help1, help2 }) => {
 			const col1 = title.padEnd(col1Width) + colGap;
-			const line1 = `${col1}${help}`;
-			if (!initial) return [line1];
-			return line1.length + initial.length < 80
-				? [`${line1} ${color.style(initial, 'gray')}`]
-				: [line1, spaces(col1.length) + color.style(initial, 'gray')];
+			const line1 = `${col1}${help1}`;
+			if (!help2) return [line1];
+			return line1.length + help2.length < 80
+				? [`${line1} ${color.style(help2, 'gray')}`]
+				: [line1, spaces(col1.length) + color.style(help2, 'gray')];
 		});
 	};
 
@@ -259,21 +249,20 @@ function displayHosts({
 	actual,
 	networkAddress,
 }: {
-	configured: string;
+	configured?: string;
 	actual: string;
 	networkAddress?: string;
 }): { local: string; network?: string } {
-	const isLocalhost = (value = '') => HOSTS_LOCAL.includes(value);
-	const isWildcard = (value = '') => HOSTS_WILDCARD.v4 === value || HOSTS_WILDCARD.v6 === value;
+	const isLocal = (value: string) => HOSTS.local.includes(value);
+	const isUnspec = (value: string) => HOSTS.unspecified.includes(value);
 
-	if (!isWildcard(configured) && !isLocalhost(configured)) {
+	if (configured && !isUnspec(configured) && !isLocal(configured)) {
 		return { local: configured };
 	}
 
-	return {
-		local: isWildcard(actual) || isLocalhost(actual) ? 'localhost' : actual,
-		network: isWildcard(configured) && getRuntime() !== 'webcontainer' ? networkAddress : undefined,
-	};
+	const local = isUnspec(actual) || isLocal(actual) ? 'localhost' : actual;
+	const showNetwork = !configured || isUnspec(configured);
+	return { local, network: showNetwork ? networkAddress : undefined };
 }
 
 /**

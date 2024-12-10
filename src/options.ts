@@ -1,13 +1,13 @@
 import { isAbsolute, resolve } from 'node:path';
 
 import { DEFAULT_OPTIONS, PORTS_CONFIG } from './constants.ts';
-import type { HttpHeaderRule, ServerOptions } from './types.d.ts';
-import { printValue } from './utils.ts';
+import type { RuntimeOptions, HttpHeaderRule, ServerOptions } from './types.d.ts';
+import { getRuntime, printValue } from './utils.ts';
 
 export function serverOptions(
 	options: ServerOptions,
 	onError: (msg: string) => void,
-): Required<ServerOptions> {
+): RuntimeOptions {
 	const validator = new OptionsValidator(onError);
 
 	const checked: Omit<ServerOptions, 'root'> = {
@@ -30,6 +30,9 @@ export function serverOptions(
 		if (typeof value !== 'undefined') {
 			(final as Record<string, any>)[key] = value;
 		}
+	}
+	if (final.host == null && getRuntime() === 'webcontainer') {
+		final.host = 'localhost';
 	}
 
 	return final;
