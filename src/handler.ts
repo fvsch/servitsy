@@ -13,7 +13,7 @@ import type {
 	Request,
 	Response,
 	ResMetaData,
-	ServerOptions,
+	RuntimeOptions,
 } from './types.d.ts';
 import { getLocalPath, headerCase, isSubpath, PathMatcher, trimSlash } from './utils.ts';
 
@@ -21,7 +21,7 @@ interface Config {
 	req: Request;
 	res: Response;
 	resolver: FileResolver;
-	options: Required<ServerOptions> & { _noStream?: boolean };
+	options: RuntimeOptions;
 }
 
 interface Payload {
@@ -266,7 +266,7 @@ export class RequestHandler {
 	*/
 	#setHeaders(
 		filePath: string,
-		options: Partial<{ contentType: string; cors: boolean; headers: ServerOptions['headers'] }>,
+		options: Partial<{ contentType: string; cors: boolean; headers: RuntimeOptions['headers'] }>,
 	) {
 		if (this.#res.headersSent) return;
 		const { contentType, cors, headers } = options;

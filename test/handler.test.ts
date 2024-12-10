@@ -4,7 +4,7 @@ import { afterAll, expect, suite, test } from 'vitest';
 
 import { extractUrlPath, fileHeaders, isValidUrlPath, RequestHandler } from '../src/handler.ts';
 import { FileResolver } from '../src/resolver.ts';
-import type { HttpHeaderRule, ServerOptions } from '../src/types.d.ts';
+import type { HttpHeaderRule, RuntimeOptions } from '../src/types.d.ts';
 import { fsFixture, getBlankOptions, getDefaultOptions, platformSlash } from './shared.ts';
 
 type ResponseHeaders = Record<string, undefined | number | string | string[]>;
@@ -30,7 +30,7 @@ function mockReqRes(method: string, url: string, headers: Record<string, string 
 }
 
 function handlerContext(
-	options: Required<ServerOptions>,
+	options: RuntimeOptions,
 ): (method: string, url: string, headers?: Record<string, string | string[]>) => RequestHandler {
 	const resolver = new FileResolver(options);
 	const handlerOptions = { ...options, gzip: false, _noStream: true };

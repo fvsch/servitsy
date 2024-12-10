@@ -36,3 +36,17 @@ export interface ServerOptions {
 	cors?: boolean;
 	gzip?: boolean;
 }
+
+export interface RuntimeOptions {
+	root: string;
+	ext: string[];
+	dirFile: string[];
+	dirList: boolean;
+	exclude: string[];
+	host: string | undefined;
+	ports: number[];
+	headers: HttpHeaderRule[];
+	cors: boolean;
+	gzip: boolean;
+	_noStream?: boolean;
+}
