@@ -213,22 +213,20 @@ export function helpPage() {
 		return result.join('\n\n');
 	};
 
-	const optionCols = () => {
-		const options = CLI_OPTIONS.map((opt) => {
-			const title = opt.short ? `-${opt.short}, --${opt.name}` : `--${opt.name}`;
-			const [help1, help2] = opt.help.split('\n');
-			return { title, help1, help2 };
-		});
-
-		const col1Width = clamp(Math.max(...options.map((opt) => opt.title.length)), 14, 20);
-
-		return options.flatMap(({ title, help1, help2 }) => {
-			const col1 = title.padEnd(col1Width) + colGap;
+	const optionCols = (options: [string, string][]) => {
+		const col1Width = clamp(Math.max(...options.map((opt) => opt[0].length)), 10, 20);
+		return options.flatMap(([name, help]) => {
+			const col1 = name.padEnd(col1Width) + colGap;
+			const [help1, help2] = help.split('\n');
 			const line1 = `${col1}${help1}`;
-			if (!help2) return [line1];
-			return line1.length + help2.length < 80
-				? [`${line1} ${color.style(help2, 'gray')}`]
-				: [line1, spaces(col1.length) + color.style(help2, 'gray')];
+			if (help2) {
+				if (line1.length + help2.length <= 76) {
+					return [`${line1} ${color.style(help2, 'gray')}`];
+				} else {
+					return [line1, spaces(col1.length) + color.style(help2, 'gray')];
+				}
+			}
+			return [line1];
 		});
 	};
 
@@ -240,7 +238,7 @@ export function helpPage() {
 			`${color.style('$', 'bold dim')} ${color.style('servitsy', 'magentaBright')} --help`,
 			`${color.style('$', 'bold dim')} ${color.style('servitsy', 'magentaBright')} ${color.brackets('directory')} ${color.brackets('options')}`,
 		]),
-		section('OPTIONS', optionCols()),
+		section('OPTIONS', optionCols(Object.entries(CLI_OPTIONS))),
 	].join('\n\n');
 }
 
