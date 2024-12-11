@@ -27,51 +27,19 @@ export const DEFAULT_OPTIONS: Omit<RuntimeOptions, 'root'> = {
 	exclude: ['.*', '!.well-known'],
 };
 
-export const CLI_OPTIONS: Array<{ name: string; short?: string; help: string }> = [
-	{
-		name: 'help',
-		help: 'Display this message',
-	},
-	{
-		name: 'version',
-		help: `Display current version`,
-	},
-	{
-		name: 'host',
-		short: 'h',
-		help: `Bind to a specific host\n(default: undefined)`,
-	},
-	{
-		name: 'port',
-		short: 'p',
-		help: `Bind to a specific port or ports\n(default: '${PORTS_CONFIG.initial}+')`,
-	},
-	{
-		name: 'header',
-		help: 'Add custom HTTP header(s) to responses',
-	},
-	{
-		name: 'cors',
-		help: `Send CORS HTTP headers in responses\n(default: false)`,
-	},
-	{
-		name: 'gzip',
-		help: `Use gzip compression for text files\n(default: true)`,
-	},
-	{
-		name: 'ext',
-		help: `Extensions which can be omitted in URLs\n(default: '${DEFAULT_OPTIONS.ext.join(', ')}')`,
-	},
-	{
-		name: 'dirfile',
-		help: `Directory index file(s)\n(default: '${DEFAULT_OPTIONS.dirFile.join(', ')}')`,
-	},
-	{
-		name: 'dirlist',
-		help: `Allow listing directory contents\n(default: true)`,
-	},
-	{
-		name: 'exclude',
-		help: `Block access to folders and files by pattern\n(default: '${DEFAULT_OPTIONS.exclude.join(', ')}')`,
-	},
-];
+export const CLI_OPTIONS: Record<string, string> = {
+	'--help': `Display this help message`,
+	'--version': `Display the current version of servitsy`,
+	'-h, --host': `Specify custom host\n(default: undefined)`,
+	'-p, --port': `Specify custom port(s)\n(default: '${PORTS_CONFIG.initial}+')`,
+	'--cors': `Send CORS HTTP headers`,
+	'--dirfile': `Directory index file(s)\n(default: '${DEFAULT_OPTIONS.dirFile}')`,
+	'--exclude': `Deny file access by pattern\n(default: '${DEFAULT_OPTIONS.exclude.join(', ')}')`,
+	'--ext': `Extension(s) used to resolve URLs\n(default: '${DEFAULT_OPTIONS.ext}')`,
+	'--header': `Add custom HTTP header(s) to responses`,
+	'--no-dirfile': `Do not serve directory index files`,
+	'--no-dirlist': `Do not serve directory listings`,
+	'--no-exclude': `Disable default file access patterns`,
+	'--no-ext': `Disable default file extensions`,
+	'--no-gzip': `Disable gzip compression of text responses`,
+};
