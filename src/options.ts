@@ -16,7 +16,7 @@ export function serverOptions(
 		host: validator.host(options.host),
 		cors: validator.cors(options.cors),
 		headers: validator.headers(options.headers),
-		dirFile: validator.dirFile(options.dirFile),
+		index: validator.index(options.index),
 		dirList: validator.dirList(options.dirList),
 		ext: validator.ext(options.ext),
 		exclude: validator.exclude(options.exclude),
@@ -84,10 +84,6 @@ export class OptionsValidator {
 		return this.#bool(input, 'invalid cors value');
 	}
 
-	dirFile(input?: string[]): string[] | undefined {
-		return this.#arr(input, 'invalid dirFile value', isValidPattern);
-	}
-
 	dirList(input?: boolean): boolean | undefined {
 		return this.#bool(input, 'invalid dirList value');
 	}
@@ -110,6 +106,10 @@ export class OptionsValidator {
 
 	host(input?: string): string | undefined {
 		return this.#str(input, 'invalid host value', isValidHost);
+	}
+
+	index(input?: string[]): string[] | undefined {
+		return this.#arr(input, 'invalid index value', isValidPattern);
 	}
 
 	ports(input?: number[]): number[] | undefined {

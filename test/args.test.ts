@@ -81,8 +81,8 @@ suite('CLIArgs', () => {
 			--gzip
 			--ext .html,.htm
 			--ext md,mdown
-			--dirfile index.html
-			--dirfile index.htmlx
+			--index index.html
+			--index index.htmlx
 			--dirlist
 			--exclude .*,*config
 			--exclude *rc
@@ -96,7 +96,7 @@ suite('CLIArgs', () => {
 		expect(args.get('cors')).toBe(true);
 		expect(args.get('gzip')).toBe(true);
 		expect(args.get('ext')).toEqual(['.html,.htm', 'md,mdown']);
-		expect(args.get('dirfile')).toEqual(['index.html', 'index.htmlx']);
+		expect(args.get('index')).toEqual(['index.html', 'index.htmlx']);
 		expect(args.get('dirlist')).toBe(true);
 		expect(args.get('exclude')).toEqual(['.*,*config', '*rc']);
 	});
@@ -133,7 +133,7 @@ suite('CLIArgs', () => {
 		const args = new CLIArgs(arr`
 			--port 123456789
 			--host localhost --host localesthost
-			--dirfile index.html
+			--index index.html
 			--ext html
 			--random value1
 		`);
@@ -141,7 +141,7 @@ suite('CLIArgs', () => {
 		expect(args.str('port')).toBe('123456789');
 		expect(args.str('host')).toBe('localesthost');
 		// configured as multiple strings
-		expect(args.str('dirfile')).toBe(undefined);
+		expect(args.str('index')).toBe(undefined);
 		expect(args.str('ext')).toBe(undefined);
 		// not configured, defaults to boolean
 		expect(args.str('random')).toBe(undefined);
@@ -161,14 +161,14 @@ suite('CLIArgs', () => {
 
 	test('list accessor only returns arrays', () => {
 		const args = new CLIArgs(arr`
-			--dirfile 404.html
+			--index 404.html
 			--ext red --ext green --ext blue
 			--header h1 --header h2
 			--headers h3 --headers h4
 			--host host1 --host host2
 			--random value1 --random value2
 		`);
-		expect(args.list('dirfile')).toEqual(['404.html']);
+		expect(args.list('index')).toEqual(['404.html']);
 		expect(args.list('ext')).toEqual(['red', 'green', 'blue']);
 		expect(args.list('header')).toEqual(['h1', 'h2']);
 		expect(args.list('headers')).toEqual(['h3', 'h4']);
@@ -178,8 +178,8 @@ suite('CLIArgs', () => {
 
 	test('list accessor returns empty array for --no- prefix', () => {
 		const args = new CLIArgs(arr`
-			--dirfile 404.html
-			--no-dirfile
+			--index 404.html
+			--no-index
 			--no-exclude
 			--exclude !*.md --exclude .DS_Store
 			--ext .html --ext .htm
@@ -189,7 +189,7 @@ suite('CLIArgs', () => {
 			--header h1 --header h2
 			--headers h3 --headers h4
 		`);
-		expect(args.list('dirfile')).toEqual([]);
+		expect(args.list('index')).toEqual([]);
 		expect(args.list('exclude')).toEqual([]);
 		expect(args.list('ext')).toEqual([]);
 		expect(args.list('header')).toEqual([]);
@@ -198,12 +198,12 @@ suite('CLIArgs', () => {
 
 	test('splitList accessor parses comma-separated lists', () => {
 		const args = new CLIArgs(arr`
-			--dirfile index.html,index.htmlx
-			--dirfile page.html,page.htmlx
+			--index index.html,index.htmlx
+			--index page.html,page.htmlx
 			--ext .html
 			--ext a,b,,,,c,,d
 		`);
-		expect(args.splitList('dirfile')).toEqual([
+		expect(args.splitList('index')).toEqual([
 			'index.html',
 			'index.htmlx',
 			'page.html',
@@ -213,9 +213,9 @@ suite('CLIArgs', () => {
 	});
 
 	test('splitList returns empty array for empty string and --no- variant', () => {
-		expect(new CLIArgs([]).splitList('dirfile')).toBe(undefined);
-		expect(new CLIArgs(['--dirfile', '']).splitList('dirfile')).toEqual([]);
-		expect(new CLIArgs(['--no-dirfile']).splitList('dirfile')).toEqual([]);
+		expect(new CLIArgs([]).splitList('index')).toBe(undefined);
+		expect(new CLIArgs(['--index', '']).splitList('index')).toEqual([]);
+		expect(new CLIArgs(['--no-index']).splitList('index')).toEqual([]);
 		expect(new CLIArgs([]).splitList('ext')).toBe(undefined);
 		expect(new CLIArgs(['--ext', '']).splitList('ext')).toEqual([]);
 		expect(new CLIArgs(['--no-ext']).splitList('ext')).toEqual([]);
@@ -250,16 +250,16 @@ suite('CLIArgs.options', () => {
 		expect(error.list).toEqual([]);
 	});
 
-	test('parses --dirfile as a string list', () => {
+	test('parses --index as a string list', () => {
 		const error = errorList();
-		const single = new CLIArgs(arr`--dirfile index.html`);
-		expect(single.options(error)).toEqual({ dirFile: ['index.html'] });
+		const single = new CLIArgs(arr`--index index.html`);
+		expect(single.options(error)).toEqual({ index: ['index.html'] });
 		const multiple = new CLIArgs(arr`
-			--dirfile index.html,index.htm
-			--dirfile page.html,page.htm
+			--index index.html,index.htm
+			--index page.html,page.htm
 		`);
 		expect(multiple.options(error)).toEqual({
-			dirFile: ['index.html', 'index.htm', 'page.html', 'page.htm'],
+			index: ['index.html', 'index.htm', 'page.html', 'page.htm'],
 		});
 		expect(error.list).toEqual([]);
 	});
@@ -292,9 +292,9 @@ suite('CLIArgs.options', () => {
 		const args = new CLIArgs(arr`
 			--no-exclude
 			--no-ext --ext html
-			--dirfile index.html --no-dirfile
+			--index index.html --no-index
 		`);
-		expect(args.options(error)).toEqual({ ext: [], dirFile: [], exclude: [] });
+		expect(args.options(error)).toEqual({ ext: [], index: [], exclude: [] });
 		expect(error.list).toEqual([]);
 	});
 
@@ -365,7 +365,7 @@ suite('CLIArgs.unknown', () => {
 			--cors --no-cors
 			--gzip --no-gzip
 			--ext --no-ext
-			--dirfile --no-dirfile
+			--index --no-index
 			--dirlist --no-dirlist
 			--exclude --no-exclude
 		`);

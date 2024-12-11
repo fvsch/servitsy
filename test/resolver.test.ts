@@ -53,7 +53,7 @@ suite('FileResolver.locateFile', async () => {
 		const { $locate } = new TestFileResolver({
 			root: path(),
 			ext: [],
-			dirFile: [],
+			index: [],
 		});
 
 		for (const localFilePath of Object.keys(fileTree)) {
@@ -79,17 +79,17 @@ suite('FileResolver.locateFile', async () => {
 		await $locate(path`section2/sub-page/hello`, file('section2/sub-page/hello.txt'));
 	});
 
-	test('locates variants with options.dirFile', async () => {
+	test('locates variants with options.index', async () => {
 		const { $locate } = new TestFileResolver({
 			root: path(),
-			dirFile: ['index.html'],
+			index: ['index.html'],
 		});
 
-		// finds dirFile
+		// finds index files
 		await $locate(path``, file('index.html'));
 		await $locate(path`section1`, file('section1/index.html'));
 
-		// does not add .html or find non-dirFile children
+		// does not add .html or find non-index children
 		await $locate(path`page1`, {
 			filePath: path`page1`,
 			kind: null,

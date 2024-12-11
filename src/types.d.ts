@@ -27,7 +27,7 @@ export interface ResMetaData {
 export interface ServerOptions {
 	root: string;
 	ext?: string[];
-	dirFile?: string[];
+	index?: string[];
 	dirList?: boolean;
 	exclude?: string[];
 	host?: string;
@@ -40,7 +40,7 @@ export interface ServerOptions {
 export interface RuntimeOptions {
 	root: string;
 	ext: string[];
-	dirFile: string[];
+	index: string[];
 	dirList: boolean;
 	exclude: string[];
 	host: string | undefined;
