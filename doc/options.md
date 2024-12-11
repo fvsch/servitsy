@@ -5,12 +5,12 @@ servitsy supports the following command-line options:
 - [`host`](#host): specify a custom host
 - [`port`](#port): specify a custom port or range of ports
 - [`cors`](#cors): send CORS HTTP headers in responses
-- [`dirFile`](#dirfile): directory index file(s)
 - [`dirList`](#dirlist): allow or disallow directory listings
 - [`exclude`](#exclude): deny file access by pattern
 - [`ext`](#ext): extensions used to resolve URLs
 - [`gzip`](#gzip): enable or disable gzip compression
 - [`header`](#header): add custom HTTP header(s) to responses
+- [`index`](#index): directory index file(s)
 
 > [!NOTE]  
 > Examples on this page use the `servitsy` command. If you haven't installed servitsy globally, you can use `npx servitsy` instead.
@@ -69,24 +69,9 @@ servitsy --cors
 servitsy --no-cors
 ```
 
-## `dirFile`
-
-File names to look up when a request matches a directory. Defaults to `index.html`.
-
-```sh
-# Default value
-servitsy --dirfile 'index.html'
-
-# Custom values
-servitsy --dirfile 'index.html,index.htm' --dirfile 'page.html,page.htm'
-
-# Disable defaults
-servitsy --no-dirfile  # or --dirfile=''
-```
-
 ## `dirList`
 
-Enables or disables listing directory contents, when a request matches a directory and no `dirFile` is found in that directory. Enabled by default.
+Enables or disables listing directory contents, when a request matches a directory and no `index` file is found in that directory. Enabled by default.
 
 ```sh
 # Serve directory listings (same as default)
@@ -175,3 +160,18 @@ servitsy --header '*.rst {"content-type": "text/x-rst"}'
 ```
 
 See the [`exclude` option](#exclude) for more information about file matching patterns.
+
+## `index`
+
+File names to look up when a request matches a directory. Defaults to `index.html`.
+
+```sh
+# Default value
+servitsy --index 'index.html'
+
+# Custom values
+servitsy --index 'index.html,index.htm' --index 'page.html,page.htm'
+
+# Disable defaults
+servitsy --no-index  # or --index=''
+```

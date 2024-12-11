@@ -223,9 +223,9 @@ suite('OptionsValidator', () => {
 		valid(val.gzip, true);
 		valid(val.gzip, false);
 
-		valid(val.dirFile, undefined);
-		valid(val.dirFile, []);
-		valid(val.dirFile, ['a b c', 'Indéx.html']);
+		valid(val.index, undefined);
+		valid(val.index, []);
+		valid(val.index, ['a b c', 'Indéx.html']);
 
 		valid(val.exclude, undefined);
 		valid(val.exclude, []);
@@ -267,8 +267,8 @@ suite('OptionsValidator', () => {
 		const val = new OptionsValidator(throwError);
 
 		expect(() => val.cors(null as any)).toThrow(`invalid cors value: null`);
-		expect(() => val.dirFile({ hello: 'world' } as any)).toThrow(
-			`invalid dirFile value: {"hello":"world"}`,
+		expect(() => val.index({ hello: 'world' } as any)).toThrow(
+			`invalid index value: {"hello":"world"}`,
 		);
 		expect(() => val.dirList('yes' as any)).toThrow(`invalid dirList value: 'yes'`);
 		expect(() => val.exclude(new Set(['index']) as any)).toThrow(`invalid exclude pattern: {}`);
@@ -282,7 +282,7 @@ suite('OptionsValidator', () => {
 	test('sends errors for invalid inputs', () => {
 		const val = new OptionsValidator(throwError);
 
-		expect(() => val.dirFile(['./index.html'])).toThrow(`invalid dirFile value: './index.html'`);
+		expect(() => val.index(['./index.html'])).toThrow(`invalid index value: './index.html'`);
 		expect(() => val.exclude([null] as any)).toThrow(`invalid exclude pattern: null`);
 		expect(() => val.exclude(['.*', 'a:b:c'])).toThrow(`invalid exclude pattern: 'a:b:c'`);
 		expect(() => val.ext(['.html', 'htm'])).toThrow(`invalid ext value: 'htm'`);
@@ -325,7 +325,7 @@ suite('serverOptions', () => {
 		const testOptions2: ServerOptions = {
 			root: cwd(),
 			ext: ['.htm', '.TXT'],
-			dirFile: ['page.md', 'Index Page.html'],
+			index: ['page.md', 'Index Page.html'],
 			exclude: ['.htaccess', '*.*.*', '_*'],
 			headers: [{ include: ['*.md', '*.html'], headers: { dnt: 1 } }],
 			host: '192.168.1.199',
@@ -343,7 +343,7 @@ suite('serverOptions', () => {
 		const inputs = {
 			root: 'this/path/doesnt/exist',
 			cors: null,
-			dirFile: [undefined, 'invalid/value', 'C:\\Temp'],
+			index: [undefined, 'invalid/value', 'C:\\Temp'],
 			dirList: {},
 			exclude: [{}, 'section/*.json', 'a:b:c:d', 'no\\pe'],
 			ext: ['html', 'txt', './index.html', '..'],

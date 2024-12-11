@@ -7,7 +7,7 @@ import { getLocalPath, isSubpath, PathMatcher, trimSlash } from './utils.ts';
 export class FileResolver {
 	#root: string;
 	#ext: string[] = [];
-	#dirFile: string[] = [];
+	#index: string[] = [];
 	#dirList = false;
 	#excludeMatcher: PathMatcher;
 
@@ -22,8 +22,8 @@ export class FileResolver {
 		if (Array.isArray(options.ext)) {
 			this.#ext = options.ext;
 		}
-		if (Array.isArray(options.dirFile)) {
-			this.#dirFile = options.dirFile;
+		if (Array.isArray(options.index)) {
+			this.#index = options.index;
 		}
 		if (typeof options.dirList === 'boolean') {
 			this.#dirList = options.dirList;
@@ -110,8 +110,8 @@ export class FileResolver {
 		const kind = await getKind(filePath);
 
 		// Try alternates
-		if (kind === 'dir' && this.#dirFile.length) {
-			const paths = this.#dirFile.map((name) => join(filePath, name));
+		if (kind === 'dir' && this.#index.length) {
+			const paths = this.#index.map((name) => join(filePath, name));
 			const match = await this.#locateAltFiles(paths);
 			if (match) return match;
 		} else if (kind === null && this.#ext.length) {
