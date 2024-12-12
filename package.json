@@ -20,14 +20,8 @@
 		"url": "https://www.npmjs.com/~fvsch"
 	},
 	"type": "module",
-	"main": "./lib/index.js",
 	"bin": {
 		"servitsy": "bin/servitsy.js"
-	},
-	"exports": {
-		".": {
-			"import": "./lib/index.js"
-		}
 	},
 	"files": [
 		"./lib",
@@ -42,10 +36,10 @@
 		"typecheck": "tsc -p tsconfig.json --noEmit && tsc -p test/tsconfig.json --noEmit"
 	},
 	"devDependencies": {
-		"@types/node": "^20.17.9",
+		"@types/node": "^22.10.2",
 		"fs-fixture": "^2.6.0",
 		"linkedom": "^0.18.5",
-		"prettier": "^3.4.1",
+		"prettier": "^3.4.2",
 		"typescript": "~5.7.2",
 		"vitest": "^2.1.8"
 	}
