@@ -37,7 +37,7 @@ export class PathMatcher {
 		if (input.includes('/') || input.includes('\\')) {
 			return null;
 		} else if (input.includes('*')) {
-			const toEscape = /([\[\]\(\)\|\^\$\.\+\?])/g;
+			const toEscape = /([\]|[)(^$.+?])/g;
 			const re = input.replace(toEscape, '\\$1').replace(/\*/g, '[^/]*');
 			return new RegExp(re);
 		}
@@ -175,8 +175,8 @@ export function trimSlash(
 	input: string = '',
 	config: { start?: boolean; end?: boolean } = { start: true, end: true },
 ) {
-	if (config.start === true) input = input.replace(/^[\/\\]/, '');
-	if (config.end === true) input = input.replace(/[\/\\]$/, '');
+	if (config.start === true) input = input.replace(/^[/\\]/, '');
+	if (config.end === true) input = input.replace(/[/\\]$/, '');
 	return input;
 }
 

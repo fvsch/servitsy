@@ -127,7 +127,7 @@ Info 2
 		const { err, logger } = getLogger();
 		await logger.error(new Error('Whoops'));
 		expect(err.contents).toMatch(`Error: Whoops`);
-		expect(err.contents).toMatch(/[\\\/]test[\\\/]logger\.test\.ts:\d+:\d+/);
+		expect(err.contents).toMatch(/[/\\]test[/\\]logger\.test\.ts:\d+:\d+/);
 	});
 });
 

@@ -22,7 +22,7 @@ async function bundleAssets() {
 		STYLES: await readPkgFile('assets/styles.css'),
 	};
 	const minify = (input = '') => input.replace(/^\s+/gm, '').trim();
-	const escape = (input = '') => input.replace(/\`/g, '\\`');
+	const escape = (input = '') => input.replace(/`/g, '\\`');
 
 	const out = Object.entries(assets).map(([key, contents]) => {
 		return `export const ${key} = \`${escape(minify(contents))}\`;`;
