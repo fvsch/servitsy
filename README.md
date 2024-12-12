@@ -64,11 +64,11 @@ For local testing, here are a few established alternatives you may prefer, with 
 
 | Package       | Version | Dependencies | Installed size† |
 | ------------- | ------- | ------------ | --------------- |
-| [servitsy]    | 0.4.5   | 0            | 108 kB          |
+| [servitsy]    | 0.5.0   | 0            | 104 kB          |
 | [servor]      | 4.0.2   | 0            | 144 kB          |
 | [sirv-cli]    | 3.0.0   | 12           | 396 kB          |
 | [serve]       | 14.2.4  | 87           | 7.5 MB          |
-| [http-server] | 14.1.1  | 45           | 8.9 MB          |
+| [http-server] | 14.1.1  | 52           | 9.4 MB          |
 
 If size and dependency count is not a concern and you want something stable and battle-tested, I recommend [serve] and [http-server].
 

@@ -1,6 +1,6 @@
 {
 	"name": "servitsy",
-	"version": "0.4.5",
+	"version": "0.5.0",
 	"license": "MIT",
 	"description": "Small, local HTTP server for static files",
 	"keywords": [
@@ -17,7 +17,7 @@
 	},
 	"author": {
 		"name": "Florens Verschelde",
-		"url": "https://www.npmjs.com/~fvsch"
+		"url": "https://fvsch.com"
 	},
 	"type": "module",
 	"bin": {

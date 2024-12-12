@@ -1,5 +1,19 @@
 # servitsy changelog
 
+## v0.5.0 (2024-12-12)
+
+BREAKING:
+
+- Boolean CLI options do not accept a text value anymore (#46). Use the `--no-*` prefix for negative values. For example, for a boolean option named `gzip`, use `--gzip` (true) and `--no-gzip` (false).
+- Renamed `--dir-file` option to `--index` (#53)
+- Renamed `--dir-list` option to `--list` (#54)
+- Removed empty `lib/index.js` entrypoint (#55)
+
+Misc:
+
+- fix: leave host blank by default (#49)
+- fix: use trailing slashes in URLs to directories (#48)
+
 ## v0.4.5 (2024-11-19)
 
 - fix: improved validation for some options (#39)
