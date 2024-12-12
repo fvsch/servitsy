@@ -5,12 +5,12 @@ servitsy supports the following command-line options:
 - [`host`](#host): specify a custom host
 - [`port`](#port): specify a custom port or range of ports
 - [`cors`](#cors): send CORS HTTP headers in responses
-- [`dirList`](#dirlist): allow or disallow directory listings
 - [`exclude`](#exclude): deny file access by pattern
 - [`ext`](#ext): extensions used to resolve URLs
 - [`gzip`](#gzip): enable or disable gzip compression
 - [`header`](#header): add custom HTTP header(s) to responses
 - [`index`](#index): directory index file(s)
+- [`list`](#list): allow or disallow directory listings
 
 > [!NOTE]  
 > Examples on this page use the `servitsy` command. If you haven't installed servitsy globally, you can use `npx servitsy` instead.
@@ -67,18 +67,6 @@ servitsy --cors
 
 # Disable (same as default)
 servitsy --no-cors
-```
-
-## `dirList`
-
-Enables or disables listing directory contents, when a request matches a directory and no `index` file is found in that directory. Enabled by default.
-
-```sh
-# Serve directory listings (same as default)
-servitsy --dirlist
-
-# Disable: do not serve directory listings
-servitsy --no-dirlist
 ```
 
 ## `exclude`
@@ -174,4 +162,16 @@ servitsy --index 'index.html,index.htm' --index 'page.html,page.htm'
 
 # Disable defaults
 servitsy --no-index  # or --index=''
+```
+
+## `list`
+
+Enables or disables listing directory contents, when a request matches a directory and no `index` file is found in that directory. Enabled by default.
+
+```sh
+# List directory contents (same as default)
+servitsy --list
+
+# Disable: do not list directory contents
+servitsy --no-list
 ```

@@ -17,7 +17,7 @@ export function serverOptions(
 		cors: validator.cors(options.cors),
 		headers: validator.headers(options.headers),
 		index: validator.index(options.index),
-		dirList: validator.dirList(options.dirList),
+		list: validator.list(options.list),
 		ext: validator.ext(options.ext),
 		exclude: validator.exclude(options.exclude),
 	};
@@ -84,10 +84,6 @@ export class OptionsValidator {
 		return this.#bool(input, 'invalid cors value');
 	}
 
-	dirList(input?: boolean): boolean | undefined {
-		return this.#bool(input, 'invalid dirList value');
-	}
-
 	exclude(input?: string[]): string[] | undefined {
 		return this.#arr(input, 'invalid exclude pattern', isValidPattern);
 	}
@@ -110,6 +106,10 @@ export class OptionsValidator {
 
 	index(input?: string[]): string[] | undefined {
 		return this.#arr(input, 'invalid index value', isValidPattern);
+	}
+
+	list(input?: boolean): boolean | undefined {
+		return this.#bool(input, 'invalid list value');
 	}
 
 	ports(input?: number[]): number[] | undefined {

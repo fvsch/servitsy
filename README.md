@@ -41,7 +41,7 @@ You can configure servitsy's behavior [with options](https://github.com/fvsch/se
 npx servitsy -p 3000 --cors
 
 # Serve 'dist' folder and disable directory listings
-npx servitsy dist --no-dirlist
+npx servitsy dist --no-list
 ```
 
 - Use `npx servitsy --help` for an overview of available options.

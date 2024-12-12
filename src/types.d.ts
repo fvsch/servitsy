@@ -28,7 +28,7 @@ export interface ServerOptions {
 	root: string;
 	ext?: string[];
 	index?: string[];
-	dirList?: boolean;
+	list?: boolean;
 	exclude?: string[];
 	host?: string;
 	ports?: number[];
@@ -41,7 +41,7 @@ export interface RuntimeOptions {
 	root: string;
 	ext: string[];
 	index: string[];
-	dirList: boolean;
+	list: boolean;
 	exclude: string[];
 	host: string | undefined;
 	ports: number[];
