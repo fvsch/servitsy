@@ -110,7 +110,7 @@ export class RequestHandler {
 		}
 
 		// found a directory that we can show a listing for
-		if (status === 200 && file?.kind === 'dir' && this.#options.dirList) {
+		if (status === 200 && file?.kind === 'dir' && this.#options.list) {
 			return this.#sendListPage(file.filePath);
 		}
 

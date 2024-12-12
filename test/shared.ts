@@ -21,7 +21,7 @@ export function getBlankOptions(root?: string): RuntimeOptions {
 		gzip: false,
 		cors: false,
 		headers: [],
-		dirList: false,
+		list: false,
 		index: [],
 		ext: [],
 		exclude: [],

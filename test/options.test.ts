@@ -215,9 +215,9 @@ suite('OptionsValidator', () => {
 		valid(val.cors, true);
 		valid(val.cors, false);
 
-		valid(val.dirList, undefined);
-		valid(val.dirList, true);
-		valid(val.dirList, false);
+		valid(val.list, undefined);
+		valid(val.list, true);
+		valid(val.list, false);
 
 		valid(val.gzip, undefined);
 		valid(val.gzip, true);
@@ -270,7 +270,7 @@ suite('OptionsValidator', () => {
 		expect(() => val.index({ hello: 'world' } as any)).toThrow(
 			`invalid index value: {"hello":"world"}`,
 		);
-		expect(() => val.dirList('yes' as any)).toThrow(`invalid dirList value: 'yes'`);
+		expect(() => val.list('yes' as any)).toThrow(`invalid list value: 'yes'`);
 		expect(() => val.exclude(new Set(['index']) as any)).toThrow(`invalid exclude pattern: {}`);
 		expect(() => val.ext('.html' as any)).toThrow(`invalid ext value: '.html'`);
 		expect(() => val.gzip(1 as any)).toThrow(`invalid gzip value: 1`);
@@ -313,7 +313,7 @@ suite('serverOptions', () => {
 
 		const testOptions1: ServerOptions = {
 			root: cwd(),
-			dirList: false,
+			list: false,
 			gzip: false,
 			cors: true,
 		};
@@ -343,12 +343,12 @@ suite('serverOptions', () => {
 		const inputs = {
 			root: 'this/path/doesnt/exist',
 			cors: null,
-			index: [undefined, 'invalid/value', 'C:\\Temp'],
-			dirList: {},
 			exclude: [{}, 'section/*.json', 'a:b:c:d', 'no\\pe'],
 			ext: ['html', 'txt', './index.html', '..'],
 			gzip: undefined,
 			headers: [],
+			index: [undefined, 'invalid/value', 'C:\\Temp'],
+			list: {},
 			host: 'cool.test:3000',
 			ports: [0, 100_000],
 		};

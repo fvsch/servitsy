@@ -8,7 +8,7 @@ export class FileResolver {
 	#root: string;
 	#ext: string[] = [];
 	#index: string[] = [];
-	#dirList = false;
+	#list = false;
 	#excludeMatcher: PathMatcher;
 
 	constructor(options: ServerOptions) {
@@ -25,8 +25,8 @@ export class FileResolver {
 		if (Array.isArray(options.index)) {
 			this.#index = options.index;
 		}
-		if (typeof options.dirList === 'boolean') {
-			this.#dirList = options.dirList;
+		if (typeof options.list === 'boolean') {
+			this.#list = options.list;
 		}
 
 		this.#excludeMatcher = new PathMatcher(options.exclude ?? [], {
@@ -55,8 +55,7 @@ export class FileResolver {
 
 		// We have a match
 		if (file?.kind === 'file' || file?.kind === 'dir') {
-			const allowed =
-				file.kind === 'dir' && !this.#dirList ? false : this.allowedPath(file.filePath);
+			const allowed = file.kind === 'dir' && !this.#list ? false : this.allowedPath(file.filePath);
 			const readable = allowed && (await isReadable(file.filePath, file.kind));
 			return { status: allowed ? (readable ? 200 : 403) : 404, file };
 		}
@@ -65,7 +64,7 @@ export class FileResolver {
 	}
 
 	async index(dirPath: string): Promise<FSLocation[]> {
-		if (!this.#dirList) return [];
+		if (!this.#list) return [];
 
 		const items: FSLocation[] = (await getIndex(dirPath)).filter(
 			(item) => item.kind != null && this.allowedPath(item.filePath),

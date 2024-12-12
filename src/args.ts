@@ -22,8 +22,8 @@ const PARSE_ARGS_OPTIONS: ParseArgsConfig['options'] = {
 	'no-ext': { type: 'boolean' },
 	index: { type: 'string', multiple: true },
 	'no-index': { type: 'boolean' },
-	dirlist: { type: 'boolean' },
-	'no-dirlist': { type: 'boolean' },
+	list: { type: 'boolean' },
+	'no-list': { type: 'boolean' },
 	exclude: { type: 'string', multiple: true },
 	'no-exclude': { type: 'boolean' },
 };
@@ -130,7 +130,7 @@ export class CLIArgs {
 			cors: this.bool('cors'),
 			gzip: this.bool('gzip'),
 			index: this.splitList('index'),
-			dirList: this.bool('dirlist'),
+			list: this.bool('list'),
 			exclude: this.splitList('exclude'),
 		};
 

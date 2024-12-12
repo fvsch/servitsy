@@ -221,14 +221,14 @@ suite('RequestHandler', async () => {
 		const parent = dir('');
 		const folder = dir('Some Folder');
 		const cases = [
-			{ dirList: false, url: '/', status: 404, file: parent },
-			{ dirList: false, url: '/Some%20Folder/', status: 404, file: folder },
-			{ dirList: true, url: '/', status: 200, file: parent },
-			{ dirList: true, url: '/Some%20Folder/', status: 200, file: folder },
+			{ list: false, url: '/', status: 404, file: parent },
+			{ list: false, url: '/Some%20Folder/', status: 404, file: folder },
+			{ list: true, url: '/', status: 200, file: parent },
+			{ list: true, url: '/Some%20Folder/', status: 200, file: folder },
 		];
 
-		for (const { dirList, url, status, file } of cases) {
-			const request = handlerContext({ ...blankOptions, dirList });
+		for (const { list, url, status, file } of cases) {
+			const request = handlerContext({ ...blankOptions, list });
 			const handler = request('GET', url);
 			await handler.process();
 			expect(handler.status).toBe(status);

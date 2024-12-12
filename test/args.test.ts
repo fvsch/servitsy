@@ -83,7 +83,7 @@ suite('CLIArgs', () => {
 			--ext md,mdown
 			--index index.html
 			--index index.htmlx
-			--dirlist
+			--list
 			--exclude .*,*config
 			--exclude *rc
 		`);
@@ -97,20 +97,20 @@ suite('CLIArgs', () => {
 		expect(args.get('gzip')).toBe(true);
 		expect(args.get('ext')).toEqual(['.html,.htm', 'md,mdown']);
 		expect(args.get('index')).toEqual(['index.html', 'index.htmlx']);
-		expect(args.get('dirlist')).toBe(true);
+		expect(args.get('list')).toBe(true);
 		expect(args.get('exclude')).toEqual(['.*,*config', '*rc']);
 	});
 
 	test('bool accessor only returns booleans', () => {
 		const args = new CLIArgs(arr`
 			--cors
-			--dirlist
+			--list
 			--ext html
 			--port true
 		`);
 		// specified and configured as boolean
 		expect(args.bool('cors')).toBe(true);
-		expect(args.bool('dirlist')).toBe(true);
+		expect(args.bool('list')).toBe(true);
 		// configured as boolean but not specified
 		expect(args.bool('gzip')).toBe(undefined);
 		// not configured as boolean
@@ -121,11 +121,11 @@ suite('CLIArgs', () => {
 	test('bool accessor returns false for --no- prefix', () => {
 		const args = new CLIArgs(arr`
 			--no-cors
-			--no-dirlist
+			--no-list
 			--no-gzip
 		`);
 		expect(args.bool('cors')).toBe(false);
-		expect(args.bool('dirlist')).toBe(false);
+		expect(args.bool('list')).toBe(false);
 		expect(args.bool('gzip')).toBe(false);
 	});
 
@@ -234,10 +234,10 @@ suite('CLIArgs.options', () => {
 		const error = errorList();
 		const noArgs = new CLIArgs([]);
 		expect(noArgs.options(error)).toEqual({});
-		const posArgs = new CLIArgs(arr`--cors --gzip --dirlist`);
-		expect(posArgs.options(error)).toEqual({ cors: true, gzip: true, dirList: true });
-		const negArgs = new CLIArgs(arr`--no-cors --no-gzip --no-dirlist`);
-		expect(negArgs.options(error)).toEqual({ cors: false, gzip: false, dirList: false });
+		const posArgs = new CLIArgs(arr`--cors --gzip --list`);
+		expect(posArgs.options(error)).toEqual({ cors: true, gzip: true, list: true });
+		const negArgs = new CLIArgs(arr`--no-cors --no-gzip --no-list`);
+		expect(negArgs.options(error)).toEqual({ cors: false, gzip: false, list: false });
 		expect(error.list).toEqual([]);
 	});
 
@@ -366,7 +366,7 @@ suite('CLIArgs.unknown', () => {
 			--gzip --no-gzip
 			--ext --no-ext
 			--index --no-index
-			--dirlist --no-dirlist
+			--list --no-list
 			--exclude --no-exclude
 		`);
 		expect(args.unknown()).toEqual([]);

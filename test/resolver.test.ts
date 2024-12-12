@@ -174,7 +174,7 @@ suite('FileResolver.find', async () => {
 	});
 
 	test('finds folder with exact path', async () => {
-		const { $find } = new TestFileResolver({ ...minimalOptions, dirList: true });
+		const { $find } = new TestFileResolver({ ...minimalOptions, list: true });
 		for (const localPath of ['section', '/section/']) {
 			await $find(localPath, { status: 200, file: dir('section') });
 		}
@@ -254,15 +254,15 @@ suite('FileResolver.index', async () => {
 
 	afterAll(() => fixture.rm());
 
-	test('does not index directories when options.dirList is false', async () => {
-		const { $index } = new TestFileResolver({ ...defaultOptions, dirList: false });
+	test('does not index directories when options.list is false', async () => {
+		const { $index } = new TestFileResolver({ ...defaultOptions, list: false });
 		await $index(path``, []);
 		await $index(path`section`, []);
 		await $index(path`doesnt-exist`, []);
 	});
 
-	test('indexes directories when options.dirList is true', async () => {
-		const { $index } = new TestFileResolver({ ...defaultOptions, dirList: true });
+	test('indexes directories when options.list is true', async () => {
+		const { $index } = new TestFileResolver({ ...defaultOptions, list: true });
 		await $index(path``, [
 			dir('.well-known'),
 			file('about-us.html'),
