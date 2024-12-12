@@ -207,7 +207,7 @@ async function typeForFile(handle: FileHandle, charset?: string): Promise<TypeRe
 		} else {
 			return result.text();
 		}
-	} catch (err) {
+	} catch {
 		return result.unknown();
 	}
 }

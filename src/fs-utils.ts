@@ -48,7 +48,7 @@ export async function getKind(filePath: string): Promise<FSKind> {
 	try {
 		const stats = await lstat(filePath);
 		return statsKind(stats);
-	} catch (err) {
+	} catch {
 		return null;
 	}
 }

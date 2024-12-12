@@ -1,3 +1,4 @@
+import { isIP } from 'node:net';
 import { isAbsolute, resolve } from 'node:path';
 
 import { DEFAULT_OPTIONS, PORTS_CONFIG } from './constants.ts';
@@ -140,11 +141,11 @@ function isStringArray(input: unknown): input is string[] {
 
 export function isValidExt(input: string): boolean {
 	if (typeof input !== 'string' || !input) return false;
-	return /^\.[\w\-]+(\.[\w\-]+){0,4}$/.test(input);
+	return /^\.[\w-]+(\.[\w-]+){0,4}$/.test(input);
 }
 
 export function isValidHeader(name: string): boolean {
-	return typeof name === 'string' && /^[a-z\d\-\_]+$/i.test(name);
+	return typeof name === 'string' && /^[a-z\d-_]+$/i.test(name);
 }
 
 /** @type {(value: any) => value is HttpHeaderRule} */
@@ -171,15 +172,14 @@ export function isValidHeaderRule(value: unknown): value is HttpHeaderRule {
 // as a usability nicety to catch obvious errors
 export function isValidHost(input: string): boolean {
 	if (typeof input !== 'string' || !input.length) return false;
-	const domainLike = /^([a-z\d\-]+)(\.[a-z\d\-]+)*$/i;
-	const ipLike = /^([\d\.]+|[a-f\d\:]+)$/i;
-	return domainLike.test(input) || ipLike.test(input);
+	if (isIP(input) >= 4) return true;
+	return /^([a-z\d-]+)(\.[a-z\d-]+)*$/i.test(input);
 }
 
 export function isValidPattern(value: string): boolean {
 	if (typeof value !== 'string') return false;
 	if (value.length < (value.startsWith('!') ? 2 : 1)) return false;
-	return !/[\\\/\:]/.test(value);
+	return !/[/\\:]/.test(value);
 }
 
 export function isValidPort(num: number): boolean {

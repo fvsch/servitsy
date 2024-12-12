@@ -52,8 +52,8 @@ export class CLIArgs {
 	*/
 	#cleanArgs(args: string[]): string[] {
 		const clean: string[] = [];
-		const shortEqual = /^\-[a-z]\=/i;
-		const shortCombo = /^\-[a-z0-9]{2,}/i;
+		const shortEqual = /^-[a-z]=/i;
+		const shortCombo = /^-[a-z\d]{2,}/i;
 		for (const arg of args) {
 			if (arg.startsWith('-')) {
 				if (shortEqual.test(arg)) {

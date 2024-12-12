@@ -123,6 +123,8 @@ suite('isValidHost', () => {
 		valid('127.0.0.1');
 		valid('192.168.0.99');
 		valid('255.255.255.255');
+		// bug in node's net.isIP, or actually valid?
+		valid('9999.9999.9999.9999.9999');
 	});
 
 	test('accepts ipv6 addresses', () => {
@@ -137,21 +139,16 @@ suite('isValidHost', () => {
 		invalid(false);
 		invalid(null);
 		invalid('');
+		invalid('.');
+		invalid(':');
 		invalid('____');
 		invalid('with spaces');
 		invalid('piña-colada.dev');
 		invalid('1.1::1.1');
 		invalid('9999.9999:9999::::9999.9999');
 		invalid('2001:0zb9::7334');
-	});
-
-	// not ideal, but don't want to make it stricter and possibly buggier
-	test('accepts bad strings that only use ip characters', () => {
-		valid(':');
-		valid('.');
-		valid('123...4567890...');
-		valid('9999.9999.9999.9999.9999');
-		valid('1::::1::::1::::1');
+		invalid('123...4567890...');
+		invalid('1::::1::::1::::1');
 	});
 });
 
@@ -303,8 +300,9 @@ suite('OptionsValidator', () => {
 suite('serverOptions', () => {
 	test('returns default options with empty input', () => {
 		const onError = errorList();
-		const { root, ...result } = serverOptions({ root: cwd() }, onError);
-		expect(result).toEqual(DEFAULT_OPTIONS);
+		const root = cwd();
+		const result = serverOptions({ root }, onError);
+		expect(result).toEqual({ root, ...DEFAULT_OPTIONS });
 		expect(onError.list).toEqual([]);
 	});
 
