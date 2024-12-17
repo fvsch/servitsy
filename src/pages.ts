@@ -1,6 +1,7 @@
 import { basename, dirname } from 'node:path';
 
 import { FAVICON_LIST, FAVICON_ERROR, ICONS, STYLES } from './assets.ts';
+import { targetKind } from './fs-utils.ts';
 import type { FSLocation } from './types.d.ts';
 import { clamp, escapeHtml, trimSlash } from './utils.ts';
 
@@ -71,7 +72,10 @@ export function dirListPage(data: {
 	const parentPath = dirname(filePath);
 	const showParent = trimmedUrl !== '';
 
-	const sorted = [...items.filter((x) => isDirLike(x)), ...items.filter((x) => !isDirLike(x))];
+	const sorted = [
+		...items.filter((x) => targetKind(x) === 'dir'),
+		...items.filter((x) => targetKind(x) !== 'dir'),
+	];
 	if (showParent) {
 		sorted.unshift({ filePath: parentPath, kind: 'dir' });
 	}
@@ -96,7 +100,7 @@ ${sorted.map((item) => renderListItem({ item, ext, parentPath })).join('\n')}
 
 function renderListItem(data: { item: FSLocation; ext: string[]; parentPath: string }) {
 	const { item, ext, parentPath } = data;
-	const isDir = isDirLike(item);
+	const isDir = targetKind(item) === 'dir';
 	const icon = `icon-${isDir ? 'dir' : 'file'}${item.kind === 'link' ? '-link' : ''}`;
 	const name = basename(item.filePath);
 	let href = encodeURIComponent(name);
@@ -154,10 +158,6 @@ function renderBreadcrumbs(path: string): string {
 			return `<a class="bc-link filepath" href="${attr(href)}">${html(nl2sp(part))}</a>`;
 		})
 		.join(slash);
-}
-
-function isDirLike(item: FSLocation): boolean {
-	return item.kind === 'dir' || (item.kind === 'link' && item.target?.kind === 'dir');
 }
 
 function decodeURIPathSegment(s: string): string {

@@ -2,29 +2,27 @@ import { isIP } from 'node:net';
 import { isAbsolute, resolve } from 'node:path';
 
 import { DEFAULT_OPTIONS, PORTS_CONFIG } from './constants.ts';
-import type { RuntimeOptions, HttpHeaderRule, ServerOptions } from './types.d.ts';
-import { getRuntime, printValue } from './utils.ts';
+import type { HttpHeaderRule, RuntimeOptions, ServerOptions, TrailingSlash } from './types.d.ts';
+import { printValue } from './utils.ts';
 
-export function serverOptions(
-	options: ServerOptions,
-	onError: (msg: string) => void,
-): RuntimeOptions {
-	const validator = new OptionsValidator(onError);
+export function serverOptions(opt: ServerOptions, onError: (msg: string) => void): RuntimeOptions {
+	const val = new OptionsValidator(onError);
 
 	const checked: Omit<ServerOptions, 'root'> = {
-		ports: validator.ports(options.ports),
-		gzip: validator.gzip(options.gzip),
-		host: validator.host(options.host),
-		cors: validator.cors(options.cors),
-		headers: validator.headers(options.headers),
-		index: validator.index(options.index),
-		list: validator.list(options.list),
-		ext: validator.ext(options.ext),
-		exclude: validator.exclude(options.exclude),
+		cors: val.cors(opt.cors),
+		exclude: val.exclude(opt.exclude),
+		ext: val.ext(opt.ext),
+		gzip: val.gzip(opt.gzip),
+		headers: val.headers(opt.headers),
+		host: val.host(opt.host),
+		index: val.index(opt.index),
+		list: val.list(opt.list),
+		ports: val.ports(opt.ports),
+		trailingSlash: val.trailingSlash(opt.trailingSlash),
 	};
 
 	const final = structuredClone({
-		root: validator.root(options.root),
+		root: val.root(opt.root),
 		...DEFAULT_OPTIONS,
 	});
 	for (const [key, value] of Object.entries(checked)) {
@@ -32,15 +30,13 @@ export function serverOptions(
 			(final as Record<string, any>)[key] = value;
 		}
 	}
-	if (final.host == null && getRuntime() === 'webcontainer') {
-		final.host = 'localhost';
-	}
 
 	return final;
 }
 
 export class OptionsValidator {
-	#errorCb;
+	#errorCb: (msg: string) => void;
+
 	constructor(onError: (msg: string) => void) {
 		this.#errorCb = onError;
 	}
@@ -71,11 +67,11 @@ export class OptionsValidator {
 		else this.#error(msg, input);
 	}
 
-	#str(
-		input: string | undefined,
+	#str<T extends string>(
+		input: T | undefined,
 		msg: string,
-		isValid: (input: string) => boolean,
-	): string | undefined {
+		isValid: (input: T) => boolean,
+	): T | undefined {
 		if (typeof input === 'undefined') return;
 		if (typeof input === 'string' && isValid(input)) return input;
 		else this.#error(msg, input);
@@ -133,10 +129,19 @@ export class OptionsValidator {
 		const value = typeof input === 'string' ? input : '';
 		return isAbsolute(value) ? value : resolve(value);
 	}
+
+	trailingSlash(input?: string): TrailingSlash | undefined {
+		return this.#str<TrailingSlash>(input as any, 'invalid trailingSlash value', isTrailingSlash);
+	}
 }
 
 function isStringArray(input: unknown): input is string[] {
 	return Array.isArray(input) && input.every((item) => typeof item === 'string');
+}
+
+export function isTrailingSlash(input: any): input is TrailingSlash {
+	const valid: TrailingSlash[] = ['always', 'auto', 'ignore', 'never'];
+	return valid.includes(input);
 }
 
 export function isValidExt(input: string): boolean {

@@ -86,3 +86,7 @@ function statsKind(stats: {
 	else if (stats.isFile?.()) return 'file';
 	return null;
 }
+
+export function targetKind({ kind, target }: FSLocation): FSKind {
+	return kind === 'link' && target ? target.kind : kind;
+}

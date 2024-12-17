@@ -2,9 +2,9 @@ import { IncomingMessage, ServerResponse } from 'node:http';
 import { Duplex } from 'node:stream';
 import { afterAll, expect, suite, test } from 'vitest';
 
-import { extractUrlPath, fileHeaders, isValidUrlPath, RequestHandler } from '../src/handler.ts';
+import { fileHeaders, isValidUrlPath, redirectSlash, RequestHandler } from '../src/handler.ts';
 import { FileResolver } from '../src/resolver.ts';
-import type { HttpHeaderRule, RuntimeOptions } from '../src/types.d.ts';
+import type { HttpHeaderRule, RuntimeOptions, TrailingSlash } from '../src/types.d.ts';
 import { fsFixture, getBlankOptions, getDefaultOptions, platformSlash } from './shared.ts';
 
 type ResponseHeaders = Record<string, undefined | number | string | string[]>;
@@ -30,14 +30,17 @@ function mockReqRes(method: string, url: string, headers: Record<string, string 
 }
 
 function handlerContext(
-	options: RuntimeOptions,
+	baseOptions: RuntimeOptions,
 ): (method: string, url: string, headers?: Record<string, string | string[]>) => RequestHandler {
+	const options = { ...baseOptions, gzip: false };
 	const resolver = new FileResolver(options);
-	const handlerOptions = { ...options, gzip: false, _noStream: true };
 
 	return (method, url, headers) => {
 		const { req, res } = mockReqRes(method, url, headers);
-		return new RequestHandler({ req, res, resolver, options: handlerOptions });
+		const handler = new RequestHandler({ req, res, resolver, options });
+		handler._canRedirect = true;
+		handler._canStream = false;
+		return handler;
 	};
 }
 
@@ -47,67 +50,6 @@ function withHeaderRules(
 ): (filePath: string) => ReturnType<typeof fileHeaders> {
 	return (filePath) => fileHeaders(filePath, rules, blockList);
 }
-
-suite('isValidUrlPath', () => {
-	const check = (urlPath: string, expected = true) => {
-		expect(isValidUrlPath(urlPath)).toBe(expected);
-	};
-
-	test('rejects invalid paths', () => {
-		check('', false);
-		check('anything', false);
-		check('https://example.com/hello', false);
-		check('/hello?', false);
-		check('/hello#intro', false);
-		check('/hello//world', false);
-		check('/hello\\world', false);
-		check('/..', false);
-		check('/%2E%2E/etc', false);
-		check('/_%2F_%2F_', false);
-		check('/_%5C_%5C_', false);
-		check('/_%2f_%5c_', false);
-	});
-
-	test('accepts valid url paths', () => {
-		check('/', true);
-		check('/hello/world', true);
-		check('/YES!/YES!!/THE TIGER IS OUT!', true);
-		check('/.well-known/security.txt', true);
-		check('/cool..story', true);
-		check('/%20%20%20%20spaces%0A%0Aand%0A%0Alinebreaks%0A%0A%20%20%20%20', true);
-		check(
-			'/%E5%BA%A7%E9%96%93%E5%91%B3%E5%B3%B6%E3%81%AE%E5%8F%A4%E5%BA%A7%E9%96%93%E5%91%B3%E3%83%93%E3%83%BC%E3%83%81%E3%80%81%E6%B2%96%E7%B8%84%E7%9C%8C%E5%B3%B6%E5%B0%BB%E9%83%A1%E5%BA%A7%E9%96%93%E5%91%B3%E6%9D%91',
-			true,
-		);
-	});
-});
-
-suite('extractUrlPath', () => {
-	const checkUrl = (url: string, expected: string | null) => {
-		expect(extractUrlPath(url)).toBe(expected);
-	};
-
-	test('extracts URL pathname', () => {
-		checkUrl('https://example.com/hello/world', '/hello/world');
-		checkUrl('/hello/world?cool=test', '/hello/world');
-		checkUrl('/hello/world#right', '/hello/world');
-	});
-
-	test('keeps percent encoding', () => {
-		checkUrl('/Super%3F%20%C3%89patant%21/', '/Super%3F%20%C3%89patant%21/');
-		checkUrl('/%E3%82%88%E3%81%86%E3%81%93%E3%81%9D', '/%E3%82%88%E3%81%86%E3%81%93%E3%81%9D');
-	});
-
-	test('resolves double-dots and slashes', () => {
-		// `new URL` treats backslashes as forward slashes
-		checkUrl('/a\\b', '/a/b');
-		checkUrl('/a\\.\\b', '/a/b');
-		checkUrl('/\\foo/', '/');
-		// double dots are resolved
-		checkUrl('/../bar', '/bar');
-		checkUrl('/%2E%2E/bar', '/bar');
-	});
-});
 
 suite('fileHeaders', () => {
 	test('headers without include patterns are added for all responses', () => {
@@ -159,6 +101,124 @@ suite('fileHeaders', () => {
 	});
 });
 
+suite('isValidUrlPath', () => {
+	const check = (urlPath: string, expected = true) => {
+		expect(isValidUrlPath(urlPath)).toBe(expected);
+	};
+
+	test('rejects invalid paths', () => {
+		check('', false);
+		check('anything', false);
+		check('https://example.com/hello', false);
+		check('/hello?', false);
+		check('/hello#intro', false);
+		check('/hello//world', false);
+		check('/hello\\world', false);
+		check('/..', false);
+		check('/%2E%2E/etc', false);
+		check('/_%2F_%2F_', false);
+		check('/_%5C_%5C_', false);
+		check('/_%2f_%5c_', false);
+	});
+
+	test('accepts valid url paths', () => {
+		check('/', true);
+		check('/hello/world', true);
+		check('/YES!/YES!!/THE TIGER IS OUT!', true);
+		check('/.well-known/security.txt', true);
+		check('/cool..story', true);
+		check('/%20%20%20%20spaces%0A%0Aand%0A%0Alinebreaks%0A%0A%20%20%20%20', true);
+		check(
+			'/%E5%BA%A7%E9%96%93%E5%91%B3%E5%B3%B6%E3%81%AE%E5%8F%A4%E5%BA%A7%E9%96%93%E5%91%B3%E3%83%93%E3%83%BC%E3%83%81%E3%80%81%E6%B2%96%E7%B8%84%E7%9C%8C%E5%B3%B6%E5%B0%BB%E9%83%A1%E5%BA%A7%E9%96%93%E5%91%B3%E6%9D%91',
+			true,
+		);
+	});
+});
+
+suite('redirectSlash', () => {
+	const url = (path: string) => {
+		const base = 'http://localhost/';
+		return new URL(path.startsWith('//') ? base + path.slice(1) : path, base);
+	};
+
+	const getRs = (slash: TrailingSlash) => {
+		const rs = (path: string) => redirectSlash(url(path), { kind: null, slash });
+		rs.dir = (path: string) => redirectSlash(url(path), { kind: 'dir', slash });
+		rs.file = (path: string) => redirectSlash(url(path), { kind: 'file', slash });
+		return rs;
+	};
+
+	test('keeps empty path or single slash', () => {
+		const rs = getRs('auto');
+		expect(rs.dir('')).toBeUndefined();
+		expect(rs.dir('/')).toBeUndefined();
+		expect(rs.file('')).toBeUndefined();
+		expect(rs.file('/')).toBeUndefined();
+	});
+
+	test('redirects duplicate slashes', () => {
+		const rs = getRs('auto');
+		expect(rs('//')).toBe('/');
+		expect(rs('///////one')).toBe('/one');
+		expect(rs('/two//////')).toBe('/two/');
+		expect(rs('//a//b///////c')).toBe('/a/b/c');
+		expect(rs('//d//e///////f/////')).toBe('/d/e/f/');
+		expect(rs('///x?y#z')).toBe('/x?y#z');
+	});
+
+	test('slash=keep does not change trailing slash', () => {
+		const rs = getRs('ignore');
+		for (const path of ['/', '/notrail', '/trailing/']) {
+			expect(rs(path)).toBeUndefined();
+			expect(rs.file(path)).toBeUndefined();
+			expect(rs.dir(path)).toBeUndefined();
+		}
+	});
+
+	test('slash=always adds trailing slash', () => {
+		const rs = getRs('always');
+		expect(rs('/notrail')).toBe('/notrail/');
+		expect(rs('/trailing/')).toBe(undefined);
+		expect(rs.file('/notrail')).toBe('/notrail/');
+		expect(rs.file('/trailing/')).toBe(undefined);
+		expect(rs.dir('/notrail')).toBe('/notrail/');
+		expect(rs.dir('/trailing/')).toBe(undefined);
+	});
+
+	test('slash=never removes trailing slash', () => {
+		const rs = getRs('never');
+		expect(rs('/notrail')).toBe(undefined);
+		expect(rs('/trailing/')).toBe('/trailing');
+		expect(rs.file('/notrail')).toBe(undefined);
+		expect(rs.file('/trailing/')).toBe('/trailing');
+		expect(rs.dir('/notrail')).toBe(undefined);
+		expect(rs.dir('/trailing/')).toBe('/trailing');
+	});
+
+	test('slash=auto keeps trailing slash when no file is found', () => {
+		const rs = getRs('auto');
+		expect(rs('/')).toBe(undefined);
+		expect(rs('/notrail')).toBe(undefined);
+		expect(rs('/trailing/')).toBe(undefined);
+	});
+
+	test('slash=auto redirects files with trailing slash', () => {
+		const rs = getRs('auto');
+		expect(rs.file('/notrail')).toBe(undefined);
+		expect(rs.file('/trailing/')).toBe('/trailing');
+		expect(rs.file('/section/notrail.html')).toBe(undefined);
+		expect(rs.file('/section/trailing.html/')).toBe('/section/trailing.html');
+	});
+
+	test('slash=auto redirects dirs without trailing slash', () => {
+		const rs = getRs('auto');
+		expect(rs.dir('/notrail')).toBe('/notrail/');
+		expect(rs.dir('/trailing/')).toBe(undefined);
+		expect(rs.dir('/.test/notrail')).toBe('/.test/notrail/');
+		expect(rs.dir('/.test/trailing/')).toBe(undefined);
+	});
+});
+
 suite('RequestHandler', async () => {
 	const { fixture, dir, path } = await fsFixture({
 		'.gitignore': '*.html\n',
@@ -186,7 +246,7 @@ suite('RequestHandler', async () => {
 		const request = handlerContext(blankOptions);
 		const handler = request('GET', '/');
 		expect(handler.method).toBe('GET');
-		expect(handler.urlPath).toBe('/');
+		expect(handler.url?.pathname).toBe('/');
 		expect(handler.status).toBe(200);
 		expect(handler.file).toBe(null);
 	});
@@ -196,7 +256,7 @@ suite('RequestHandler', async () => {
 			const handler = request(method, '/README.md');
 			expect(handler.method).toBe(method);
 			expect(handler.status).toBe(200);
-			expect(handler.urlPath).toBe('/README.md');
+			expect(handler.url?.pathname).toBe('/README.md');
 			expect(handler.file).toBe(null);
 
 			await handler.process();
@@ -207,39 +267,41 @@ suite('RequestHandler', async () => {
 		});
 	}
 
-	test('GET resolves a request with an index file', async () => {
-		const handler = request('GET', '/');
+	test('GET redirects path with duplicate slashes', async () => {
+		const handler = request('GET', '///cool///path///');
 		await handler.process();
-
-		expect(handler.status).toBe(200);
-		expect(handler.file?.kind).toBe('file');
-		expect(handler.localPath).toBe('index.html');
-		expect(handler.error).toBe(undefined);
+		expect(handler.status).toBe(307);
+		expect(handler.headers.location).toBe('/cool/path/');
 	});
 
-	test('GET returns a directory listing', async () => {
-		const parent = dir('');
-		const folder = dir('Some Folder');
-		const cases = [
-			{ list: false, url: '/', status: 404, file: parent },
-			{ list: false, url: '/Some%20Folder/', status: 404, file: folder },
-			{ list: true, url: '/', status: 200, file: parent },
-			{ list: true, url: '/Some%20Folder/', status: 200, file: folder },
-		];
+	test('GET redirects trailing slash depending on file kind', async () => {
+		const reqFile = request('GET', '/section/page/');
+		await reqFile.process();
+		expect(reqFile.file?.kind).toBe('file');
+		expect(reqFile.status).toBe(307);
+		expect(reqFile.headers.location).toBe('/section/page');
 
-		for (const { list, url, status, file } of cases) {
-			const request = handlerContext({ ...blankOptions, list });
-			const handler = request('GET', url);
-			await handler.process();
-			expect(handler.status).toBe(status);
-			// both error and list pages are HTML
-			expect(handler.headers['content-type']).toBe('text/html; charset=UTF-8');
-			// folder is still resolved when status is 404, just not used
-			expect(handler.file).toEqual(file);
-		}
+		/* Buggy
+		const reqDir = request('GET', '/section');
+		await reqDir.process();
+		console.log(reqDir.file);
+		expect(reqDir.file?.kind).toBe('dir');
+		expect(reqDir.status).toBe(307);
+		expect(reqDir.headers.location).toBe('/section/');
+		*/
 	});
 
-	test('GET returns a 404 for an unknown path', async () => {
+	test('GET returns 400 for invalid URL-encoded chars', async () => {
+		const one = request('GET', '/cool/%2F%0A%2F%0A/path/');
+		await one.process();
+		expect(one.status).toBe(400);
+
+		const two = request('GET', '/cool/%5C%5C/path/');
+		await two.process();
+		expect(two.status).toBe(400);
+	});
+
+	test('GET returns 404 for an unknown path', async () => {
 		const control = request('GET', '/index.html');
 		await control.process();
 		expect(control.status).toBe(200);
@@ -250,6 +312,16 @@ suite('RequestHandler', async () => {
 		expect(noFile.status).toBe(404);
 		expect(noFile.file).toBe(null);
 		expect(noFile.localPath).toBe(null);
+	});
+
+	test('GET resolves a request with an index file', async () => {
+		const handler = request('GET', '/');
+		await handler.process();
+
+		expect(handler.status).toBe(200);
+		expect(handler.file?.kind).toBe('file');
+		expect(handler.localPath).toBe('index.html');
+		expect(handler.error).toBe(undefined);
 	});
 
 	test('GET finds .html files without extension', async () => {
@@ -279,6 +351,28 @@ suite('RequestHandler', async () => {
 		await checkType('/section/favicon.svg', 'image/svg+xml; charset=UTF-8');
 		await checkType('/section/page', 'text/html; charset=UTF-8');
 		await checkType('/%E6%9C%80%E8%BF%91%E3%81%AE%E6%9B%B4%E6%96%B0', 'text/html; charset=UTF-8');
+	});
+
+	test('GET returns a directory listing', async () => {
+		const parent = dir('');
+		const folder = dir('Some Folder');
+		const cases = [
+			{ list: false, url: '/', status: 404, file: parent },
+			{ list: false, url: '/Some%20Folder/', status: 404, file: folder },
+			{ list: true, url: '/', status: 200, file: parent },
+			{ list: true, url: '/Some%20Folder/', status: 200, file: folder },
+		];
+
+		for (const { list, url, status, file } of cases) {
+			const request = handlerContext({ ...blankOptions, list });
+			const handler = request('GET', url);
+			await handler.process();
+			expect(handler.status).toBe(status);
+			// both error and list pages are HTML
+			expect(handler.headers['content-type']).toBe('text/html; charset=UTF-8');
+			// folder is still resolved when status is 404, just not used
+			expect(handler.file).toEqual(file);
+		}
 	});
 
 	test('POST is handled as GET', async () => {

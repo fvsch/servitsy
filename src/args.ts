@@ -1,6 +1,7 @@
 import { parseArgs, type ParseArgsConfig } from 'node:util';
 
 import { PORTS_CONFIG } from './constants.ts';
+import { isTrailingSlash } from './options.ts';
 import type { HttpHeaderRule, ServerOptions } from './types.d.ts';
 import { intRange, printValue } from './utils.ts';
 
@@ -9,11 +10,9 @@ const PARSE_ARGS_OPTIONS: ParseArgsConfig['options'] = {
 	version: { type: 'boolean' },
 	host: { type: 'string', short: 'h' },
 	port: { type: 'string', short: 'p' },
-	// allow plural as alias to 'ports'
-	ports: { type: 'string' },
+	ports: { type: 'string' }, // alias of 'port'
 	header: { type: 'string', multiple: true },
-	// allow plural as alias to 'header'
-	headers: { type: 'string', multiple: true },
+	headers: { type: 'string', multiple: true }, // alias of 'header'
 	cors: { type: 'boolean' },
 	'no-cors': { type: 'boolean' },
 	gzip: { type: 'boolean' },
@@ -26,6 +25,7 @@ const PARSE_ARGS_OPTIONS: ParseArgsConfig['options'] = {
 	'no-list': { type: 'boolean' },
 	exclude: { type: 'string', multiple: true },
 	'no-exclude': { type: 'boolean' },
+	'trailing-slash': { type: 'string' },
 };
 
 export class CLIArgs {
@@ -158,6 +158,12 @@ export class CLIArgs {
 		const ext = this.splitList('ext');
 		if (ext != null) {
 			options.ext = ext.map((item) => normalizeExt(item));
+		}
+
+		const slash = this.str('trailing-slash');
+		if (slash != null) {
+			if (isTrailingSlash(slash)) options.trailingSlash = slash;
+			else invalid('--trailing-slash', slash);
 		}
 
 		for (const name of this.unknown()) {
