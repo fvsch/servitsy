@@ -202,43 +202,40 @@ export class CLIServer {
 }
 
 export function helpPage() {
-	const spaces = (count = 0) => ' '.repeat(count);
-	const indent = spaces(2);
-	const colGap = spaces(4);
+	const { style: _, brackets: br } = color;
+	const sp = (num = 1) => ' '.repeat(num);
 
 	const section = (heading: string = '', lines: string[] = []) => {
 		const result = [];
-		if (heading.length) result.push(indent + color.style(heading, 'bold'));
-		if (lines.length) result.push(lines.map((l) => indent.repeat(2) + l).join('\n'));
+		if (heading.length) result.push(sp(2) + _(heading, 'bold'));
+		if (lines.length) result.push(lines.map((l) => sp(4) + l).join('\n'));
 		return result.join('\n\n');
 	};
 
-	const optionCols = (options: [string, string][]) => {
-		const col1Width = clamp(Math.max(...options.map((opt) => opt[0].length)), 10, 20);
-		return options.flatMap(([name, help]) => {
-			const col1 = name.padEnd(col1Width) + colGap;
-			const [help1, help2] = help.split('\n');
+	const options = Object.entries(CLI_OPTIONS);
+	const optWidth = clamp(Math.max(...options.map((o) => o[0].length)), 10, 18) + 2;
+	const optionCols = (entries: [string, string][]) =>
+		entries.flatMap((opt) => {
+			const col1 = opt[0].padEnd(optWidth) + sp(2);
+			const [help1, help2] = opt[1].split('\n');
 			const line1 = `${col1}${help1}`;
 			if (help2) {
 				if (line1.length + help2.length <= 76) {
-					return [`${line1} ${color.style(help2, 'gray')}`];
+					return [`${line1} ${_(help2, 'gray')}`];
 				} else {
-					return [line1, spaces(col1.length) + color.style(help2, 'gray')];
+					return [line1, sp(col1.length) + _(help2, 'gray')];
 				}
 			}
 			return [line1];
 		});
-	};
 
 	return [
-		section(
-			`${color.style('servitsy', 'magentaBright bold')} — Local HTTP server for static files`,
-		),
+		section(`${_('servitsy', 'magentaBright bold')} — Local HTTP server for static files`),
 		section('USAGE', [
-			`${color.style('$', 'bold dim')} ${color.style('servitsy', 'magentaBright')} --help`,
-			`${color.style('$', 'bold dim')} ${color.style('servitsy', 'magentaBright')} ${color.brackets('directory')} ${color.brackets('options')}`,
+			`${_('$', 'bold dim')} ${_('servitsy', 'magentaBright')} --help`,
+			`${_('$', 'bold dim')} ${_('servitsy', 'magentaBright')} ${br('directory')} ${br('options')}`,
 		]),
-		section('OPTIONS', optionCols(Object.entries(CLI_OPTIONS))),
+		section('OPTIONS', optionCols(options)),
 	].join('\n\n');
 }
 
