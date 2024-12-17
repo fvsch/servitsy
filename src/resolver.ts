@@ -1,6 +1,6 @@
 import { isAbsolute, join } from 'node:path';
 
-import { getIndex, getKind, getRealpath, isReadable } from './fs-utils.ts';
+import { getIndex, getKind, getRealpath, isReadable, targetKind } from './fs-utils.ts';
 import type { FSLocation, ServerOptions } from './types.d.ts';
 import { getLocalPath, isSubpath, PathMatcher, trimSlash } from './utils.ts';
 
@@ -9,35 +9,35 @@ export class FileResolver {
 	#ext: string[] = [];
 	#index: string[] = [];
 	#list = false;
-	#excludeMatcher: PathMatcher;
-
-	constructor(options: ServerOptions) {
-		if (typeof options.root !== 'string') {
-			throw new Error('Missing root directory');
-		} else if (!isAbsolute(options.root)) {
-			throw new Error('Expected absolute root path');
-		}
-		this.#root = trimSlash(options.root, { end: true });
-
-		if (Array.isArray(options.ext)) {
-			this.#ext = options.ext;
-		}
-		if (Array.isArray(options.index)) {
-			this.#index = options.index;
-		}
-		if (typeof options.list === 'boolean') {
-			this.#list = options.list;
-		}
-
-		this.#excludeMatcher = new PathMatcher(options.exclude ?? [], {
-			caseSensitive: true,
-		});
-	}
+	#excludeMatcher?: PathMatcher;
 
 	allowedPath(filePath: string): boolean {
 		const localPath = getLocalPath(this.#root, filePath);
 		if (localPath == null) return false;
+		if (!this.#excludeMatcher) return true;
 		return this.#excludeMatcher.test(localPath) === false;
+	}
+
+	constructor({ exclude = [], ext = [], index = [], list, root }: ServerOptions) {
+		if (typeof root !== 'string') {
+			throw new Error('Missing root directory');
+		} else if (!isAbsolute(root)) {
+			throw new Error('Expected absolute root path');
+		}
+		this.#root = trimSlash(root, { end: true });
+
+		if (Array.isArray(exclude) && exclude.length > 0) {
+			this.#excludeMatcher = new PathMatcher(exclude, { caseSensitive: true });
+		}
+		if (Array.isArray(ext)) {
+			this.#ext = ext;
+		}
+		if (Array.isArray(index)) {
+			this.#index = index;
+		}
+		if (typeof list === 'boolean') {
+			this.#list = list;
+		}
 	}
 
 	async find(localPath: string): Promise<{ status: number; file: FSLocation | null }> {
@@ -47,16 +47,17 @@ export class FileResolver {
 		// Resolve symlink
 		if (file?.kind === 'link') {
 			const realPath = await getRealpath(file.filePath);
-			const real = realPath != null ? await this.locateFile(realPath) : null;
-			if (real?.kind === 'file' || real?.kind === 'dir') {
-				file = real;
+			const target = realPath != null ? await this.locateFile(realPath) : null;
+			if (target?.kind === 'file' || target?.kind === 'dir') {
+				file.target = target;
 			}
 		}
 
 		// We have a match
-		if (file?.kind === 'file' || file?.kind === 'dir') {
-			const allowed = file.kind === 'dir' && !this.#list ? false : this.allowedPath(file.filePath);
-			const readable = allowed && (await isReadable(file.filePath, file.kind));
+		const real = file?.target ?? file;
+		if (real?.kind === 'file' || real?.kind === 'dir') {
+			const allowed = real.kind === 'dir' && !this.#list ? false : this.allowedPath(real.filePath);
+			const readable = allowed && (await isReadable(real.filePath, real.kind));
 			return { status: allowed ? (readable ? 200 : 403) : 404, file };
 		}
 

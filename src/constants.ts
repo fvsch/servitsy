@@ -1,4 +1,5 @@
-import type { RuntimeOptions } from './types.d.ts';
+import type { RuntimeOptions, TrailingSlash } from './types.d.ts';
+import { getRuntime, intRange } from './utils.ts';
 
 export const HOSTS = {
 	local: ['localhost', '127.0.0.1', '::1'],
@@ -16,15 +17,16 @@ export const SUPPORTED_METHODS = ['GET', 'HEAD', 'OPTIONS', 'POST'];
 export const MAX_COMPRESS_SIZE = 50_000_000;
 
 export const DEFAULT_OPTIONS: Omit<RuntimeOptions, 'root'> = {
-	host: undefined,
-	ports: [8080, 8081, 8082, 8083, 8084, 8085, 8086, 8087, 8088, 8089],
-	gzip: true,
 	cors: false,
-	headers: [],
-	list: true,
-	index: ['index.html'],
-	ext: ['.html'],
 	exclude: ['.*', '!.well-known'],
+	ext: ['.html'],
+	gzip: true,
+	headers: [],
+	host: getRuntime() === 'webcontainer' ? 'localhost' : undefined,
+	index: ['index.html'],
+	list: true,
+	ports: intRange(8080, 8089),
+	trailingSlash: 'auto',
 };
 
 export const CLI_OPTIONS: Record<string, string> = {
@@ -37,6 +39,7 @@ export const CLI_OPTIONS: Record<string, string> = {
 	'--ext': `Set extension(s) used to resolve URLs\n(default: '${DEFAULT_OPTIONS.ext}')`,
 	'--header': `Add custom HTTP header(s) to responses`,
 	'--index': `Set directory index file name(s)\n(default: '${DEFAULT_OPTIONS.index}')`,
+	'--trailing-slash': `Enforce trailing slash in URL path\n('auto' (default) | 'never' | 'always' | 'ignore')`,
 	'--no-exclude': `Disable default file access patterns`,
 	'--no-ext': `Disable default file extensions`,
 	'--no-gzip': `Disable gzip compression of text responses`,
