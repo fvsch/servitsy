@@ -118,7 +118,7 @@ export function requestLogLine({
 	const { start, close } = timing;
 	const { style: _, brackets } = color;
 
-	const isSuccess = status >= 200 && status < 300;
+	const isSuccess = status >= 200 && status < 400;
 	const timestamp = start ? new Date(start).toTimeString().split(' ')[0]?.padStart(8) : undefined;
 	const duration = start && close ? Math.ceil(close - start) : undefined;
 
@@ -130,7 +130,7 @@ export function requestLogLine({
 
 	const line = [
 		timestamp && _(timestamp, 'dim'),
-		_(`${status}`, isSuccess ? 'green' : 'red'),
+		_(`${status}`, statusColor(status)),
 		_('—', 'dim'),
 		_(method, 'cyan'),
 		displayPath,
@@ -143,6 +143,12 @@ export function requestLogLine({
 		return `${line}\n${_(error.toString(), 'red')}`;
 	}
 	return line;
+}
+
+function statusColor(value: number): string {
+	if (value >= 200 && value < 300) return 'green';
+	if (value >= 400 && value < 600) return 'red';
+	return 'gray';
 }
 
 function pathSuffix(urlPath: string, localPath: string): [string, string] | undefined {
