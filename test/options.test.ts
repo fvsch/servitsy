@@ -3,6 +3,7 @@ import { expect, suite, test } from 'vitest';
 
 import { DEFAULT_OPTIONS } from '../src/constants.ts';
 import {
+	isTrailingSlash,
 	isValidExt,
 	isValidHeader,
 	isValidHeaderRule,
@@ -36,6 +37,25 @@ function makeValidChecks(isValidFn: (input: any) => boolean) {
 function throwError(msg: string) {
 	throw new Error(msg);
 }
+
+suite('isTrailingSlash', () => {
+	const { valid, invalid } = makeValidChecks(isTrailingSlash);
+
+	test('accepts known values', () => {
+		valid('ignore');
+		valid('always');
+		valid('never');
+		valid('auto');
+	});
+
+	test('rejects unknown values', () => {
+		invalid('yes');
+		invalid('off');
+		invalid('none');
+		invalid('IGNORE');
+		invalid('Always');
+	})
+})
 
 suite('isValidExt', () => {
 	const { valid, invalid } = makeValidChecks(isValidExt);
@@ -253,6 +273,9 @@ suite('OptionsValidator', () => {
 		valid(val.ports, [5000, 5001, 5002, 5003, 5004, 5005]);
 		valid(val.ports, [10000, 1000, 100, 10, 1]);
 
+		valid(val.trailingSlash, 'auto');
+		valid(val.trailingSlash, 'ignore');
+
 		// root validator is a bit stranger: requires a string, and may
 		// modify it by calling path.resolve.
 		valid(val.root, cwd());
@@ -274,6 +297,7 @@ suite('OptionsValidator', () => {
 		expect(() => val.headers({ dnt: '1' } as any)).toThrow(`invalid header value: {"dnt":"1"}`);
 		expect(() => val.host(true as any)).toThrow(`invalid host value: true`);
 		expect(() => val.ports(8000 as any)).toThrow(`invalid port value: 8000`);
+		expect(() => val.trailingSlash(false as any)).toThrow(`invalid trailingSlash value: false`);
 	});
 
 	test('sends errors for invalid inputs', () => {
@@ -294,6 +318,7 @@ suite('OptionsValidator', () => {
 		);
 		expect(() => val.host('Bad Host!')).toThrow(`invalid host value: 'Bad Host!'`);
 		expect(() => val.ports([1, 80, 3000, 99_999])).toThrow(`invalid port number: 99999`);
+		expect(() => val.trailingSlash('Nope')).toThrow(`invalid trailingSlash value: 'Nope'`);
 	});
 });
 
@@ -327,6 +352,7 @@ suite('serverOptions', () => {
 			exclude: ['.htaccess', '*.*.*', '_*'],
 			headers: [{ include: ['*.md', '*.html'], headers: { dnt: 1 } }],
 			host: '192.168.1.199',
+			trailingSlash: 'always',
 		};
 		expect(serverOptions(testOptions2, onError)).toEqual({
 			...DEFAULT_OPTIONS,
@@ -349,6 +375,7 @@ suite('serverOptions', () => {
 			list: {},
 			host: 'cool.test:3000',
 			ports: [0, 100_000],
+			trailingSlash: 'whatever',
 		};
 		const { root, ...result } = serverOptions(
 			// @ts-expect-error

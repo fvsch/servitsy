@@ -6,7 +6,10 @@ export type FSKind = 'dir' | 'file' | 'link' | null;
 export interface FSLocation {
 	filePath: string;
 	kind: FSKind;
-	target?: { filePath: string; kind: FSKind };
+	target?: {
+		filePath: string;
+		kind: FSKind;
+	};
 }
 
 export interface HttpHeaderRule {
@@ -24,29 +27,32 @@ export interface ResMetaData {
 	error?: Error | string;
 }
 
+export type TrailingSlash = 'auto' | 'never' | 'always' | 'ignore';
+
 export interface ServerOptions {
 	root: string;
+	cors?: boolean;
+	exclude?: string[];
 	ext?: string[];
+	gzip?: boolean;
+	headers?: HttpHeaderRule[];
+	host?: string;
 	index?: string[];
 	list?: boolean;
-	exclude?: string[];
-	host?: string;
 	ports?: number[];
-	headers?: HttpHeaderRule[];
-	cors?: boolean;
-	gzip?: boolean;
+	trailingSlash?: TrailingSlash;
 }
 
 export interface RuntimeOptions {
 	root: string;
+	cors: boolean;
+	exclude: string[];
 	ext: string[];
+	gzip: boolean;
+	headers: HttpHeaderRule[];
+	host: string | undefined;
 	index: string[];
 	list: boolean;
-	exclude: string[];
-	host: string | undefined;
 	ports: number[];
-	headers: HttpHeaderRule[];
-	cors: boolean;
-	gzip: boolean;
-	_noStream?: boolean;
+	trailingSlash: TrailingSlash;
 }
