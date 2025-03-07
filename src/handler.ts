@@ -218,11 +218,12 @@ export class RequestHandler {
 
 		// Send file contents if already available
 		if (typeof body === 'string' || Buffer.isBuffer(body)) {
-			const buf = compress ? gzipSync(body) : Buffer.from(body);
-			this.#header('content-length', buf.byteLength);
+			let buf = typeof body === 'string' ? Buffer.from(body) : body;
 			if (compress) {
+				buf = gzipSync(buf);
 				this.#header('content-encoding', 'gzip');
 			}
+			this.#header('content-length', buf.byteLength);
 			if (!isHead) {
 				this.#res.write(buf);
 			}
