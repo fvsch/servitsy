@@ -1,6 +1,7 @@
 import { Buffer } from 'node:buffer';
 import { createReadStream } from 'node:fs';
 import { open, stat, type FileHandle } from 'node:fs/promises';
+import { basename, dirname } from 'node:path';
 import { createGzip, gzipSync } from 'node:zlib';
 
 import { MAX_COMPRESS_SIZE, SUPPORTED_METHODS } from './constants.ts';
@@ -17,7 +18,7 @@ import type {
 	RuntimeOptions,
 	TrailingSlash,
 } from './types.d.ts';
-import { getLocalPath, headerCase, isSubpath, PathMatcher, trimSlash } from './utils.ts';
+import { fwdSlash, getLocalPath, headerCase, isSubpath, PathMatcher, trimSlash } from './utils.ts';
 
 interface Config {
 	req: Request;
@@ -38,12 +39,12 @@ export class RequestHandler {
 	#res: Config['res'];
 	#resolver: Config['resolver'];
 	#options: Config['options'];
+	#file: FSLocation | null = null;
 
 	timing: ResMetaData['timing'] = { start: Date.now() };
 	url?: URL;
 	localUrl?: URL;
 	error?: Error | string;
-	file: FSLocation | null = null;
 
 	_canRedirect = true;
 	_canStream = true;
@@ -67,6 +68,10 @@ export class RequestHandler {
 		res.on('close', () => {
 			this.timing.close = Date.now();
 		});
+	}
+
+	get file(): FSLocation | null {
+		return this.#file?.target ?? this.#file;
 	}
 
 	get headers() {
@@ -124,13 +129,13 @@ export class RequestHandler {
 
 		// search for files
 		const result = await this.#resolver.find(decodeURIComponent(searchPath));
-		this.file = result.file?.target ?? result.file;
+		this.#file = result.file;
 		this.status = result.status;
 
 		// redirect multiple slashes, missing/extra trailing slashes
 		if (this._canRedirect) {
 			const location = redirectSlash(this.url, {
-				kind: this.file?.kind,
+				file: this.#file,
 				slash: this.#options.trailingSlash,
 			});
 			if (location != null) {
@@ -430,23 +435,52 @@ function pickHeader(headers: Request['headers'], name: string): string[] {
 
 export function redirectSlash(
 	url: URL | null,
-	{ kind = null, slash }: { kind?: FSKind; slash?: TrailingSlash },
+	{ file, slash }: { file: FSLocation | null; slash: TrailingSlash },
 ): string | undefined {
-	if (!url || url.pathname.length < 2) return;
-	let path = url.pathname.replace(/\/{2,}/g, '/');
+	if (!url || url.pathname.length < 2 || !file) return;
+	const { kind, filePath } = file;
 
-	const trailing = path.endsWith('/');
-	const aye = slash === 'always' || (slash === 'auto' && kind === 'dir');
-	const nay = slash === 'never' || (slash === 'auto' && kind === 'file');
+	let urlPath = url.pathname.replace(/\/{2,}/g, '/');
+	const trailing = urlPath.endsWith('/');
 
-	if (aye && !trailing) {
-		path += '/';
-	} else if (nay && trailing) {
-		path = path.replace(/\/+$/, '') || '/';
+	let aye = slash === 'always';
+	let nay = slash === 'never';
+
+	if (slash === 'auto' && file) {
+		if (file.kind === 'dir') {
+			aye = true;
+		} else if (file.kind === 'file') {
+			const fileName = basename(file.filePath);
+			const parentName = basename(dirname(file.filePath));
+			if (urlPath.endsWith(`/${fileName}`)) {
+				nay = true;
+			} else if (urlPath.endsWith(`/${parentName}`) || urlPath.endsWith(`/${parentName}/`)) {
+				aye = true;
+			}
+			if (urlPath.startsWith('/TEST/')) {
+				console.log({
+					file,
+					urlPath,
+					fileName,
+					parentName,
+					nay,
+					aye,
+					endsWithFileName: urlPath.endsWith(`/${fileName}`),
+					endsWithParentName:
+						urlPath.endsWith(`/${parentName}`) || urlPath.endsWith(`/${parentName}/`),
+				});
+			}
+		}
 	}
 
-	if (path !== url.pathname) {
-		return `${path || '/'}${url.search}${url.hash}`;
+	if (aye && !trailing) {
+		urlPath += '/';
+	} else if (nay && trailing) {
+		urlPath = urlPath.replace(/\/$/, '') || '/';
+	}
+
+	if (urlPath !== url.pathname) {
+		return `${urlPath}${url.search}${url.hash}`;
 	}
 }
 

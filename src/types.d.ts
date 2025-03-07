@@ -6,7 +6,10 @@ export type FSKind = 'dir' | 'file' | 'link' | null;
 export interface FSLocation {
 	filePath: string;
 	kind: FSKind;
-	target?: { filePath: string; kind: FSKind };
+	target?: {
+		filePath: string;
+		kind: FSKind;
+	};
 }
 
 export interface HttpHeaderRule {

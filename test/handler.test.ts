@@ -4,8 +4,8 @@ import { afterAll, expect, suite, test } from 'vitest';
 
 import { fileHeaders, isValidUrlPath, redirectSlash, RequestHandler } from '../src/handler.ts';
 import { FileResolver } from '../src/resolver.ts';
-import type { HttpHeaderRule, RuntimeOptions, TrailingSlash } from '../src/types.d.ts';
-import { fsFixture, getBlankOptions, getDefaultOptions, platformSlash } from './shared.ts';
+import type { FSLocation, HttpHeaderRule, RuntimeOptions, TrailingSlash } from '../src/types.d.ts';
+import { fsFixture, getBlankOptions, getDefaultOptions, loc, platformSlash } from './shared.ts';
 
 type ResponseHeaders = Record<string, undefined | number | string | string[]>;
 
@@ -136,24 +136,22 @@ suite('isValidUrlPath', () => {
 });
 
 suite('redirectSlash', () => {
+	const { dir, file } = loc;
 	const url = (path: string) => {
 		const base = 'http://localhost/';
 		return new URL(path.startsWith('//') ? base + path.slice(1) : path, base);
 	};
 
 	const getRs = (slash: TrailingSlash) => {
-		const rs = (path: string) => redirectSlash(url(path), { kind: null, slash });
-		rs.dir = (path: string) => redirectSlash(url(path), { kind: 'dir', slash });
-		rs.file = (path: string) => redirectSlash(url(path), { kind: 'file', slash });
-		return rs;
+		return (urlPath: string, file?: FSLocation) => redirectSlash(url(urlPath), { file: file ?? null, slash });
 	};
 
 	test('keeps empty path or single slash', () => {
 		const rs = getRs('auto');
-		expect(rs.dir('')).toBeUndefined();
-		expect(rs.dir('/')).toBeUndefined();
-		expect(rs.file('')).toBeUndefined();
-		expect(rs.file('/')).toBeUndefined();
+		expect(rs('', dir(''))).toBeUndefined();
+		expect(rs('/', dir(''))).toBeUndefined();
+		expect(rs('', file('index.html'))).toBeUndefined();
+		expect(rs('/', file('index.html'))).toBeUndefined();
 	});
 
 	test('redirects duplicate slashes', () => {
@@ -170,8 +168,8 @@ suite('redirectSlash', () => {
 		const rs = getRs('ignore');
 		for (const path of ['/', '/notrail', '/trailing/']) {
 			expect(rs(path)).toBeUndefined();
-			expect(rs.file(path)).toBeUndefined();
-			expect(rs.dir(path)).toBeUndefined();
+			expect(rs(path, file(path))).toBeUndefined();
+			expect(rs(path, file(path))).toBeUndefined();
 		}
 	});
 
@@ -179,20 +177,20 @@ suite('redirectSlash', () => {
 		const rs = getRs('always');
 		expect(rs('/notrail')).toBe('/notrail/');
 		expect(rs('/trailing/')).toBe(undefined);
-		expect(rs.file('/notrail')).toBe('/notrail/');
-		expect(rs.file('/trailing/')).toBe(undefined);
-		expect(rs.dir('/notrail')).toBe('/notrail/');
-		expect(rs.dir('/trailing/')).toBe(undefined);
+		expect(rs('/notrail', file('notrail'))).toBe('/notrail/');
+		expect(rs('/trailing/', file('trailing'))).toBe(undefined);
+		expect(rs('/notrail', dir('notrail'))).toBe('/notrail/');
+		expect(rs('/trailing/', dir('trailing'))).toBe(undefined);
 	});
 
 	test('slash=never removes trailing slash', () => {
 		const rs = getRs('never');
 		expect(rs('/notrail')).toBe(undefined);
 		expect(rs('/trailing/')).toBe('/trailing');
-		expect(rs.file('/notrail')).toBe(undefined);
-		expect(rs.file('/trailing/')).toBe('/trailing');
-		expect(rs.dir('/notrail')).toBe(undefined);
-		expect(rs.dir('/trailing/')).toBe('/trailing');
+		expect(rs('/notrail', file('notrail'))).toBe(undefined);
+		expect(rs('/trailing/', file('trailing'))).toBe('/trailing');
+		expect(rs('/notrail', dir('notrail'))).toBe(undefined);
+		expect(rs('/trailing/', dir('trailing'))).toBe('/trailing');
 	});
 
 	test('slash=auto keeps trailing slash when no file is found', () => {
@@ -204,18 +202,18 @@ suite('redirectSlash', () => {
 
 	test('slash=auto redirects files with trailing slash', () => {
 		const rs = getRs('auto');
-		expect(rs.file('/notrail')).toBe(undefined);
-		expect(rs.file('/trailing/')).toBe('/trailing');
-		expect(rs.file('/section/notrail.html')).toBe(undefined);
-		expect(rs.file('/section/trailing.html/')).toBe('/section/trailing.html');
+		expect(rs('/notrail', file('notrail.html'))).toBe(undefined);
+		expect(rs('/TEST/trailing/', file('trailing.html'))).toBe('/TEST/trailing');
+		expect(rs('/section/notrail.html', file('notrail.html'))).toBe(undefined);
+		expect(rs('/section/trailing.html/', file('trailing.html'))).toBe('/section/trailing.html');
 	});
 
 	test('slash=auto redirects dirs without trailing slash', () => {
 		const rs = getRs('auto');
-		expect(rs.dir('/notrail')).toBe('/notrail/');
-		expect(rs.dir('/trailing/')).toBe(undefined);
-		expect(rs.dir('/.test/notrail')).toBe('/.test/notrail/');
-		expect(rs.dir('/.test/trailing/')).toBe(undefined);
+		expect(rs('/notrail', dir('notrail'))).toBe('/notrail/');
+		expect(rs('/trailing/', dir('trailing'))).toBe(undefined);
+		expect(rs('/.test/notrail', dir('.test/notrail'))).toBe('/.test/notrail/');
+		expect(rs('/.test/trailing/', dir('.test/trailing'))).toBe(undefined);
 	});
 });
 
