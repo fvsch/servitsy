@@ -5,11 +5,13 @@
 		"target": "ES2022",
 		"lib": ["ES2022"],
 		"types": ["node"],
-		"strict": true,
-		"isolatedModules": true,
 		"outDir": "./lib",
+		"strict": true,
 		"allowImportingTsExtensions": true,
+		"erasableSyntaxOnly": true,
+		"isolatedModules": true,
+		"removeComments": true,
 		"rewriteRelativeImportExtensions": true,
-		"removeComments": true
+		"verbatimModuleSyntax": true
 	}
 }

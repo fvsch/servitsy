@@ -7,8 +7,9 @@
 		"types": ["node"],
 		"strict": true,
 		"skipLibCheck": true,
-		"isolatedModules": true,
 		"allowImportingTsExtensions": true,
+		"isolatedModules": true,
+		"erasableSyntaxOnly": true,
 		"noEmit": true
 	}
 }
