@@ -16,15 +16,16 @@ export async function fsFixture(fileTree: import('fs-fixture').FileTree) {
 export function getBlankOptions(root?: string): RuntimeOptions {
 	return {
 		root: root ?? loc.path(),
-		host: undefined,
-		ports: [8080],
-		gzip: false,
 		cors: false,
-		headers: [],
-		list: false,
-		index: [],
-		ext: [],
 		exclude: [],
+		ext: [],
+		gzip: false,
+		headers: [],
+		host: undefined,
+		index: [],
+		list: false,
+		ports: [8080],
+		trailingSlash: 'auto',
 	};
 }
 

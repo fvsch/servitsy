@@ -1,6 +1,7 @@
 import { Buffer } from 'node:buffer';
 import { createReadStream } from 'node:fs';
 import { open, stat, type FileHandle } from 'node:fs/promises';
+import { basename, dirname } from 'node:path';
 import { createGzip, gzipSync } from 'node:zlib';
 
 import { MAX_COMPRESS_SIZE, SUPPORTED_METHODS } from './constants.ts';
@@ -8,14 +9,16 @@ import { getContentType, typeForFilePath } from './content-type.ts';
 import { dirListPage, errorPage } from './pages.ts';
 import { FileResolver } from './resolver.ts';
 import type {
+	FSKind,
 	FSLocation,
 	HttpHeaderRule,
 	Request,
 	Response,
 	ResMetaData,
 	RuntimeOptions,
+	TrailingSlash,
 } from './types.d.ts';
-import { getLocalPath, headerCase, isSubpath, PathMatcher, trimSlash } from './utils.ts';
+import { fwdSlash, getLocalPath, headerCase, isSubpath, PathMatcher, trimSlash } from './utils.ts';
 
 interface Config {
 	req: Request;
@@ -36,11 +39,15 @@ export class RequestHandler {
 	#res: Config['res'];
 	#resolver: Config['resolver'];
 	#options: Config['options'];
+	#file: FSLocation | null = null;
 
 	timing: ResMetaData['timing'] = { start: Date.now() };
-	urlPath: string | null = null;
-	file: FSLocation | null = null;
+	url?: URL;
+	localUrl?: URL;
 	error?: Error | string;
+
+	_canRedirect = true;
+	_canStream = true;
 
 	constructor({ req, res, resolver, options }: Config) {
 		this.#req = req;
@@ -49,7 +56,11 @@ export class RequestHandler {
 		this.#options = options;
 
 		try {
-			this.urlPath = extractUrlPath(req.url ?? '');
+			// If the request object is from express or a similar framework
+			// (e.g. if using servitsy as middleware), the 'req.url' value may
+			// be rewritten. The real URL is in req.originalUrl.
+			this.url = urlFromPath(req.originalUrl ?? req.url ?? '');
+			this.localUrl = urlFromPath(req.url ?? '');
 		} catch (err: any) {
 			this.error = err;
 		}
@@ -59,24 +70,31 @@ export class RequestHandler {
 		});
 	}
 
+	get file(): FSLocation | null {
+		return this.#file?.target ?? this.#file;
+	}
+
+	get headers() {
+		return this.#res.getHeaders();
+	}
+
+	get localPath() {
+		if (this.file) {
+			return getLocalPath(this.#options.root, this.file.filePath);
+		}
+		return null;
+	}
+
 	get method() {
 		return this.#req.method ?? '';
 	}
+
 	get status() {
 		return this.#res.statusCode;
 	}
 	set status(code) {
 		if (this.#res.headersSent) return;
 		this.#res.statusCode = code;
-	}
-	get headers() {
-		return this.#res.getHeaders();
-	}
-	get localPath() {
-		if (this.file) {
-			return getLocalPath(this.#options.root, this.file.filePath);
-		}
-		return null;
 	}
 
 	async process() {
@@ -87,34 +105,63 @@ export class RequestHandler {
 			return this.#sendErrorPage();
 		}
 
-		// no need to look up files for the '*' OPTIONS request
-		if (this.method === 'OPTIONS' && this.urlPath === '*') {
-			this.status = 204;
-			this.#setHeaders('*', { cors: this.#options.cors });
-			return this.#send();
-		}
-
-		if (this.urlPath == null) {
+		// bail if something went wrong in constructor
+		if (!this.url || !this.localUrl || this.error) {
 			this.status = 400;
+			this.error ??= new Error('Invalid request');
 			return this.#sendErrorPage();
 		}
 
-		const localPath = trimSlash(decodeURIComponent(this.urlPath));
-		const { status, file } = await this.#resolver.find(localPath);
-		this.status = status;
-		this.file = file;
-
-		// found a file to serve
-		if (status === 200 && file?.kind === 'file') {
-			return this.#sendFile(file.filePath);
+		// no need to look up files for the '*' OPTIONS request
+		if (this.method === 'OPTIONS' && this.#req.url === '*') {
+			this.status = 204;
+			this.#setHeaders('*');
+			return this.#send();
 		}
 
-		// found a directory that we can show a listing for
-		if (status === 200 && file?.kind === 'dir' && this.#options.list) {
-			return this.#sendListPage(file.filePath);
+		// make sure the url path is valid
+		const searchPath = this.localUrl.pathname.replace(/\/{2,}/g, '/');
+		if (!isValidUrlPath(searchPath)) {
+			this.status = 400;
+			this.error = new Error(`Invalid URL path: '${searchPath}'`);
+			return this.#sendErrorPage();
+		}
+
+		// search for files
+		const result = await this.#resolver.find(decodeURIComponent(searchPath));
+		this.#file = result.file;
+		this.status = result.status;
+
+		// redirect multiple slashes, missing/extra trailing slashes
+		if (this._canRedirect) {
+			const location = redirectSlash(this.url, {
+				file: this.#file,
+				slash: this.#options.trailingSlash,
+			});
+			if (location != null) {
+				return this.#redirect(location);
+			}
+		}
+
+		if (this.status === 200 && this.file) {
+			const { kind, filePath } = this.file;
+			// found a file to serve
+			if (kind === 'file') {
+				return this.#sendFile(filePath);
+			}
+			// found a directory that we can show a listing for
+			if (kind === 'dir' && this.#options.list) {
+				return this.#sendListPage(filePath);
+			}
 		}
 
 		return this.#sendErrorPage();
+	}
+
+	async #redirect(location: string) {
+		this.status = 307;
+		this.#header('location', location);
+		return this.#send();
 	}
 
 	async #sendFile(filePath: string) {
@@ -147,15 +194,13 @@ export class RequestHandler {
 
 		this.#setHeaders(filePath, {
 			contentType: data.contentType,
-			cors: this.#options.cors,
-			headers: this.#options.headers,
 		});
 
 		if (this.method === 'OPTIONS') {
 			this.status = 204;
 		}
-		// read file as stream
-		else if (this.method !== 'HEAD' && !this.#options._noStream) {
+		// read file
+		else if (this.method !== 'HEAD' && this._canStream) {
 			data.body = createReadStream(filePath, { autoClose: true, start: 0 });
 		}
 
@@ -171,20 +216,18 @@ export class RequestHandler {
 			this.status = 204;
 			return this.#send();
 		}
-		const items = await this.#resolver.index(filePath);
 		const body = dirListPage({
-			root: this.#options.root,
-			ext: this.#options.ext,
-			urlPath: this.urlPath ?? '',
 			filePath,
-			items,
+			items: await this.#resolver.index(filePath),
+			urlPath: this.url?.pathname ?? '',
+			ext: this.#options.ext,
+			root: this.#options.root,
 		});
 		return this.#send({ body, isText: true });
 	}
 
 	async #sendErrorPage(): Promise<void> {
 		this.#setHeaders('error.html', {
-			cors: this.#options.cors,
 			headers: [],
 		});
 		if (this.method === 'OPTIONS') {
@@ -192,8 +235,8 @@ export class RequestHandler {
 		}
 		const body = errorPage({
 			status: this.status,
-			url: this.#req.url ?? '',
-			urlPath: this.urlPath,
+			url: this.url?.href ?? '',
+			urlPath: this.url?.pathname ?? '',
 		});
 		return this.#send({ body, isText: true });
 	}
@@ -213,8 +256,7 @@ export class RequestHandler {
 
 		const isHead = this.method === 'HEAD';
 		const compress =
-			this.#options.gzip &&
-			canCompress({ accept: this.#req.headers['accept-encoding'], isText, statSize });
+			this.#options.gzip && canCompress({ headers: this.#req.headers, isText, statSize });
 
 		// Send file contents if already available
 		if (typeof body === 'string' || Buffer.isBuffer(body)) {
@@ -267,31 +309,33 @@ export class RequestHandler {
 	*/
 	#setHeaders(
 		filePath: string,
-		options: Partial<{ contentType: string; cors: boolean; headers: RuntimeOptions['headers'] }>,
+		config: Partial<{
+			contentType: string;
+			cors: boolean;
+			headers: RuntimeOptions['headers'];
+		}> = {},
 	) {
 		if (this.#res.headersSent) return;
-		const { contentType, cors, headers } = options;
 
 		const isOptions = this.method === 'OPTIONS';
-		const headerRules = headers ?? this.#options.headers;
-
 		if (isOptions || this.status === 405) {
 			this.#header('allow', SUPPORTED_METHODS.join(', '));
 		}
 
 		if (!isOptions) {
-			const value = contentType ?? typeForFilePath(filePath).toString();
-			this.#header('content-type', value);
+			const type = config.contentType ?? typeForFilePath(filePath);
+			this.#header('content-type', type.toString());
 		}
 
-		if (cors ?? this.#options.cors) {
+		if (config.cors ?? this.#options.cors) {
 			this.#setCorsHeaders();
 		}
 
-		const localPath = getLocalPath(this.#options.root, filePath);
-		if (localPath != null && headerRules.length) {
-			const blockList = ['content-encoding', 'content-length'];
-			for (const { name, value } of fileHeaders(localPath, headerRules, blockList)) {
+		const rules = config.headers ?? this.#options.headers;
+		const path = getLocalPath(this.#options.root, filePath);
+		if (path != null && rules.length) {
+			const headers = fileHeaders(path, rules, ['content-encoding', 'content-length']);
+			for (const { name, value } of headers) {
 				this.#header(name, value, false);
 			}
 		}
@@ -315,8 +359,8 @@ export class RequestHandler {
 		return {
 			status: this.status,
 			method: this.method,
-			url: this.#req.url ?? '',
-			urlPath: this.urlPath,
+			url: this.url?.href ?? '',
+			urlPath: this.url?.pathname ?? '',
 			localPath: this.localPath,
 			timing: structuredClone(this.timing),
 			error: this.error,
@@ -325,31 +369,20 @@ export class RequestHandler {
 }
 
 function canCompress({
-	accept = '',
+	headers,
+	isText,
 	statSize = 0,
-	isText = false,
 }: {
-	accept?: string | string[];
-	isText?: boolean;
+	headers: Request['headers'];
+	isText: boolean;
 	statSize?: number;
-}): boolean {
-	accept = Array.isArray(accept) ? accept.join(',') : accept;
-	if (isText && statSize <= MAX_COMPRESS_SIZE && accept) {
-		return accept
-			.toLowerCase()
-			.split(',')
-			.some((value) => value.split(';')[0].trim() === 'gzip');
+}) {
+	if (!isText || statSize > MAX_COMPRESS_SIZE) return false;
+	for (const header of pickHeader(headers, 'accept-encoding')) {
+		const names = header.split(',').map((value) => value.split(';')[0].trim().toLowerCase());
+		if (names.includes('gzip')) return true;
 	}
 	return false;
-}
-
-export function extractUrlPath(url: string): string {
-	if (url === '*') return url;
-	const path = new URL(url, 'http://localhost/').pathname || '/';
-	if (!isValidUrlPath(path)) {
-		throw new Error(`Invalid URL path: '${path}'`);
-	}
-	return path;
 }
 
 export function fileHeaders(localPath: string, rules: HttpHeaderRule[], blockList: string[] = []) {
@@ -393,4 +426,67 @@ function parseHeaderNames(input: string = ''): string[] {
 		.split(',')
 		.map((h) => h.trim())
 		.filter(isHeader);
+}
+
+function pickHeader(headers: Request['headers'], name: string): string[] {
+	const value = headers[name];
+	return typeof value === 'string' ? [value] : (value ?? []);
+}
+
+export function redirectSlash(
+	url: URL | null,
+	{ file, slash }: { file: FSLocation | null; slash: TrailingSlash },
+): string | undefined {
+	if (!url || url.pathname.length < 2 || !file) return;
+	const { kind, filePath } = file;
+
+	let urlPath = url.pathname.replace(/\/{2,}/g, '/');
+	const trailing = urlPath.endsWith('/');
+
+	let aye = slash === 'always';
+	let nay = slash === 'never';
+
+	if (slash === 'auto' && file) {
+		if (file.kind === 'dir') {
+			aye = true;
+		} else if (file.kind === 'file') {
+			const fileName = basename(file.filePath);
+			const parentName = basename(dirname(file.filePath));
+			if (urlPath.endsWith(`/${fileName}`)) {
+				nay = true;
+			} else if (urlPath.endsWith(`/${parentName}`) || urlPath.endsWith(`/${parentName}/`)) {
+				aye = true;
+			}
+			if (urlPath.startsWith('/TEST/')) {
+				console.log({
+					file,
+					urlPath,
+					fileName,
+					parentName,
+					nay,
+					aye,
+					endsWithFileName: urlPath.endsWith(`/${fileName}`),
+					endsWithParentName:
+						urlPath.endsWith(`/${parentName}`) || urlPath.endsWith(`/${parentName}/`),
+				});
+			}
+		}
+	}
+
+	if (aye && !trailing) {
+		urlPath += '/';
+	} else if (nay && trailing) {
+		urlPath = urlPath.replace(/\/$/, '') || '/';
+	}
+
+	if (urlPath !== url.pathname) {
+		return `${urlPath}${url.search}${url.hash}`;
+	}
+}
+
+function urlFromPath(urlPath: string, base: string = 'http://localhost/') {
+	if (!base.endsWith('/')) base += '/';
+	let url = urlPath.trim();
+	if (url.startsWith('//')) url = base + url.slice(1);
+	return new URL(url, base);
 }
