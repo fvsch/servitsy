@@ -40,7 +40,7 @@
 		"fs-fixture": "^2.8.1",
 		"linkedom": "^0.18.11",
 		"prettier": "^3.5.3",
-		"typescript": "~5.8.2",
+		"typescript": "~5.9.2",
 		"vitest": "^3.2.4"
 	}
 }
