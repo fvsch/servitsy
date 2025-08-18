@@ -75,30 +75,33 @@ suite('CLIArgs', () => {
 			-h short-host.local
 			-p 80
 			--port 1337+
-			--header header1
-			--header header2
 			--cors
-			--gzip
+			--exclude .*,*config
+			--exclude *rc
 			--ext .html,.htm
 			--ext md,mdown
+			--gzip
+			--header header1
+			--header header2
 			--index index.html
 			--index index.htmlx
 			--list
-			--exclude .*,*config
-			--exclude *rc
+			--trailing-slash ignore
 		`);
 		expect(args.get('unknown')).toBe(undefined);
 		expect(args.get('help')).toBe(true);
 		expect(args.get('version')).toBe(true);
 		expect(args.get('host')).toBe('short-host.local');
 		expect(args.get('port')).toBe('1337+');
-		expect(args.get('header')).toEqual(['header1', 'header2']);
 		expect(args.get('cors')).toBe(true);
-		expect(args.get('gzip')).toBe(true);
+		expect(args.get('exclude')).toEqual(['.*,*config', '*rc']);
+		expect(args.get('exclude')).toEqual(['.*,*config', '*rc']);
 		expect(args.get('ext')).toEqual(['.html,.htm', 'md,mdown']);
+		expect(args.get('gzip')).toBe(true);
+		expect(args.get('header')).toEqual(['header1', 'header2']);
 		expect(args.get('index')).toEqual(['index.html', 'index.htmlx']);
 		expect(args.get('list')).toBe(true);
-		expect(args.get('exclude')).toEqual(['.*,*config', '*rc']);
+		expect(args.get('trailing-slash')).toBe('ignore');
 	});
 
 	test('bool accessor only returns booleans', () => {
@@ -133,16 +136,18 @@ suite('CLIArgs', () => {
 		const args = new CLIArgs(arr`
 			--port 123456789
 			--host localhost --host localesthost
-			--index index.html
+			--trailing-slash always
 			--ext html
+			--index index.html
 			--random value1
 		`);
 		// specified and configured as string
 		expect(args.str('port')).toBe('123456789');
 		expect(args.str('host')).toBe('localesthost');
+		expect(args.str('trailing-slash')).toBe('always');
 		// configured as multiple strings
-		expect(args.str('index')).toBe(undefined);
 		expect(args.str('ext')).toBe(undefined);
+		expect(args.str('index')).toBe(undefined);
 		// not configured, defaults to boolean
 		expect(args.str('random')).toBe(undefined);
 	});
@@ -346,6 +351,23 @@ suite('CLIArgs.options', () => {
 			`invalid --header value: '*.md {"bad": [json]}'`,
 		]);
 	});
+
+	test('validates --trailing-slash value', () => {
+		const error = errorList();
+		const options = (str = '') => {
+			const args = new CLIArgs(arr(str));
+			return args.options(error);
+		};
+		for (const value of ['ignore', 'always', 'never', 'auto']) {
+			expect(options(`--trailing-slash ${value}`)).toEqual({ trailingSlash: value });
+		}
+		expect(options(`--trailing-slash keep`)).toEqual({});
+		expect(options(`--trailing-slash off`)).toEqual({});
+		expect(error.list).toEqual([
+			`invalid --trailing-slash value: 'keep'`,
+			`invalid --trailing-slash value: 'off'`,
+		]);
+	})
 
 	test('sets warnings for unknown args', () => {
 		const error = errorList();
