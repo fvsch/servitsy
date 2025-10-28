@@ -14,14 +14,14 @@ jobs:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v6
         with:
-          node-version: 22
+          node-version: 24
       - run: npm ci
       - run: npm run typecheck
   test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node: [20, 22]
+        node: [20, 24]
     name: Run tests on Node ${{ matrix.node }}
     steps:
       - uses: actions/checkout@v5
