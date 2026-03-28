@@ -1,9 +1,9 @@
 {
 	"include": ["./*.ts"],
 	"compilerOptions": {
-		"module": "NodeNext",
-		"target": "ES2022",
-		"lib": ["ES2022", "DOM", "DOM.Iterable"],
+		"module": "nodenext",
+		"target": "es2022",
+		"lib": ["es2022", "dom"],
 		"types": ["node"],
 		"strict": true,
 		"skipLibCheck": true,
