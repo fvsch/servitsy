@@ -9,24 +9,32 @@ on:
 jobs:
   check-types:
     runs-on: ubuntu-latest
-    name: Check types
+    name: Check types (node${{ matrix.node }})
+    strategy:
+      matrix: { node: [24] }
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
+      - &checkout
+        uses: actions/checkout@v6
+      - &setup-pnpm
+        uses: pnpm/action-setup@v4
         with:
-          node-version: 24
-      - run: npm ci
-      - run: npm run typecheck
+          version: 10
+      - &setup-node
+        uses: actions/setup-node@v6
+        with:
+          cache: 'pnpm'
+          node-version: ${{ matrix.node }}
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run typecheck
   test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
         node: [20, 24]
-    name: Run tests on Node ${{ matrix.node }}
+    name: Run tests (node${{ matrix.node }})
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
-        with:
-          node-version: ${{ matrix.node }}
-      - run: npm ci
-      - run: npm test
+      - *checkout
+      - *setup-pnpm
+      - *setup-node
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test
