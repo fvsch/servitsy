@@ -1,7 +1,6 @@
 import { join, sep as dirSep } from 'node:path';
-import { expect, suite, test } from 'vitest';
 
-import { loc } from './shared.ts';
+import { expect, suite, test } from 'vitest';
 
 import {
 	clamp,
@@ -17,6 +16,7 @@ import {
 	trimSlash,
 	withResolvers,
 } from '../src/utils.ts';
+import { loc } from './shared.ts';
 
 suite('clamp', () => {
 	test('keeps the value when between bounds', () => {

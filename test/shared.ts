@@ -1,5 +1,6 @@
 import { join, resolve, sep as dirSep } from 'node:path';
 import { cwd } from 'node:process';
+
 import { createFixture } from 'fs-fixture';
 
 import { DEFAULT_OPTIONS } from '../src/constants.ts';

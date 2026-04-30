@@ -1,4 +1,5 @@
 import { createRequire } from 'node:module';
+
 import { expect, suite, test } from 'vitest';
 
 suite('package.json', async () => {

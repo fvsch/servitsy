@@ -6,7 +6,7 @@ import { createGzip, gzipSync } from 'node:zlib';
 import { MAX_COMPRESS_SIZE, SUPPORTED_METHODS } from './constants.ts';
 import { getContentType, typeForFilePath } from './content-type.ts';
 import { dirListPage, errorPage } from './pages.ts';
-import { FileResolver } from './resolver.ts';
+import { type FileResolver } from './resolver.ts';
 import type {
 	FSLocation,
 	HttpHeaderRule,
