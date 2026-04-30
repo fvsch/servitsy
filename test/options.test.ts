@@ -1,4 +1,5 @@
 import { cwd } from 'node:process';
+
 import { expect, suite, test } from 'vitest';
 
 import { DEFAULT_OPTIONS } from '../src/constants.ts';

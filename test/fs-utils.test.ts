@@ -1,5 +1,6 @@
-import { platform } from 'node:os';
 import { chmod } from 'node:fs/promises';
+import { platform } from 'node:os';
+
 import { afterAll, expect, suite, test } from 'vitest';
 
 import { checkDirAccess, getIndex, getKind, getRealpath, isReadable } from '../src/fs-utils.ts';

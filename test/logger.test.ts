@@ -1,6 +1,7 @@
 import { type Buffer } from 'node:buffer';
 import { Writable } from 'node:stream';
 import { stripVTControlCharacters } from 'node:util';
+
 import { expect, suite, test } from 'vitest';
 
 import { ColorUtils, Logger, requestLogLine } from '../src/logger.ts';

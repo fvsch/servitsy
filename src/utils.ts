@@ -1,5 +1,5 @@
-import { env, versions } from 'node:process';
 import { isAbsolute, sep as dirSep } from 'node:path';
+import { env, versions } from 'node:process';
 
 export class PathMatcher {
 	#positive: Array<string | RegExp> = [];

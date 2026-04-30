@@ -1,5 +1,6 @@
 import { IncomingMessage, ServerResponse } from 'node:http';
 import { Duplex } from 'node:stream';
+
 import { afterAll, expect, suite, test } from 'vitest';
 
 import { extractUrlPath, fileHeaders, isValidUrlPath, RequestHandler } from '../src/handler.ts';
