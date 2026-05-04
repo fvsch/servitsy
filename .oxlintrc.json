@@ -1,0 +1,25 @@
+{
+	"$schema": "./node_modules/oxlint/configuration_schema.json",
+	"plugins": ["import", "node", "promise"],
+	"categories": {
+		"correctness": "error",
+		"suspicious": "warn",
+		"restriction": "warn"
+	},
+	"rules": {
+		"eslint/class-methods-use-this": "off",
+		"eslint/no-param-reassign": "off",
+		"eslint/no-undefined": "off",
+		"eslint/no-use-before-define": "off",
+		"import/no-relative-parent-imports": "off",
+		"typescript/consistent-type-imports": "error"
+	},
+	"overrides": [
+		{
+			"files": ["./scripts/**"],
+			"rules": {
+				"eslint/no-console": "off"
+			}
+		}
+	]
+}

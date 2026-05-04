@@ -123,7 +123,7 @@ export function requestLogLine({
 	const duration = start && close ? Math.ceil(close - start) : undefined;
 
 	let displayPath = _(urlPath ?? url, 'cyan');
-	if (isSuccess && urlPath != null && localPath != null) {
+	if (isSuccess && urlPath !== null && localPath !== null) {
 		const parts = pathSuffix(urlPath, localPath);
 		if (parts) displayPath = _(parts[0], 'cyan') + brackets(parts[1], 'dim,gray,dim');
 	}

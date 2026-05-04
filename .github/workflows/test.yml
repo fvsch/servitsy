@@ -16,15 +16,15 @@ jobs:
       - &checkout
         uses: actions/checkout@v6
       - &setup-pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
         with:
-          version: 10
+          version: 11
       - &setup-node
         uses: actions/setup-node@v6
         with:
-          cache: 'pnpm'
+          cache: "pnpm"
           node-version: ${{ matrix.node }}
-      - run: pnpm install --frozen-lockfile
+      - run: pnpm ci
       - run: pnpm run typecheck
   test:
     runs-on: ubuntu-latest
@@ -36,5 +36,17 @@ jobs:
       - *checkout
       - *setup-pnpm
       - *setup-node
-      - run: pnpm install --frozen-lockfile
+      - run: pnpm ci
       - run: pnpm test
+  lint:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [24]
+    name: Lint (node${{ matrix.node }})
+    steps:
+      - *checkout
+      - *setup-pnpm
+      - *setup-node
+      - run: pnpm ci
+      - run: pnpm run lint

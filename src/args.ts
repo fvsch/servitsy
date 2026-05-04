@@ -136,9 +136,9 @@ export class CLIArgs {
 
 		// args that require extra parsing
 		const port = this.str('port') ?? this.str('ports');
-		if (port != null) {
+		if (typeof port === 'string') {
 			const value = parsePort(port);
-			if (value != null) options.ports = value;
+			if (Array.isArray(value)) options.ports = value;
 			else invalid('--port', port);
 		}
 
@@ -150,13 +150,13 @@ export class CLIArgs {
 				if (!rule) invalid('--header', value);
 				return rule;
 			})
-			.filter((rule) => rule != null);
+			.filter((rule) => rule !== undefined);
 		if (headers.length) {
 			options.headers = headers;
 		}
 
 		const ext = this.splitList('ext');
-		if (ext != null) {
+		if (Array.isArray(ext)) {
 			options.ext = ext.map((item) => normalizeExt(item));
 		}
 
@@ -165,7 +165,11 @@ export class CLIArgs {
 		}
 
 		// remove undefined values
-		return Object.fromEntries(Object.entries(options).filter((entry) => entry[1] != null));
+		return Object.fromEntries(
+			Object.entries(options).filter(([_key, val]) => {
+				return val !== undefined && val !== null;
+			}),
+		);
 	}
 
 	unknown(): string[] {
@@ -210,7 +214,7 @@ export function parseHeaders(input: string): HttpHeaderRule | undefined {
 		const json = input.slice(jsonStart);
 		try {
 			const obj = JSON.parse(json);
-			if (obj != null && typeof obj === 'object') {
+			if (obj !== null && typeof obj === 'object') {
 				const entries = Object.entries(obj)
 					.map(([key, val]) => [
 						typeof key === 'string' ? key.trim() : '',
@@ -221,7 +225,9 @@ export function parseHeaders(input: string): HttpHeaderRule | undefined {
 					return makeHeadersRule(include, entries);
 				}
 			}
-		} catch {}
+		} catch {
+			// oxlint-disable no-empty
+		}
 	}
 
 	// parse header:value syntax

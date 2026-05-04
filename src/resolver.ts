@@ -36,20 +36,24 @@ export class FileResolver {
 
 	allowedPath(filePath: string): boolean {
 		const localPath = getLocalPath(this.#root, filePath);
-		if (localPath == null) return false;
-		return this.#excludeMatcher.test(localPath) === false;
+		return typeof localPath === 'string' && this.#excludeMatcher.test(localPath) === false;
 	}
 
 	async find(localPath: string): Promise<{ status: number; file: FSLocation | null }> {
+		let file: FSLocation | null = null;
 		const targetPath = this.resolvePath(localPath);
-		let file: FSLocation | null = targetPath != null ? await this.locateFile(targetPath) : null;
+		if (typeof targetPath === 'string') {
+			file = await this.locateFile(targetPath);
+		}
 
 		// Resolve symlink
 		if (file?.kind === 'link') {
 			const realPath = await getRealpath(file.filePath);
-			const real = realPath != null ? await this.locateFile(realPath) : null;
-			if (real?.kind === 'file' || real?.kind === 'dir') {
-				file = real;
+			if (typeof realPath === 'string') {
+				const real = await this.locateFile(realPath);
+				if (real !== null && (real.kind === 'file' || real.kind === 'dir')) {
+					file = real;
+				}
 			}
 		}
 
@@ -67,7 +71,7 @@ export class FileResolver {
 		if (!this.#list) return [];
 
 		const items: FSLocation[] = (await getIndex(dirPath)).filter(
-			(item) => item.kind != null && this.allowedPath(item.filePath),
+			(item) => typeof item.kind === 'string' && this.allowedPath(item.filePath),
 		);
 
 		items.sort((a, b) => a.filePath.localeCompare(b.filePath));
@@ -77,7 +81,7 @@ export class FileResolver {
 				// resolve symlinks
 				if (item.kind === 'link') {
 					const filePath = await getRealpath(item.filePath);
-					if (filePath != null && this.withinRoot(filePath)) {
+					if (typeof filePath === 'string' && this.withinRoot(filePath)) {
 						const kind = await getKind(filePath);
 						item.target = { filePath, kind };
 					}

@@ -15,7 +15,7 @@ export class PathMatcher {
 			const isNegative = input.startsWith('!');
 			const trimmedInput = input.slice(isNegative ? 1 : 0);
 			const pattern = trimmedInput.length > 0 ? this.#parse(trimmedInput) : null;
-			if (pattern != null) {
+			if (pattern !== null) {
 				(isNegative ? this.#negative : this.#positive).push(pattern);
 			}
 		}
@@ -52,7 +52,7 @@ export class PathMatcher {
 			return pattern === value;
 		} else if (pattern.test(value)) {
 			const matches = value.match(pattern);
-			return matches != null && matches[0] === value;
+			return matches !== null && matches[0] === value;
 		}
 		return false;
 	}
@@ -75,7 +75,6 @@ export class PathMatcher {
 }
 
 export function clamp(value: number, min: number, max: number): number {
-	if (typeof value !== 'number') value = min;
 	return Math.min(max, Math.max(min, value));
 }
 
@@ -175,12 +174,14 @@ export function trimSlash(
 	input: string = '',
 	config: { start?: boolean; end?: boolean } = { start: true, end: true },
 ) {
-	if (config.start === true) input = input.replace(/^[/\\]/, '');
-	if (config.end === true) input = input.replace(/[/\\]$/, '');
-	return input;
+	let out = input;
+	if (config.start === true) out = out.replace(/^[/\\]/, '');
+	if (config.end === true) out = out.replace(/[/\\]$/, '');
+	return out;
 }
 
 export function withResolvers<T = unknown>() {
+	// oxlint-disable no-empty-function
 	const noop = () => {};
 	let resolve: (value: T | PromiseLike<T>) => void = noop;
 	let reject: (reason?: any) => void = noop;

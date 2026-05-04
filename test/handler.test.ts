@@ -179,7 +179,6 @@ suite('RequestHandler', async () => {
 	});
 	const blankOptions = getBlankOptions(path());
 	const defaultOptions = getDefaultOptions(path());
-	const request = handlerContext(defaultOptions);
 
 	afterAll(() => fixture.rm());
 
@@ -194,6 +193,7 @@ suite('RequestHandler', async () => {
 
 	for (const method of ['PUT', 'DELETE']) {
 		test(`${method} method is unsupported`, async () => {
+			const request = handlerContext(defaultOptions);
 			const handler = request(method, '/README.md');
 			expect(handler.method).toBe(method);
 			expect(handler.status).toBe(200);
@@ -209,6 +209,7 @@ suite('RequestHandler', async () => {
 	}
 
 	test('GET resolves a request with an index file', async () => {
+		const request = handlerContext(defaultOptions);
 		const handler = request('GET', '/');
 		await handler.process();
 
@@ -241,6 +242,8 @@ suite('RequestHandler', async () => {
 	});
 
 	test('GET returns a 404 for an unknown path', async () => {
+		const request = handlerContext(defaultOptions);
+
 		const control = request('GET', '/index.html');
 		await control.process();
 		expect(control.status).toBe(200);
@@ -254,6 +257,8 @@ suite('RequestHandler', async () => {
 	});
 
 	test('GET finds .html files without extension', async () => {
+		const request = handlerContext(defaultOptions);
+
 		const page1 = request('GET', '/section/page');
 		await page1.process();
 		expect(page1.status).toBe(200);
@@ -266,6 +271,8 @@ suite('RequestHandler', async () => {
 	});
 
 	test('GET shows correct content-type', async () => {
+		const request = handlerContext(defaultOptions);
+
 		const checkType = async (url = '', contentType = '') => {
 			const handler = request('GET', url);
 			await handler.process();
@@ -283,6 +290,8 @@ suite('RequestHandler', async () => {
 	});
 
 	test('POST is handled as GET', async () => {
+		const request = handlerContext(defaultOptions);
+
 		const cases = [
 			{ url: '/', localPath: 'index.html', status: 200 },
 			{ url: '/manifest.json', localPath: 'manifest.json', status: 200 },
@@ -309,8 +318,10 @@ suite('RequestHandler', async () => {
 	});
 
 	test('HEAD with a 200 response', async () => {
+		const request = handlerContext(defaultOptions);
 		const handler = request('HEAD', '/');
 		await handler.process();
+
 		expect(handler.method).toBe('HEAD');
 		expect(handler.status).toBe(200);
 		expect(handler.localPath).toBe('index.html');
@@ -319,8 +330,10 @@ suite('RequestHandler', async () => {
 	});
 
 	test('HEAD with a 404 response', async () => {
+		const request = handlerContext(defaultOptions);
 		const handler = request('HEAD', '/doesnt/exist');
 		await handler.process();
+
 		expect(handler.method).toBe('HEAD');
 		expect(handler.status).toBe(404);
 		expect(handler.file).toBe(null);
@@ -329,8 +342,10 @@ suite('RequestHandler', async () => {
 	});
 
 	test('OPTIONS *', async () => {
+		const request = handlerContext(defaultOptions);
 		const handler = request('OPTIONS', '*');
 		await handler.process();
+
 		expect(handler.method).toBe('OPTIONS');
 		expect(handler.status).toBe(204);
 		checkHeaders(handler.headers, {
@@ -340,8 +355,10 @@ suite('RequestHandler', async () => {
 	});
 
 	test('OPTIONS for existing file', async () => {
+		const request = handlerContext(defaultOptions);
 		const handler = request('OPTIONS', '/section/page');
 		await handler.process();
+
 		expect(handler.method).toBe('OPTIONS');
 		expect(handler.status).toBe(204);
 		checkHeaders(handler.headers, {
@@ -351,8 +368,10 @@ suite('RequestHandler', async () => {
 	});
 
 	test('OPTIONS for missing file', async () => {
+		const request = handlerContext(defaultOptions);
 		const handler = request('OPTIONS', '/doesnt/exist');
 		await handler.process();
+
 		expect(handler.status).toBe(404);
 		checkHeaders(handler.headers, {
 			allow: allowMethods,

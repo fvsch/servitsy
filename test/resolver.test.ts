@@ -26,6 +26,7 @@ suite('FileResolver.#root', () => {
 	test('throws when root is not defined', () => {
 		expect(() => {
 			// @ts-expect-error
+			// oxlint-disable no-new
 			new FileResolver({});
 		}).toThrow(/Missing root directory/);
 	});
@@ -190,8 +191,8 @@ suite('FileResolver.find', async () => {
 	test('default options block dotfiles', async () => {
 		const resolver = new TestFileResolver(defaultOptions);
 		const check = async (url: string, expected: string) => {
-			const { status, file } = await resolver.find(url);
-			const result = `${status} ${file ? getLocalPath(defaultOptions.root, file.filePath) : null}`;
+			const { status, file: f } = await resolver.find(url);
+			const result = `${status} ${f ? getLocalPath(defaultOptions.root, f.filePath) : null}`;
 			expect(result).toBe(platformSlash(expected));
 		};
 

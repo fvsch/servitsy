@@ -1,7 +1,7 @@
 import { join, resolve, sep as dirSep } from 'node:path';
 import { cwd } from 'node:process';
 
-import { createFixture } from 'fs-fixture';
+import { createFixture, type FileTree } from 'fs-fixture';
 
 import { DEFAULT_OPTIONS } from '../src/constants.ts';
 import type { FSLocation, RuntimeOptions } from '../src/types.d.ts';
@@ -9,7 +9,7 @@ import { trimSlash } from '../src/utils.ts';
 
 export const loc = testPathUtils(join(cwd(), '_servitsy_test_'));
 
-export async function fsFixture(fileTree: import('fs-fixture').FileTree) {
+export async function fsFixture(fileTree: FileTree) {
 	const fixture = await createFixture(fileTree);
 	return { fileTree, fixture, ...testPathUtils(fixture.path) };
 }

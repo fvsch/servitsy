@@ -12,6 +12,7 @@ export async function checkDirAccess(
 		const stats = await stat(dirPath);
 		if (stats.isDirectory()) {
 			// needs r-x permissions to access contents of the directory
+			// oxlint-disable no-bitwise
 			await access(dirPath, constants.R_OK | constants.X_OK);
 			return true;
 		} else {
@@ -62,18 +63,15 @@ export async function getRealpath(filePath: string): Promise<string | null> {
 	}
 }
 
-export async function isReadable(filePath: string, kind?: FSKind): Promise<boolean> {
-	if (kind === undefined) {
-		kind = await getKind(filePath);
-	}
-	if (kind === 'dir' || kind === 'file' || kind === 'link') {
-		const mode = kind === 'dir' ? constants.R_OK | constants.X_OK : constants.R_OK;
-		return access(filePath, mode).then(
-			() => true,
-			() => false,
-		);
-	}
-	return false;
+export async function isReadable(filePath: string, asKind?: FSKind): Promise<boolean> {
+	const kind = asKind === undefined ? await getKind(filePath) : asKind;
+	if (typeof kind !== 'string') return false;
+
+	const mode = kind === 'dir' ? constants.R_OK | constants.X_OK : constants.R_OK;
+	return access(filePath, mode).then(
+		() => true,
+		() => false,
+	);
 }
 
 function statsKind(stats: {
