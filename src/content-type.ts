@@ -250,7 +250,7 @@ export function isBinHeader(bytes: Uint8Array): boolean {
 		return false;
 	}
 
-	for (let i = 0; i < limit; i++) {
+	for (let i = 0; i < limit; i += 1) {
 		if (isBinDataByte(bytes[i])) {
 			return true;
 		}

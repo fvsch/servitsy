@@ -177,5 +177,6 @@ function html(input: string) {
 }
 
 function nl2sp(input: string) {
+	/* oxlint-disable no-control-regex */
 	return input.replace(/[\u{000A}-\u{000D}\u{2028}]/gu, ' ');
 }

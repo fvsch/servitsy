@@ -32,6 +32,7 @@
 		"prepack": "npm run build && npm test",
 		"build": "node scripts/prebuild.js && tsc -p tsconfig.json --listEmittedFiles && oxfmt --write lib",
 		"format": "oxfmt --write '**/*.{css,js,ts}' '**/*config*.json'",
+		"lint": "oxlint",
 		"test": "vitest --run test/*.test.ts",
 		"typecheck": "tsc -p tsconfig.json --noEmit && tsc -p test/tsconfig.json --noEmit"
 	},
@@ -40,6 +41,7 @@
 		"fs-fixture": "^2.12.0",
 		"linkedom": "^0.18.12",
 		"oxfmt": "^0.47.0",
+		"oxlint": "^1.62.0",
 		"typescript": "~6.0.3",
 		"vitest": "^4.1.5"
 	}

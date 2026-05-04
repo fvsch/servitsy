@@ -1,5 +1,5 @@
 import { Buffer } from 'node:buffer';
-import { createReadStream } from 'node:fs';
+import { createReadStream, type ReadStream } from 'node:fs';
 import { open, stat, type FileHandle } from 'node:fs/promises';
 import { createGzip, gzipSync } from 'node:zlib';
 
@@ -25,7 +25,7 @@ interface Config {
 }
 
 interface Payload {
-	body?: string | Buffer | import('node:fs').ReadStream;
+	body?: string | Buffer | ReadStream;
 	contentType?: string;
 	isText?: boolean;
 	statSize?: number;
@@ -94,7 +94,7 @@ export class RequestHandler {
 			return this.#send();
 		}
 
-		if (this.urlPath == null) {
+		if (typeof this.urlPath !== 'string') {
 			this.status = 400;
 			return this.#sendErrorPage();
 		}
@@ -155,7 +155,7 @@ export class RequestHandler {
 			this.status = 204;
 		}
 		// read file as stream
-		else if (this.method !== 'HEAD' && !this.#options._noStream) {
+		else if (this.method !== 'HEAD' && this.#options.disableStreaming !== true) {
 			data.body = createReadStream(filePath, { autoClose: true, start: 0 });
 		}
 
@@ -237,7 +237,7 @@ export class RequestHandler {
 			this.#header('content-length', String(statSize));
 		}
 
-		if (isHead || body == null) {
+		if (isHead || !body) {
 			this.#res.end();
 			return;
 		}
@@ -289,7 +289,7 @@ export class RequestHandler {
 		}
 
 		const localPath = getLocalPath(this.#options.root, filePath);
-		if (localPath != null && headerRules.length) {
+		if (typeof localPath === 'string' && headerRules.length) {
 			const blockList = ['content-encoding', 'content-length'];
 			for (const { name, value } of fileHeaders(localPath, headerRules, blockList)) {
 				this.#header(name, value, false);
@@ -333,9 +333,9 @@ function canCompress({
 	isText?: boolean;
 	statSize?: number;
 }): boolean {
-	accept = Array.isArray(accept) ? accept.join(',') : accept;
+	const values = Array.isArray(accept) ? accept.join(',') : accept;
 	if (isText && statSize <= MAX_COMPRESS_SIZE && accept) {
-		return accept
+		return values
 			.toLowerCase()
 			.split(',')
 			.some((value) => value.split(';')[0].trim() === 'gzip');

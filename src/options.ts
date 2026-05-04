@@ -32,7 +32,7 @@ export function serverOptions(
 			(final as Record<string, any>)[key] = value;
 		}
 	}
-	if (final.host == null && getRuntime() === 'webcontainer') {
+	if (typeof final.host !== 'string' && getRuntime() === 'webcontainer') {
 		final.host = 'localhost';
 	}
 
@@ -148,22 +148,21 @@ export function isValidHeader(name: string): boolean {
 	return typeof name === 'string' && /^[a-z\d-_]+$/i.test(name);
 }
 
-/** @type {(value: any) => value is HttpHeaderRule} */
 export function isValidHeaderRule(value: unknown): value is HttpHeaderRule {
 	if (!value || typeof value !== 'object') return false;
 	const { include, headers } = value as any;
 	if (typeof include !== 'undefined' && !isStringArray(include)) {
 		return false;
 	}
-	if (headers == null || typeof headers !== 'object') {
+	if (headers === null || typeof headers !== 'object') {
 		return false;
 	}
 	const entries = Object.entries(headers);
 	return (
 		entries.length > 0 &&
-		entries.every(([key, value]) => {
+		entries.every(([key, val]) => {
 			if (!isValidHeader(key)) return false;
-			return typeof value === 'string' || typeof value === 'boolean' || Number.isFinite(value);
+			return typeof val === 'string' || typeof val === 'boolean' || Number.isFinite(val);
 		})
 	);
 }
