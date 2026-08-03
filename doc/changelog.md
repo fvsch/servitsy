@@ -1,5 +1,10 @@
 # servitsy changelog
 
+## v0.6.0 (2026-08-03)
+
+- BREAKING: Minimum Node.js version is v20.12.0 (#69)
+- Housekeeping: updated dev tooling to pnpm, TypeScript 7, Vitest 4, oxfmt and oxlint (#61, #64, #65, #66, #67)
+
 ## v0.5.0 (2024-12-12)
 
 BREAKING:
@@ -20,7 +25,7 @@ Misc:
 
 ## v0.4.4 (2024-11-15)
 
-- Several refactoring changes changes (#34, #35, #36, #37), resulting in ~15% smaller package size.
+- Several refactoring changes changes (#34, #35, #36, #37), resulting in ~15% smaller package size
 
 ## v0.4.3 (2024-11-08)
 
@@ -91,7 +96,7 @@ Misc:
 
 First release. Initial features include:
 
-- Serve static files over HTTP/1.1.
-- Nice looking directory indexes.
-- Command line interface only.
-- Configuration through CLI arguments `--host`, `--port`, `--header`, `--cors`, `--ext`, `--dir-file`, `--dir-list` and `--exclude`.
+- Serve static files over HTTP/1.1
+- Nice looking directory indexes
+- Command line interface only
+- Configuration through CLI arguments `--host`, `--port`, `--header`, `--cors`, `--ext`, `--dir-file`, `--dir-list` and `--exclude`

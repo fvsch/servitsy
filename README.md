@@ -2,11 +2,13 @@
 
 Small, local HTTP server for static files.
 
-- **Small:** no dependencies, 22 kilobytes gzipped.
+- **Small:** no dependencies, 22 kB gzipped.
 - **Local:** designed for local development workflows.
 - **Static:** serves files and directory listings.
 
-<img alt="Web browser screenshot of a directory listing for the servitsy source code, served by servitsy on localhost:8080" src="https://raw.githubusercontent.com/fvsch/servitsy/refs/heads/main/doc/example.png" width="820">
+<img alt="Web browser screenshot of a directory listing for the servitsy source code, served by servitsy on localhost:8080"
+	src="https://raw.githubusercontent.com/fvsch/servitsy/refs/heads/main/doc/example.png"
+	width="820">
 
 ## Usage
 
@@ -15,7 +17,7 @@ npx servitsy [directory] [options]
 ```
 
 > [!NOTE]
-> servitsy is a command-line tool, published as a npm package. It requires [Node.js] version 18 or higher, or a compatible runtime like [Deno] or [Bun].
+> servitsy is a command-line tool, published as a npm package. It requires [Node.js] version 20 or higher, or a compatible runtime like [Deno] or [Bun].
 
 ```sh
 # Running with Bun
@@ -64,10 +66,10 @@ For local testing, here are a few established alternatives you may prefer, with 
 
 | Package       | Version | Dependencies | Installed size† |
 | ------------- | ------- | ------------ | --------------- |
-| [servitsy]    | 0.5.0   | 0            | 104 kB          |
+| [servitsy]    | 0.6.0   | 0            | 104 kB          |
 | [servor]      | 4.0.2   | 0            | 144 kB          |
-| [sirv-cli]    | 3.0.0   | 12           | 396 kB          |
-| [serve]       | 14.2.4  | 87           | 7.5 MB          |
+| [sirv-cli]    | 3.0.1   | 12           | 396 kB          |
+| [serve]       | 14.2.6  | 84           | 6.9 MB          |
 | [http-server] | 14.1.1  | 52           | 9.4 MB          |
 
 If size and dependency count is not a concern and you want something stable and battle-tested, I recommend [serve] and [http-server].
