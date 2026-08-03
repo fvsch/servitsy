@@ -1,7 +1,7 @@
 import { release } from 'node:os';
 import { platform } from 'node:process';
 import { type Writable } from 'node:stream';
-import { inspect } from 'node:util';
+import { inspect, styleText } from 'node:util';
 
 import type { ResMetaData } from './types.d.ts';
 import { clamp, fwdSlash, getEnv, getRuntime, trimSlash, withResolvers } from './utils.ts';
@@ -32,15 +32,21 @@ export class ColorUtils {
 			return parts.join('');
 		}
 		const formats = format.split(',');
-		return parts
-			.map((part, index) => (formats[index] ? this.style(part, formats[index]) : part))
-			.join('');
+		return parts.map((part, i) => this.style(part, formats[i])).join('');
 	};
 
 	style = (text: string, format: string = ''): string => {
-		if (!this.enabled) return text;
-		return styleText(format.trim().split(/\s+/g), text);
+		if (!format || !this.enabled) return text;
+		return styleText(this.#stFormat(format), text, { validateStream: false });
 	};
+
+	#stFormat(format: string): Parameters<typeof styleText>[0] {
+		const fmt = format
+			.trim()
+			.split(/\s+/g)
+			.filter((s) => Object.hasOwn(inspect.colors, s));
+		return fmt as any[];
+	}
 }
 
 export class Logger {
@@ -153,21 +159,6 @@ function pathSuffix(urlPath: string, localPath: string): [string, string] | unde
 			return [filePath.slice(0, index), filePath.slice(index)];
 		}
 	}
-}
-
-/**
-Basic implementation of 'node:util' styleText to support Node 18 + Deno.
-*/
-function styleText(format: string | string[], text: string): string {
-	let before = '';
-	let after = '';
-	for (const style of Array.isArray(format) ? format : [format]) {
-		const codes = inspect.colors[style.trim()];
-		if (!codes) continue;
-		before = `${before}\x1b[${codes[0]}m`;
-		after = `\x1b[${codes[1]}m${after}`;
-	}
-	return `${before}${text}${after}`;
 }
 
 function supportsColor(): boolean {
