@@ -42,11 +42,11 @@
 	},
 	"devDependencies": {
 		"@types/node": "^24.12.0",
-		"fs-fixture": "^2.14.0",
+		"fs-fixture": "^2.16.0",
 		"linkedom": "^0.18.13",
-		"oxfmt": "^0.61.0",
-		"oxlint": "^1.76.0",
+		"oxfmt": "^0.71.0",
+		"oxlint": "^1.86.0",
 		"typescript": "~7.0.2",
-		"vitest": "^4.1.10"
+		"vitest": "^5.0.3"
 	}
 }
