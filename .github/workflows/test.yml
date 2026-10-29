@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     name: Check types (node${{ matrix.node }})
     strategy:
-      matrix: { node: [24] }
+      matrix: { node: [26] }
     steps:
       - &checkout
         uses: actions/checkout@v7
@@ -30,7 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node: [22, 24]
+        node: [22, 24, 26]
     name: Run tests (node${{ matrix.node }})
     steps:
       - *checkout
@@ -42,7 +42,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node: [24]
+        node: [26]
     name: Lint (node${{ matrix.node }})
     steps:
       - *checkout
